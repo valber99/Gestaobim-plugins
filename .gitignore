@@ -15,3 +15,6 @@ bin/
 obj/
 dist/
 build/cache/
+
+# projeto local do usuario (banco de familias), nao faz parte deste repositorio
+banco_familias/
