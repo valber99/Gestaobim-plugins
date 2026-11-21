@@ -68,7 +68,7 @@ public static class UpdateNotifier
         if (_button is null) return;
         _button.LargeImage = App.Icon("sobre-novo");
         _button.Image = App.Icon("sobre-novo");
-        _button.ToolTip = $"Nova versão disponível: {release.Version}. Clique para ver.";
+        _button.ToolTip = $"Nova versão disponível: {release.Version.ToString(3)}. Clique para ver.";
     }
 
     private static void MarkUpToDate()
@@ -108,14 +108,14 @@ public static class UpdateNotifier
         if (release is not null)
         {
             MarkAvailable(release);
-            dialog.MainContent = $"Versão instalada: {installed}\nNova versão disponível: {release.Version}\n\n" +
+            dialog.MainContent = $"Versão instalada: {installed.ToString(3)}\nNova versão disponível: {release.Version.ToString(3)}\n\n" +
                                  "Para atualizar, baixe o .zip, feche o Revit e execute o Instalar.bat.";
             dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Baixar a nova versão");
         }
         else
         {
             if (failure is null) MarkUpToDate();
-            dialog.MainContent = $"Versão instalada: {installed}\n\n" + (failure ?? "Você está na versão mais recente.");
+            dialog.MainContent = $"Versão instalada: {installed.ToString(3)}\n\n" + (failure ?? "Você está na versão mais recente.");
         }
 
         if (dialog.Show() == TaskDialogResult.CommandLink1 && release is not null)
