@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>GB Material Studio</Name>
+    <Assembly>GBMaterialStudio\GBMaterialStudio.dll</Assembly>
+    <AddInId>6F1D5A4E-2B8C-4C1E-9D3A-7A1B5C0E8F21</AddInId>
+    <FullClassName>Gestaobim.MaterialStudio.Addin.App</FullClassName>
+    <VendorId>GBIM</VendorId>
+    <VendorDescription>Gestão BIM - github.com/valber99/Gestaobim-plugins</VendorDescription>
+  </AddIn>
+</RevitAddIns>

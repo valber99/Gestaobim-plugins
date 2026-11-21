@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+### Novo
+- **Add-in nativo (C#/.NET).** O GB Material Studio agora é um add-in do Revit que não depende de pyRevit
+  nem de Python. Um código-fonte, três compilações: Revit 2025, 2026 e 2027.
+- Instalador `Instalar.bat`/`Desinstalar.bat` (sem Python) e pacote `.zip` com checksum SHA-256.
+- Favoritos e biblioteca da edição pyRevit são copiados para `%APPDATA%\GestaoBIM\MaterialStudio` na primeira abertura.
+- 41 testes xUnit para as regras puras e o banco de favoritos; CI compila as três versões.
+
+### Observações
+- O add-in não é assinado: o Revit pergunta na primeira vez, escolha "Sempre carregar".
+- A edição pyRevit continua no repositório como legado.
+
 ## 0.2.0
 
 ### Alterado

@@ -1,11 +1,13 @@
 # Gestaobim-plugins
 
-Plugins de [pyRevit](https://github.com/pyrevitlabs/pyRevit) do ecossistema **Gestão BIM**.
+Plugins do ecossistema **Gestão BIM** para o Revit.
 
-Hoje o repositório tem uma extensão: **GBMaterialStudio**, um estúdio de materiais dentro do Revit.
-Ele aparece na faixa de opções, na aba **Gestão BIM**, painel **Materiais**.
+Hoje o repositório tem o **GB Material Studio**, um estúdio de materiais dentro do Revit. Ele é um
+**add-in nativo (.NET)**: não precisa de pyRevit e não precisa de Python instalado.
 
-## O que a GBMaterialStudio faz
+## O que o GB Material Studio faz
+
+Tudo fica na aba **Gestão BIM**, painel **Materiais**.
 
 | Botão | Para que serve |
 |---|---|
@@ -21,11 +23,13 @@ Ao favoritar um material, ele é copiado para uma biblioteca (um arquivo `.rvt` 
 `GBMaterialLibrary-<versão>.rvt`). Isso permite levar o material, completo e com a aparência, para
 qualquer projeto sem precisar abrir o projeto de onde ele veio.
 
-- Pasta padrão: `%APPDATA%\pyRevit\MaterialTools`.
+- Pasta padrão: `%APPDATA%\GestaoBIM\MaterialStudio`.
 - Para usar outra pasta (por exemplo, uma pasta de rede compartilhada), crie
-  `%APPDATA%\pyRevit\MaterialTools\gb-settings.json` com `{"library_dir": "D:\\Biblioteca"}`.
+  `%APPDATA%\GestaoBIM\MaterialStudio\gb-settings.json` com `{"library_dir": "D:\\Biblioteca"}`.
 - As texturas continuam sendo arquivos no disco: o caminho precisa existir na máquina de destino.
-  A transferência é cancelada, sem alterar o projeto, se alguma textura não for encontrada.
+  Se alguma não for encontrada, o material é transferido e você recebe um aviso.
+- Quem usava a edição em pyRevit não perde nada: favoritos, configurações e a biblioteca de
+  `%APPDATA%\pyRevit\MaterialTools` são copiados na primeira abertura (a pasta antiga não é alterada).
 
 ### Excluir não usados com segurança
 
@@ -34,59 +38,44 @@ Um material só é tratado como "não usado" quando duas verificações concorda
 próprio Revit, o mesmo critério do Purge Unused. Cada exclusão é desfeita se o Revit indicar que ela
 removeria outros elementos. Tudo é uma entrada só de desfazer.
 
-## Requisitos
-
-- Windows e Revit 2025 ou mais novo (o *Organizar materiais* usa uma API do Revit 2024+).
-- pyRevit 5 ou mais novo, com o motor CPython (Python 3.12) habilitado. A extensão não roda mais no
-  IronPython 2.7.
-
 ## Instalação
 
-```powershell
-git clone https://github.com/valber99/Gestaobim-plugins.git
-cd Gestaobim-plugins
-.\scripts\install.ps1
-```
+1. Baixe o `GBMaterialStudio-<versão>.zip` da página de [Releases](https://github.com/valber99/Gestaobim-plugins/releases).
+2. Descompacte, feche o Revit e dê dois cliques em **`Instalar.bat`**.
+3. Abra o Revit. Na primeira vez ele pergunta se confia no add-in (não há assinatura digital ainda):
+   escolha **"Sempre carregar"**.
 
-O script copia `GBMaterialStudio.extension` para `%APPDATA%\pyRevit\Extensions`, guarda um backup do que
-já estava lá e, com `-RemoveLegacy`, remove a versão antiga `ValberMaterialStudio.extension`. Depois,
-recarregue o pyRevit (aba pyRevit, Reload) ou reinicie o Revit.
+Para remover, `Desinstalar.bat`. Seus favoritos e a biblioteca não são apagados.
 
-Instalação manual: copie a pasta `GBMaterialStudio.extension` para `%APPDATA%\pyRevit\Extensions`,
-ou adicione a pasta do clone como caminho de extensões do pyRevit.
+Requisitos: Windows e **Revit 2025, 2026 ou 2027**.
 
 ## Desenvolvimento
 
-O código roda dentro do Revit, no motor **CPython 3.12** do pyRevit (pythonnet). Dois cuidados que esse
-motor impõe, e que os módulos `mt_wpf` e `mt_dialogs` resolvem:
-
-- `pyrevit.forms` (janelas, alertas, listas) **não existe no CPython**. Use `mt_wpf.Window`
-  (carrega o XAML e expõe os controles como atributos) e `mt_dialogs` (`alert`, `ask_for_string`,
-  `pick_file`, `ask_for_color`, `select_from_list`).
-- Listas do WPF precisam de uma coleção .NET (`mt_wpf.net_list`), e classes Python que o WPF liga por
-  binding a pincéis precisam de propriedades .NET reais (`mt_wpf.clr_property`). Interfaces do Revit
-  (`ISelectionFilter`, `IExternalEventHandler`, ...) exigem `__namespace__ = mt_wpf.NAMESPACE`.
+Um código-fonte, três compilações (uma por ano do Revit), com a API vinda do NuGet
+(`Nice3point.Revit.Api`), então não é preciso ter o Revit instalado para compilar.
 
 ```powershell
-python -m pip install pytest
-python -m pytest -q
+dotnet test tests/GBMaterialStudio.Core.Tests        # regras puras, configurações e banco de favoritos
+dotnet build src/GBMaterialStudio -c Release -p:RevitVersion=2027
+./build/package.ps1                                  # gera dist/GBMaterialStudio-<versão>.zip (2025, 2026, 2027)
 ```
 
-Os testes cobrem o que não depende do Revit: as regras de renomear e de duplicados, as configurações,
-o banco de favoritos (leitura, escrita atômica, backup, bloqueio) e guardas das regras do CPython
-(sem `pyrevit.forms`, sem `imp`, todo botão com `#! python3`, XAML bem formado). O que depende da API do
-Revit é verificado dentro do Revit.
+Estrutura:
 
-Arquivos gerados por script (rode de novo se alterar a origem):
-
-Em `GBMaterialStudio.extension/`:
-
-- `tools/build_native.ps1` compila `lib/GBCursorHook.dll` a partir de `tools/GBCursorHook.cs`.
-  Precisa do `csc.exe` do .NET Framework (já vem no Windows).
-- `tools/build_cursor.ps1` gera `lib/eyedropper.cur` (cursor do conta-gotas) a partir de `lib/gestaobim.png`.
-- `tools/build_icons.ps1` gera os ícones dos botões novos.
+- `src/GBMaterialStudio.Core` — regras puras e o banco de favoritos (sem Revit; testado em Windows e Linux).
+- `src/GBMaterialStudio` — o add-in: comandos, janelas (WPF/XAML) e a camada que usa a API do Revit.
+- `tests/GBMaterialStudio.Core.Tests` — testes xUnit.
+- `installer` e `build` — manifesto `.addin`, instaladores e empacotamento.
+- `GBMaterialStudio.extension` — **edição legada em pyRevit** (mantida só como referência, ver abaixo).
 
 Mais detalhes de arquitetura e das decisões em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
+
+### Edição legada em pyRevit
+
+Antes do add-in nativo, o plugin existia como extensão do pyRevit (`GBMaterialStudio.extension`, Python 3).
+Ela continua no repositório, com testes (`python -m pytest -q`), mas **não é mais a edição recomendada**:
+exige pyRevit 5+. Se as duas estiverem instaladas, a aba "Gestão BIM" aparece duplicada; o
+`Instalar.bat` move a edição pyRevit para fora do caminho automaticamente.
 
 ## Licença
 

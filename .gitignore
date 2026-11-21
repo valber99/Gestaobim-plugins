@@ -9,3 +9,8 @@ GBMaterialStudio.extension/lib/GestaoBimCursorHook.dll
 
 # biblioteca local de familias do Revit (nao e codigo, e pesada)
 familias/
+
+# build
+bin/
+obj/
+dist/
