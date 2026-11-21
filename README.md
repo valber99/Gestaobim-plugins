@@ -40,8 +40,10 @@ removeria outros elementos. Tudo é uma entrada só de desfazer.
 
 ## Instalação
 
-1. Baixe o `GBMaterialStudio-<versão>.zip` da página de [Releases](https://github.com/valber99/Gestaobim-plugins/releases).
-2. Descompacte, feche o Revit e dê dois cliques em **`Instalar.bat`**.
+1. Baixe da página de [Releases](https://github.com/valber99/Gestaobim-plugins/releases) o instalador
+   **`GBMaterialStudio-Setup-<versão>.exe`** (ou o `.zip`, se preferir instalar pelo `Instalar.bat`).
+2. Feche o Revit e dê dois cliques no `.exe` (ele recusa instalar com o Revit aberto). O Windows pode avisar que o
+   editor é desconhecido, porque o instalador não é assinado: clique em "Mais informações" e "Executar assim mesmo".
 3. Abra o Revit. Na primeira vez ele pergunta se confia no add-in (não há assinatura digital ainda):
    escolha **"Sempre carregar"**.
 
