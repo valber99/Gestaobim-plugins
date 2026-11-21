@@ -3,6 +3,9 @@
 ## 0.3.1
 
 ### Novo
+- **Instalador `.exe`** (`GBMaterialStudio-Setup-<versão>.exe`): dois cliques instalam em todos os Revit 2025, 2026
+  e 2027 encontrados; recusa instalar com o Revit aberto. O `.zip` com `Instalar.bat` continua disponível.
+- Documentação: guia do usuário, arquitetura do add-in nativo e processo de release em `docs/`.
 - **Botão "Sobre" com aviso de atualização.** Mostra a versão instalada e consulta a última release no GitHub
   na hora; se houver versão nova, oferece "Baixar a nova versão" (abre a página da release).
 - Ao abrir o Revit, o add-in faz essa consulta em segundo plano (no máximo uma vez por dia) e, se houver versão

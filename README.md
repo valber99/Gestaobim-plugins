@@ -62,7 +62,7 @@ Um código-fonte, três compilações (uma por ano do Revit), com a API vinda do
 ```powershell
 dotnet test tests/GBMaterialStudio.Core.Tests        # regras puras, configurações e banco de favoritos
 dotnet build src/GBMaterialStudio -c Release -p:RevitVersion=2027
-./build/package.ps1                                  # gera dist/GBMaterialStudio-<versão>.zip (2025, 2026, 2027)
+./build/package.ps1                                  # gera o .zip e o instalador .exe em dist/ (2025, 2026, 2027)
 ```
 
 Estrutura:
@@ -73,7 +73,12 @@ Estrutura:
 - `installer` e `build` — manifesto `.addin`, instaladores e empacotamento.
 - `GBMaterialStudio.extension` — **edição legada em pyRevit** (mantida só como referência, ver abaixo).
 
-Mais detalhes de arquitetura e das decisões em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
+Documentação:
+
+- [`docs/GUIA-DO-USUARIO.md`](docs/GUIA-DO-USUARIO.md): instalar, usar cada botão, onde ficam os dados, problemas comuns.
+- [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md): como o add-in é organizado e por que cada decisão foi tomada.
+- [`docs/RELEASE.md`](docs/RELEASE.md): como gerar e publicar uma versão.
+- [`CHANGELOG.md`](CHANGELOG.md): histórico de versões.
 
 ### Edição legada em pyRevit
 
