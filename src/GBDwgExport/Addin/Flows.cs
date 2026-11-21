@@ -87,9 +87,7 @@ internal static class Flows
         {
             text.AppendLine().AppendLine("A mesclagem avisou que não conseguiu manter este conteúdo:");
             foreach (var loss in report.Losses.Take(6)) text.AppendLine("  • " + loss);
-            text.AppendLine(request.KeepIndividualFiles
-                ? "Os arquivos individuais exportados pelo Revit não têm essa perda."
-                : "Exporte de novo guardando os arquivos individuais para ter o conteúdo completo.");
+            text.AppendLine("Confira o desenho no AutoCAD antes de entregar. Para ter tudo, exporte com \"Um arquivo por folha\".");
         }
         if (report.Failures.Count > 0)
         {

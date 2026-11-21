@@ -17,13 +17,23 @@ public enum OutputMode
     SingleLayout,
 }
 
-/// <summary>An exported sheet and the rectangle its content occupies (drawing units).</summary>
-public sealed record SheetExtent(string Name, string File, double X0, double Y0, double X1, double Y1)
+/// <summary>
+/// An exported sheet and the rectangle its content occupies (drawing units). <paramref name="PaperWidthMm"/> and
+/// <paramref name="PaperHeightMm"/> are the paper the sheet uses in Revit (its title block), when known.
+/// </summary>
+public sealed record SheetExtent(string Name, string File, double X0, double Y0, double X1, double Y1,
+    double? PaperWidthMm = null, double? PaperHeightMm = null)
 {
+    public bool HasPaper => PaperWidthMm is > 0 && PaperHeightMm is > 0;
+
     public double Width => X1 - X0;
     public double Height => Y1 - Y0;
 }
 
+/// <summary>
+/// <paramref name="Paper"/> and <paramref name="Landscape"/> are only the fallback for a sheet whose paper Revit did not
+/// report; a sheet with a known paper always gets exactly that paper.
+/// </summary>
 public sealed record MergeOptions(OutputMode Mode, string Paper = "A1", bool Landscape = true, string LayoutName = "Folhas");
 
 /// <summary>Where a sheet was placed in the merged model space.</summary>
@@ -45,6 +55,24 @@ public static class MergePlanner
             ["A3"] = (420, 297),
             ["A4"] = (297, 210),
         };
+
+    /// <summary>How far (in millimetres) a measured sheet may be from an ISO A paper and still count as that paper.</summary>
+    public const double PaperTolerance = 3;
+
+    /// <summary>
+    /// Revit reports a sheet's size from its outline, which is often a millimetre off (840 x 594 for an A1). Within
+    /// <see cref="PaperTolerance"/> of an ISO A paper, in either orientation, the exact paper is returned; any other
+    /// size is kept as measured.
+    /// </summary>
+    public static (double Width, double Height) SnapToStandardPaper(double widthMm, double heightMm)
+    {
+        foreach (var (width, height) in Papers.Values)
+        {
+            if (Math.Abs(widthMm - width) <= PaperTolerance && Math.Abs(heightMm - height) <= PaperTolerance) return (width, height);
+            if (Math.Abs(widthMm - height) <= PaperTolerance && Math.Abs(heightMm - width) <= PaperTolerance) return (height, width);
+        }
+        return (Math.Round(widthMm, 1), Math.Round(heightMm, 1));
+    }
 
     /// <summary>Space between sheets in model space, as a fraction of the widest sheet.</summary>
     public const double GapFraction = 0.25;
@@ -87,8 +115,19 @@ public static class MergePlanner
             case OutputMode.MultipleLayouts:
                 foreach (var placement in placements)
                 {
-                    var name = Unique(LayoutName(placement.Sheet.Name), usedLayouts);
-                    AddLayout(args, name, options.Paper, options.Landscape, null, null, Window(placement.X0, placement.Y0, placement.X1, placement.Y1));
+                    var sheet = placement.Sheet;
+                    var name = Unique(LayoutName(sheet.Name), usedLayouts);
+                    if (sheet.HasPaper)
+                    {
+                        // The layout is the sheet's own paper, filled edge to edge by the sheet's content.
+                        var (w, h) = (sheet.PaperWidthMm!.Value, sheet.PaperHeightMm!.Value);
+                        AddLayout(args, name, null, w >= h, w, h, (placement.X0, placement.Y0, placement.X1, placement.Y1), margin: 0);
+                    }
+                    else
+                    {
+                        AddLayout(args, name, options.Paper, options.Landscape, null, null,
+                            Window(placement.X0, placement.Y0, placement.X1, placement.Y1), PageMargin);
+                    }
                 }
                 break;
 
@@ -98,13 +137,15 @@ public static class MergePlanner
                 var x1 = placements.Max(p => p.X1);
                 var y1 = placements.Max(p => p.Y1);
                 var (paperWidth, paperHeight) = Papers.TryGetValue(options.Paper, out var paper) ? paper : Papers["A1"];
-                var longSide = Math.Max(paperWidth, paperHeight);
+                // The long side follows the largest paper among the sheets, so the layout is as big as the sheets themselves.
+                var longSide = sheets.Where(sheet => sheet.HasPaper).Select(sheet => Math.Max(sheet.PaperWidthMm!.Value, sheet.PaperHeightMm!.Value))
+                    .DefaultIfEmpty(Math.Max(paperWidth, paperHeight)).Max();
                 var aspect = Math.Max((y1 - y0) / Math.Max(x1 - x0, 1e-9), 1e-6);
                 // The paper keeps the long side of the chosen size and follows the content's proportion.
                 var width = aspect <= 1 ? longSide : longSide / aspect;
                 var height = aspect <= 1 ? longSide * aspect : longSide;
                 AddLayout(args, Unique(LayoutName(options.LayoutName), usedLayouts), null, options.Landscape && width >= height,
-                    Math.Max(width, 100), Math.Max(height, 100), Window(x0, y0, x1, y1));
+                    Math.Max(width, 100), Math.Max(height, 100), Window(x0, y0, x1, y1), PageMargin);
                 break;
         }
 
@@ -121,7 +162,7 @@ public static class MergePlanner
     }
 
     private static void AddLayout(List<string> args, string name, string? paper, bool landscape,
-        double? width, double? height, (double X0, double Y0, double X1, double Y1) window)
+        double? width, double? height, (double X0, double Y0, double X1, double Y1) window, double margin)
     {
         Command(args, "layout.new", new { name, viewport = false });
         Command(args, "layout.set", new { name });
@@ -135,7 +176,7 @@ public static class MergePlanner
         else
             Command(args, "pagesetup", new { layout = name, paper = paper ?? "A1", landscape });
 
-        Command(args, "mview", new { p1 = new[] { PageMargin, PageMargin }, p2 = new[] { pageWidth - PageMargin, pageHeight - PageMargin } });
+        Command(args, "mview", new { p1 = new[] { margin, margin }, p2 = new[] { pageWidth - margin, pageHeight - margin } });
         Command(args, "mspace", new { });
         Command(args, "zoom", new { mode = "window", p1 = new[] { window.X0, window.Y0 }, p2 = new[] { window.X1, window.Y1 } });
         Command(args, "pspace", new { });

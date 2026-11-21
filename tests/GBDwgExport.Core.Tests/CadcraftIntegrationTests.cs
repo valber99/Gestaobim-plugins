@@ -83,6 +83,35 @@ public class CadcraftIntegrationTests : IDisposable
     }
 
     [Fact]
+    public void EachLayoutPageIsThePaperOfItsSheet()
+    {
+        if (_cli is null) return;
+
+        var landscape = Extent("Paisagem", Sample("a.dxf")) with { PaperWidthMm = 594, PaperHeightMm = 420 };
+        var portrait = Extent("Retrato", Sample("b.dxf")) with { PaperWidthMm = 420, PaperHeightMm = 594 };
+        var output = Path.Combine(_folder, "paper.dwg");
+        var (code, _, err) = Run(MergePlanner.Plan([landscape, portrait], new MergeOptions(OutputMode.MultipleLayouts), output));
+        Assert.True(code == 0, err);
+
+        foreach (var (layout, wide, tall) in new[] { ("Paisagem", 594.0, 420.0), ("Retrato", 420.0, 594.0) })
+        {
+            var pdf = Path.Combine(_folder, layout + ".pdf");
+            var (pdfCode, _, pdfErr) = Run(["run", output, "--cmd", "layout.set " + System.Text.Json.JsonSerializer.Serialize(new { name = layout }),
+                "--cmd", "exportpdf " + System.Text.Json.JsonSerializer.Serialize(new { path = pdf.Replace('\\', '/') })]);
+            Assert.True(pdfCode == 0 && File.Exists(pdf), pdfErr);
+
+            // PDF points: 1 mm = 72 / 25.4 points.
+            var box = System.Text.RegularExpressions.Regex.Match(Encoding.Latin1.GetString(File.ReadAllBytes(pdf)),
+                @"/MediaBox\s*\[\s*0\s+0\s+([0-9.]+)\s+([0-9.]+)\s*\]");
+            Assert.True(box.Success, "MediaBox nao encontrado em " + layout);
+            var widthMm = double.Parse(box.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) * 25.4 / 72;
+            var heightMm = double.Parse(box.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture) * 25.4 / 72;
+            Assert.InRange(widthMm, wide - 2, wide + 2);
+            Assert.InRange(heightMm, tall - 2, tall + 2);
+        }
+    }
+
+    [Fact]
     public void LayoutsAreNamedAfterTheSheets()
     {
         if (_cli is null) return;

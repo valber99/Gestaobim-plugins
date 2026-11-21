@@ -59,14 +59,17 @@ public static class CadcraftBridge
 
     public sealed record MergeResult(string File, IReadOnlyList<string> Losses, CadcraftOutput.Summary? Summary);
 
+    /// <summary>A sheet to merge: its label, its exported file and the paper it uses in Revit (when known).</summary>
+    public sealed record MergeInput(string Name, string File, double? PaperWidthMm, double? PaperHeightMm);
+
     /// <summary>Merges the exported sheets (name, file) into <paramref name="output"/> and reports what the tool could not keep.</summary>
-    public static MergeResult Merge(IReadOnlyList<(string Name, string File)> sheets, MergeOptions options, string output)
+    public static MergeResult Merge(IReadOnlyList<MergeInput> sheets, MergeOptions options, string output)
     {
         var extents = new List<SheetExtent>();
-        foreach (var (name, file) in sheets)
+        foreach (var sheet in sheets)
         {
-            var (x0, y0, x1, y1) = ReadExtents(file);
-            extents.Add(new SheetExtent(name, file, x0, y0, x1, y1));
+            var (x0, y0, x1, y1) = ReadExtents(sheet.File);
+            extents.Add(new SheetExtent(sheet.Name, sheet.File, x0, y0, x1, y1, sheet.PaperWidthMm, sheet.PaperHeightMm));
         }
 
         var folder = Path.GetDirectoryName(output);

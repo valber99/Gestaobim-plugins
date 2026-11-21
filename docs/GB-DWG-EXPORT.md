@@ -23,11 +23,10 @@ Aba **Gestão BIM**, painel **Exportar DWG**:
 
 | Botão | O que faz |
 |---|---|
-| **Exportar folhas** | Um arquivo DWG ou DXF por folha, exatamente como o Revit exporta. |
-| **Múltiplos layouts** | Um só DWG, com um layout (e uma janela de visualização) por folha. |
+| **Exportar folhas** | **Um só DWG**, com um layout por folha, cada layout no **mesmo papel que a folha usa no Revit**. |
 | **Model space** | Um só desenho com as folhas lado a lado no model space. |
 | **Layout único** | Um só desenho com um único layout que mostra todas as folhas. |
-| **Exportar vistas** | Plantas, cortes, elevações, 3D e outras vistas (não só folhas), um arquivo por vista. |
+| **Exportar vistas** | Plantas, cortes, elevações, 3D e outras vistas (não só folhas), um arquivo por vista, pelo motor do Revit. |
 | **Exportar / Importar configurações** | Salva as configurações num `.zip` e lê um `.zip` de outra máquina. |
 | **Sobre** | Mostra a versão e consulta o GitHub; uma bolinha vermelha avisa que há versão nova. |
 
@@ -35,14 +34,18 @@ Aba **Gestão BIM**, painel **Exportar DWG**:
 
 - **Lista:** folhas (ou vistas) em ordem natural (A2 vem antes de A10), com busca por número, nome ou tipo.
   **Marcar todas** marca as que estão visíveis na busca.
-- **Resultado:** um arquivo por folha, ou um dos três modos de desenho único (os botões do painel só escolhem o modo
-  inicial; dá para trocar na janela). Para vistas, só "um arquivo por vista" faz sentido.
-- **Arquivo:** DWG ou DXF; nome "Número - Nome da folha" ou só o número; e a **configuração de exportação do Revit**
-  (as de *Exportar > Opções > Configuração de DWG/DXF* do projeto). Sem escolher, o plugin usa padrões: vistas
-  mescladas, planos de referência e caixas de corte ocultos, cores indexadas, sólidos como malha e a unidade do projeto.
-- **Papel dos layouts:** A0 a A4, paisagem ou retrato (nos modos com layout).
-- **Guardar também os arquivos individuais:** nos modos de desenho único, os DWG exportados pelo Revit ficam numa
-  pasta `<projeto> - individuais`, ao lado do desenho mesclado. Vêm direto do Revit e não passam pela mesclagem.
+- **Resultado:** por padrão, **um só desenho com um layout por folha**. As outras opções são folhas lado a lado no
+  model space, um só layout com todas as folhas, e "um arquivo por folha (sem juntar)", que é o que o Revit exporta
+  sozinho. Os botões do painel só escolhem o modo inicial; dá para trocar na janela. Para vistas só existe um
+  arquivo por vista.
+- **Papel dos layouts:** não é uma escolha. Cada layout usa **o papel da folha no Revit**, lido do contorno da folha
+  (por exemplo, A1, A0 ou A3), em paisagem ou retrato como a folha está. Medidas a até 3 mm de um papel A0 a A4
+  (o Revit costuma informar 840 x 594 para um A1) viram o papel exato; um tamanho fora do padrão é mantido como
+  está. A janela de visualização do layout ocupa a página inteira e enquadra a folha toda.
+- **Arquivo:** DWG ou DXF; nome "Número - Nome da folha" ou só o número (nos arquivos separados); e a
+  **configuração de exportação do Revit** (as de *Exportar > Opções > Configuração de DWG/DXF* do projeto). Sem
+  escolher, o plugin usa padrões: vistas mescladas, planos de referência e caixas de corte ocultos, cores indexadas,
+  sólidos como malha e a unidade do projeto. O desenho único leva o nome do projeto.
 - **Pasta de destino** e **Abrir a pasta ao terminar**. As escolhas ficam salvas em `%APPDATA%\GestaoBIM\DwgExport`.
 
 ### Nomes de arquivos e erros
@@ -54,8 +57,8 @@ Aba **Gestão BIM**, painel **Exportar DWG**:
 - Uma folha que falha não derruba as outras: o resumo no fim lista as falhas.
 - O Revit deixa um arquivo `.pcp` (configuração de plotagem) ao lado de cada exportação; o plugin o remove, a menos que
   você já tivesse um com o mesmo nome. Um arquivo existente que você aceitou sobrescrever é apagado antes de exportar.
-- Se a mesclagem falhar, os arquivos individuais são guardados na pasta `<projeto> - individuais` mesmo que a opção
-  esteja desmarcada, para você nunca perder o que o Revit já exportou.
+- Se a mesclagem falhar, os arquivos que o Revit já exportou são guardados na pasta `<projeto> - individuais`, para
+  você nunca perder o trabalho.
 - Uma janela de andamento mostra qual folha está sendo exportada. Como a API do Revit só roda na thread do próprio
   Revit, a exportação não acontece em segundo plano: durante a mesclagem, que roda num programa à parte, a janela
   não atualiza e o Revit pode parecer parado até ela terminar.
@@ -71,7 +74,8 @@ entidades, camadas, blocos e layouts; a única perda avisada foi de cotas em arc
 Por isso:
 
 - o resumo mostra as perdas que o motor avisa;
-- os arquivos individuais (que não passam pelo motor) são guardados por padrão;
+- se precisar do conteúdo completo, "Um arquivo por folha (sem juntar)" entrega o que o Revit exporta, sem passar
+  pelo motor;
 - **abra o resultado no AutoCAD ou no DWG TrueView e confira antes de entregar ao cliente.**
 
 Fontes SHX não são lidas pelo motor, e entidades que ele não conhece podem ser descartadas sem aviso.
@@ -88,7 +92,7 @@ build/package-dwg.ps1  compila 2025/2026/2027, embute o cadcraft-cli e gera .zip
 | Arquivo | Papel |
 |---|---|
 | `Core/Naming.cs` | Nomes de arquivo seguros, nomes únicos, limite de caminho, ordem natural |
-| `Core/MergePlanner.cs` | Posiciona as folhas lado a lado e monta os comandos do `cadcraft-cli` para cada modo |
+| `Core/MergePlanner.cs` | Posiciona as folhas lado a lado, ajusta o papel ao padrão A0 a A4 e monta os comandos do `cadcraft-cli` para cada modo |
 | `Core/CadcraftOutput.cs` | Lê o que o `cadcraft-cli` imprime: limites do desenho, resumo e perdas avisadas |
 | `Core/Settings.cs` | Configurações em JSON, pacote `.zip` de configurações com manifesto, caminhos |
 | `Core/Updates.cs` | Aviso de atualização; só considera tags `dwg-v*` |
@@ -111,7 +115,8 @@ build/package-dwg.ps1  compila 2025/2026/2027, embute o cadcraft-cli e gera .zip
 - **Como uma mesclagem funciona.** Para cada folha, `cadcraft-cli info` dá os limites do conteúdo. As folhas são
   importadas lado a lado (com um espaço de 25% da maior largura) e, conforme o modo, cria-se um layout com uma
   janela de visualização do tamanho da página enquadrando cada folha (`layout.new`, `pagesetup`, `mview`, `zoom`).
-  No layout único, o papel mantém o lado maior do tamanho escolhido e segue a proporção do conjunto.
+  A página de cada layout tem o papel da folha no Revit; no layout único, o lado maior é o do maior papel entre as
+  folhas e a página segue a proporção do conjunto.
 - **Sem telemetria.** Nada é enviado a lugar nenhum além da consulta de versão ao GitHub (uma vez por dia, em segundo
   plano; `GB_DWG_EXPORT_NO_UPDATE_CHECK=1` desliga).
 - **Sem encerrar processos de terceiros.** Não há AutoCAD no fluxo.

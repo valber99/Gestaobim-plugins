@@ -22,10 +22,7 @@ public class SettingsTests : IDisposable
             Dxf = true,
             Mode = OutputMode.MultipleLayouts,
             Pattern = NamePattern.NumberOnly,
-            Paper = "A0",
-            Landscape = false,
             RevitSetup = "Setup A",
-            KeepIndividualFiles = false,
             OpenFolder = false,
         }.Save(path);
 
@@ -34,30 +31,27 @@ public class SettingsTests : IDisposable
         Assert.True(loaded.Dxf);
         Assert.Equal(OutputMode.MultipleLayouts, loaded.Mode);
         Assert.Equal(NamePattern.NumberOnly, loaded.Pattern);
-        Assert.Equal("A0", loaded.Paper);
-        Assert.False(loaded.Landscape);
         Assert.Equal("Setup A", loaded.RevitSetup);
-        Assert.False(loaded.KeepIndividualFiles);
         Assert.False(loaded.OpenFolder);
     }
 
     [Fact]
     public void MissingOrBrokenFileGivesDefaults()
     {
+        // The default result is one drawing with a layout per sheet, not one file per sheet.
         var missing = ExportSettings.Load(Path.Combine(_folder, "nope.json"));
-        Assert.Equal(OutputMode.SeparateFiles, missing.Mode);
-        Assert.True(missing.KeepIndividualFiles);
+        Assert.Equal(OutputMode.MultipleLayouts, missing.Mode);
 
         var broken = Path.Combine(_folder, "broken.json");
         File.WriteAllText(broken, "{ not json");
-        Assert.Equal(OutputMode.SeparateFiles, ExportSettings.Load(broken).Mode);
+        Assert.Equal(OutputMode.MultipleLayouts, ExportSettings.Load(broken).Mode);
     }
 
     [Fact]
     public void TransferPackageRoundTrips()
     {
         var zip = Path.Combine(_folder, "p.zip");
-        SettingsTransfer.Export(new ExportSettings { Folder = "X", Paper = "A2" }, zip, "0.1.0");
+        SettingsTransfer.Export(new ExportSettings { Folder = "X", RevitSetup = "S" }, zip, "0.1.0");
 
         using (var archive = ZipFile.OpenRead(zip))
         {
@@ -66,7 +60,7 @@ public class SettingsTests : IDisposable
         }
         var imported = SettingsTransfer.Import(zip);
         Assert.Equal("X", imported.Folder);
-        Assert.Equal("A2", imported.Paper);
+        Assert.Equal("S", imported.RevitSetup);
     }
 
     [Fact]

@@ -41,10 +41,6 @@ public partial class ExportWindow : Window
             : settings.Folder;
         FormatBox.SelectedIndex = settings.Dxf ? 1 : 0;
         PatternBox.SelectedIndex = settings.Pattern == NamePattern.NumberOnly ? 1 : 0;
-        PaperBox.SelectedItem = PaperBox.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string)i.Content == settings.Paper)
-                                ?? PaperBox.Items[1];
-        LandscapeBox.IsChecked = settings.Landscape;
-        KeepBox.IsChecked = settings.KeepIndividualFiles;
         OpenBox.IsChecked = settings.OpenFolder;
         (settings.Mode switch
         {
@@ -102,14 +98,11 @@ public partial class ExportWindow : Window
     private void RefreshMode()
     {
         var merging = Mode != OutputMode.SeparateFiles;
-        PaperGroup.IsEnabled = merging;
-        PaperBox.IsEnabled = merging && Mode != OutputMode.ModelSpace;
-        LandscapeBox.IsEnabled = merging && Mode != OutputMode.ModelSpace;
         ModeHint.Text = Mode switch
         {
-            OutputMode.MultipleLayouts => "Junta as folhas num só DWG, com um layout (e uma janela de visualização) para cada uma.",
-            OutputMode.ModelSpace => "Junta as folhas lado a lado no model space de um só desenho.",
-            OutputMode.SingleLayout => "Junta as folhas lado a lado e mostra todas num único layout.",
+            OutputMode.MultipleLayouts => "Um só DWG, com um layout para cada folha, no mesmo papel que a folha usa no Revit.",
+            OutputMode.ModelSpace => "Um só DWG com as folhas lado a lado no model space.",
+            OutputMode.SingleLayout => "Um só DWG com as folhas lado a lado, todas mostradas num único layout.",
             _ => "Cada folha vira um arquivo, exatamente como o Revit exporta.",
         };
         var modeAvailable = CadcraftAvailable || !merging;
@@ -176,15 +169,11 @@ public partial class ExportWindow : Window
         _settings.Dxf = FormatBox.SelectedIndex == 1;
         _settings.Pattern = PatternBox.SelectedIndex == 1 ? NamePattern.NumberOnly : NamePattern.NumberAndName;
         _settings.Mode = Mode;
-        _settings.Paper = (string)((ComboBoxItem)PaperBox.SelectedItem).Content;
-        _settings.Landscape = LandscapeBox.IsChecked == true;
         _settings.RevitSetup = SetupBox.SelectedItem as string is { } chosen && chosen != NoSetup ? chosen : "";
-        _settings.KeepIndividualFiles = KeepBox.IsChecked == true;
         _settings.OpenFolder = OpenBox.IsChecked == true;
         _settings.Save();
 
-        Request = new ExportRequest(items, _settings.Mode, _settings.Dxf, _settings.Pattern, folder, _settings.RevitSetup,
-            _settings.Paper, _settings.Landscape, _settings.KeepIndividualFiles, _projectName);
+        Request = new ExportRequest(items, _settings.Mode, _settings.Dxf, _settings.Pattern, folder, _settings.RevitSetup, _projectName);
         DialogResult = true;
     }
 

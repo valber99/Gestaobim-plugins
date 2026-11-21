@@ -102,6 +102,77 @@ public class MergePlannerTests
         Assert.Equal(255, MergePlanner.LayoutName(new string('x', 400)).Length);
     }
 
+    [Fact]
+    public void ALayoutHasExactlyThePaperTheSheetUsesInRevit()
+    {
+        var a1 = new SheetExtent("A101", "a.dwg", 0, 0, 841, 594, PaperWidthMm: 841, PaperHeightMm: 594);
+        var a3Portrait = new SheetExtent("A102", "b.dwg", 0, 0, 297, 420, PaperWidthMm: 297, PaperHeightMm: 420);
+        // The options ask for A4 portrait, but a sheet with a known paper never uses the fallback.
+        var args = MergePlanner.Plan([a1, a3Portrait], new MergeOptions(OutputMode.MultipleLayouts, "A4", false), "o.dwg");
+        var commands = Commands(args);
+
+        var pages = commands.Where(c => c.StartsWith("pagesetup ")).ToList();
+        Assert.Contains("\"width\":841", pages[0]);
+        Assert.Contains("\"height\":594", pages[0]);
+        Assert.Contains("\"landscape\":true", pages[0]);
+        Assert.Contains("\"width\":297", pages[1]);
+        Assert.Contains("\"height\":420", pages[1]);
+        Assert.Contains("\"landscape\":false", pages[1]);
+        Assert.DoesNotContain(pages, page => page.Contains("\"paper\""));
+    }
+
+    [Fact]
+    public void AViewportFillsThePaperEdgeToEdgeAndFramesTheSheetExactly()
+    {
+        var sheet = new SheetExtent("A101", "a.dwg", 10, 20, 851, 614, PaperWidthMm: 841, PaperHeightMm: 594);
+        var args = MergePlanner.Plan([sheet], new MergeOptions(OutputMode.MultipleLayouts), "o.dwg");
+        var commands = Commands(args);
+
+        var view = commands.Single(c => c.StartsWith("mview "));
+        Assert.Contains("\"p1\":[0,0]", view);
+        Assert.Contains("\"p2\":[841,594]", view);
+
+        // The sheet lands at 0,0 - 841,594 and the window is that rectangle, with no margin.
+        var zoom = commands.Single(c => c.StartsWith("zoom "));
+        Assert.Contains("\"p1\":[0,0]", zoom);
+        Assert.Contains("\"p2\":[841,594]", zoom);
+    }
+
+    [Theory]
+    [InlineData(840, 594, 841, 594)]      // A1 as Revit reports it
+    [InlineData(1188, 840, 1189, 841)]    // A0
+    [InlineData(420, 297, 420, 297)]      // A3 exact
+    [InlineData(297, 420, 297, 420)]      // A3 portrait stays portrait
+    [InlineData(594, 840, 594, 841)]      // A1 portrait, a millimetre short
+    [InlineData(500, 300, 500, 300)]      // not a standard paper: kept as measured
+    [InlineData(843, 594, 841, 594)]      // 2 mm over: still within the tolerance
+    [InlineData(846, 594, 846, 594)]      // 5 mm over: too far, kept as measured
+    public void MeasuredPapersSnapToTheStandardOnesWithinTolerance(double w, double h, double expectedW, double expectedH)
+    {
+        var (width, height) = MergePlanner.SnapToStandardPaper(w, h);
+        Assert.Equal((expectedW, expectedH), (width, height));
+    }
+
+    [Fact]
+    public void ASheetWithoutKnownPaperFallsBackToTheOptionsPaper()
+    {
+        var sheet = new SheetExtent("A101", "a.dwg", 0, 0, 100, 50);
+        var args = MergePlanner.Plan([sheet], new MergeOptions(OutputMode.MultipleLayouts, "A3"), "o.dwg");
+
+        Assert.Contains(Commands(args), c => c.StartsWith("pagesetup ") && c.Contains("\"paper\":\"A3\""));
+    }
+
+    [Fact]
+    public void SingleLayoutFollowsTheLargestSheetPaper()
+    {
+        var small = new SheetExtent("A", "a.dwg", 0, 0, 420, 297, PaperWidthMm: 420, PaperHeightMm: 297);
+        var large = new SheetExtent("B", "b.dwg", 0, 0, 1189, 841, PaperWidthMm: 1189, PaperHeightMm: 841);
+        var args = MergePlanner.Plan([small, large], new MergeOptions(OutputMode.SingleLayout), "o.dwg");
+
+        // The long side is the A0 one, whatever the fallback paper says.
+        Assert.Contains(Commands(args), c => c.StartsWith("pagesetup ") && c.Contains("\"width\":1189"));
+    }
+
     [Theory]
     [InlineData("Model", "Model_2")]
     [InlineData("model", "model_2")]

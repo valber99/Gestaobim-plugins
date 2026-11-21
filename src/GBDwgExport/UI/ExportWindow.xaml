@@ -67,10 +67,10 @@
             <StackPanel>
                 <GroupBox Header="Resultado">
                     <StackPanel>
-                        <RadioButton x:Name="SeparateRadio" Content="Um arquivo por folha" IsChecked="True" Checked="OnModeChanged"/>
-                        <RadioButton x:Name="LayoutsRadio" Content="Um desenho, um layout por folha" Checked="OnModeChanged"/>
+                        <RadioButton x:Name="LayoutsRadio" Content="Um desenho, um layout por folha" IsChecked="True" Checked="OnModeChanged"/>
                         <RadioButton x:Name="ModelRadio" Content="Um desenho, folhas no model space" Checked="OnModeChanged"/>
                         <RadioButton x:Name="SingleRadio" Content="Um desenho, um só layout com tudo" Checked="OnModeChanged"/>
+                        <RadioButton x:Name="SeparateRadio" Content="Um arquivo por folha (sem juntar)" Checked="OnModeChanged"/>
                         <TextBlock x:Name="ModeHint" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="#FF555B66"/>
                     </StackPanel>
                 </GroupBox>
@@ -100,23 +100,6 @@
                         <ComboBox x:Name="SetupBox" Grid.Row="2" Grid.Column="1"
                                   ToolTip="Configuração de exportação DWG do projeto (camadas, unidades, texto)"/>
                     </Grid>
-                </GroupBox>
-
-                <GroupBox x:Name="PaperGroup" Header="Papel dos layouts">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <ComboBox x:Name="PaperBox" Width="90" Margin="0,0,12,0">
-                                <ComboBoxItem Content="A0"/>
-                                <ComboBoxItem Content="A1" IsSelected="True"/>
-                                <ComboBoxItem Content="A2"/>
-                                <ComboBoxItem Content="A3"/>
-                                <ComboBoxItem Content="A4"/>
-                            </ComboBox>
-                            <CheckBox x:Name="LandscapeBox" Content="Paisagem" IsChecked="True" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <CheckBox x:Name="KeepBox" Content="Guardar também os arquivos individuais" IsChecked="True" Margin="0,8,0,0"
-                                  ToolTip="Os arquivos individuais vêm direto do Revit e não passam pela mesclagem."/>
-                    </StackPanel>
                 </GroupBox>
 
                 <GroupBox Header="Pasta de destino">

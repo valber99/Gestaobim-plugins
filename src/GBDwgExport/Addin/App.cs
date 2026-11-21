@@ -47,9 +47,7 @@ public sealed class App : IExternalApplication
             new(name, text, assembly, command) { ToolTip = tooltip, LargeImage = Icon(icon), Image = Icon(icon) };
 
         panel.AddItem(Button("GBDwgSheets", "Exportar\nfolhas", typeof(ExportSheetsCommand).FullName!, "exportar-folhas",
-            "Escolha folhas e exporte cada uma para um arquivo DWG ou DXF, com a configuração de exportação do Revit."));
-        panel.AddItem(Button("GBDwgLayouts", "Múltiplos\nlayouts", typeof(MultipleLayoutsCommand).FullName!, "layouts-multiplos",
-            "Junta as folhas escolhidas num só DWG, com um layout para cada folha. Não precisa do AutoCAD."));
+            "Exporta as folhas escolhidas para um só DWG, com um layout por folha, no mesmo papel que a folha usa no Revit. Não precisa do AutoCAD."));
         panel.AddItem(Button("GBDwgModel", "Model\nspace", typeof(ModelSpaceCommand).FullName!, "model-space",
             "Junta as folhas escolhidas lado a lado no model space de um só desenho. Não precisa do AutoCAD."));
         panel.AddItem(Button("GBDwgSingle", "Layout\núnico", typeof(SingleLayoutCommand).FullName!, "layout-unico",

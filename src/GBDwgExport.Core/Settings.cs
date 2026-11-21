@@ -40,12 +40,9 @@ public sealed class ExportSettings
     public string Folder { get; set; } = "";
     public bool Dxf { get; set; }
     public NamePattern Pattern { get; set; } = NamePattern.NumberAndName;
-    public OutputMode Mode { get; set; } = OutputMode.SeparateFiles;
-    public string Paper { get; set; } = "A1";
-    public bool Landscape { get; set; } = true;
+    public OutputMode Mode { get; set; } = OutputMode.MultipleLayouts;
     /// <summary>Name of a predefined DWG export setup of the project, or empty for the plugin defaults.</summary>
     public string RevitSetup { get; set; } = "";
-    public bool KeepIndividualFiles { get; set; } = true;
     public bool OpenFolder { get; set; } = true;
 
     private static readonly JsonSerializerOptions Options = new()

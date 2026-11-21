@@ -13,9 +13,6 @@ public sealed record ExportRequest(
     NamePattern Pattern,
     string Folder,
     string RevitSetup,
-    string Paper,
-    bool Landscape,
-    bool KeepIndividualFiles,
     string ProjectName)
 {
     public string Extension => Dxf ? ".dxf" : ".dwg";
@@ -56,17 +53,16 @@ public static class ExportService
         var individual = Path.Combine(folder, projectName + " - individuais");
 
         var merging = request.Mode != OutputMode.SeparateFiles;
-        var targetFolder = merging ? (request.KeepIndividualFiles ? individual : folder) : folder;
         var names = files.Select(file => file.FileName).ToList();
-        var tooLong = FileNamer.TooLong(targetFolder, names, request.Extension).ToList();
-        if (merging) tooLong.AddRange(FileNamer.TooLong(folder, [projectName], request.Extension));
+        // Merging writes one file; the individual files only live in a work folder, so only the merged path matters.
+        var tooLong = merging
+            ? FileNamer.TooLong(folder, [projectName], request.Extension).ToList()
+            : FileNamer.TooLong(folder, names, request.Extension).ToList();
 
         var existing = new List<string>();
         if (merging)
         {
             if (File.Exists(merged)) existing.Add(merged);
-            if (request.KeepIndividualFiles)
-                existing.AddRange(names.Select(name => Path.Combine(individual, name + request.Extension)).Where(File.Exists));
         }
         else
         {
@@ -91,7 +87,7 @@ public static class ExportService
 
         try
         {
-            var exported = new List<(string Name, string File)>();
+            var exported = new List<CadcraftBridge.MergeInput>();
             var index = 0;
             foreach (var (item, fileName) in plan.Files)
             {
@@ -103,7 +99,7 @@ public static class ExportService
                     ExportOne(doc, request, item, workFolder, fileName);
                     var file = Path.Combine(workFolder, fileName + request.Extension);
                     if (!File.Exists(file)) throw new ExportException("o Revit nao gerou o arquivo");
-                    exported.Add((label, file));
+                    exported.Add(new CadcraftBridge.MergeInput(label, file, item.PaperWidthMm, item.PaperHeightMm));
                     if (!merging) report.Written.Add(file);
                 }
                 catch (Exception error)
@@ -118,7 +114,7 @@ public static class ExportService
                 try
                 {
                     var merge = CadcraftBridge.Merge(exported,
-                        new MergeOptions(request.Mode, request.Paper, request.Landscape, FileNamer.Sanitize(request.ProjectName)),
+                        new MergeOptions(request.Mode, LayoutName: FileNamer.Sanitize(request.ProjectName)),
                         plan.MergedFile);
                     report.MergedFile = merge.File;
                     report.MergedSummary = merge.Summary;
@@ -130,17 +126,15 @@ public static class ExportService
                     report.Failures.Add(error.Message);
                 }
 
-                // When the merge failed the individual files are all the user has, so they are kept regardless of the option.
-                var mergeFailed = report.MergedFile is null;
-                if (request.KeepIndividualFiles || mergeFailed)
+                // When the merge failed the individual files are all the user has, so they are kept instead of discarded.
+                if (report.MergedFile is null)
                 {
-                    if (mergeFailed && !request.KeepIndividualFiles)
-                        report.Failures.Add($"Os arquivos individuais foram guardados em: {plan.IndividualFolder}");
+                    report.Failures.Add($"Os arquivos individuais exportados pelo Revit foram guardados em: {plan.IndividualFolder}");
                     Directory.CreateDirectory(plan.IndividualFolder);
-                    foreach (var (_, file) in exported)
+                    foreach (var input in exported)
                     {
-                        var target = Path.Combine(plan.IndividualFolder, Path.GetFileName(file));
-                        File.Copy(file, target, overwrite: true);
+                        var target = Path.Combine(plan.IndividualFolder, Path.GetFileName(input.File));
+                        File.Copy(input.File, target, overwrite: true);
                         report.Written.Add(target);
                     }
                 }
