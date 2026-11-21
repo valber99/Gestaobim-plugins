@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import os
 import re
@@ -26,21 +27,6 @@ APPDATA_DIR = os.path.join(
 DB_PATH = os.path.join(APPDATA_DIR, "favorites.json")
 UTF8 = Encoding.UTF8
 
-try:
-    unicode
-except NameError:
-    unicode = str
-
-try:
-    basestring
-except NameError:
-    basestring = (str, bytes)
-
-try:
-    unichr
-except NameError:
-    unichr = chr
-
 
 class FavoriteItem(object):
     def __init__(self, data):
@@ -66,15 +52,11 @@ def _to_unicode(value):
     if value is None:
         return ""
     try:
-        return unicode(value)
+        return str(value)
     except Exception:
         pass
     try:
         return value.ToString()
-    except Exception:
-        pass
-    try:
-        return "".join([unichr(ord(ch)) for ch in value])
     except Exception:
         return ""
 
@@ -301,7 +283,7 @@ def add_or_update_favorite(doc, material):
 
 
 def remove_favorite(material_or_id):
-    if isinstance(material_or_id, basestring):
+    if isinstance(material_or_id, str):
         key = _normalize_name(material_or_id)
     else:
         key = _normalize_name(getattr(material_or_id, "Name", ""))

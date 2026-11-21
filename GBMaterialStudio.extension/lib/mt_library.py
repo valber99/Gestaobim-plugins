@@ -13,6 +13,7 @@ from pyrevit import DB, HOST_APP
 from System.Collections.Generic import List
 
 import mt_settings
+import mt_wpf
 from mt_services import collect_asset_textures
 from mt_uihelpers import resolve_texture_path
 
@@ -26,6 +27,8 @@ class LibraryError(Exception):
 
 
 class _RejectDuplicateTypes(DB.IDuplicateTypeNamesHandler):
+    __namespace__ = mt_wpf.NAMESPACE
+
     def OnDuplicateTypeNamesFound(self, args):
         return DB.DuplicateTypeAction.Abort
 

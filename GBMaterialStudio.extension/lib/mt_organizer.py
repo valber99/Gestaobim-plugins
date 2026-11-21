@@ -4,7 +4,8 @@ import os
 
 import clr
 clr.AddReference('PresentationCore')
-from pyrevit import forms
+import mt_dialogs
+import mt_wpf
 from System.Windows.Input import Cursors
 
 import mt_hygiene
@@ -21,7 +22,7 @@ _STATE_TEXT = {
 
 
 def show_organizer(doc):
-    window = forms.WPFWindow(os.path.join(os.path.dirname(__file__), 'OrganizeWindow.xaml'))
+    window = mt_wpf.Window(os.path.join(os.path.dirname(__file__), 'OrganizeWindow.xaml'))
     state = {'rows': [], 'visible': []}
 
     def say(text):
@@ -48,7 +49,7 @@ def show_organizer(doc):
                 continue
             visible.append(row)
         state['visible'] = visible
-        window.Rows.ItemsSource = visible
+        window.Rows.ItemsSource = mt_wpf.net_list(visible)
 
     def load(sender=None, args=None):
         window.Cursor = Cursors.Wait
@@ -56,7 +57,7 @@ def show_organizer(doc):
             state['rows'] = mt_hygiene.analyze(doc)
         except Exception as error:
             state['rows'] = []
-            forms.alert(u'Nao foi possivel analisar os materiais.\n\n{0}'.format(error), title=TITLE)
+            mt_dialogs.alert(u'Nao foi possivel analisar os materiais.\n\n{0}'.format(error), title=TITLE)
         finally:
             window.Cursor = None
         summary()
@@ -86,12 +87,12 @@ def show_organizer(doc):
         if skipped:
             question += u'\n{0} selecionado(s) em uso serao mantidos.'.format(skipped)
         question += u'\n\nVoce pode desfazer com Ctrl+Z.'
-        if not forms.alert(question, title=TITLE, yes=True, no=True):
+        if not mt_dialogs.alert(question, title=TITLE, yes=True, no=True):
             return
         try:
             deleted, failures, assets = mt_hygiene.delete_unused(doc, removable)
         except Exception as error:
-            forms.alert(u'Nada foi excluido.\n\n{0}'.format(error), title=TITLE)
+            mt_dialogs.alert(u'Nada foi excluido.\n\n{0}'.format(error), title=TITLE)
             return
         load()
         message = u'{0} material(is) e {1} aparencia(s) excluidos.'.format(len(deleted), assets)
@@ -127,7 +128,7 @@ def show_organizer(doc):
         try:
             targets, steps = plan()
         except ValueError as error:
-            forms.alert(u'{0}'.format(error), title=TITLE)
+            mt_dialogs.alert(u'{0}'.format(error), title=TITLE)
             return
         ok = len([s for s in steps if s.status == core.STATUS_OK])
         conflicts = len([s for s in steps if s.status == core.STATUS_CONFLICT])
@@ -138,7 +139,7 @@ def show_organizer(doc):
         try:
             targets, steps = plan()
         except ValueError as error:
-            forms.alert(u'{0}'.format(error), title=TITLE)
+            mt_dialogs.alert(u'{0}'.format(error), title=TITLE)
             return
         ready = [s for s in steps if s.status == core.STATUS_OK]
         if not ready:
@@ -149,12 +150,12 @@ def show_organizer(doc):
         if conflicts:
             question += u'\n{0} em conflito serao ignorados.'.format(conflicts)
         question += u'\n\nVoce pode desfazer com Ctrl+Z.'
-        if not forms.alert(question, title=TITLE, yes=True, no=True):
+        if not mt_dialogs.alert(question, title=TITLE, yes=True, no=True):
             return
         try:
             renamed = mt_hygiene.rename(doc, steps, state['rows'])
         except Exception as error:
-            forms.alert(u'Nada foi renomeado.\n\n{0}'.format(error), title=TITLE)
+            mt_dialogs.alert(u'Nada foi renomeado.\n\n{0}'.format(error), title=TITLE)
             return
         load()
         say(u'{0} material(is) renomeado(s).'.format(renamed))

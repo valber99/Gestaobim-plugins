@@ -1,18 +1,34 @@
+# -*- coding: utf-8 -*-
 import os
+
+import clr
+clr.AddReference('PresentationFramework')
+clr.AddReference('PresentationCore')
+clr.AddReference('WindowsBase')
 import System
+import System.Windows
+import System.Windows.Media
+import System.Windows.Media.Imaging
 
 from pyrevit import DB
 
+import mt_wpf
 
 _PATTERN_PREVIEW_CACHE = {}
 
 
-class PatternItem(object):
+class PatternItem(System.Object):
+    """A fill pattern in a combo box. A .NET type, so WPF can bind its brush."""
+    __namespace__ = mt_wpf.NAMESPACE
+
     def __init__(self, name, elem_id, preview_brush=None, drafting=True):
-        self.Name = name
+        self._name = name
         self.Id = elem_id
-        self.PreviewBrush = preview_brush
+        self._preview_brush = preview_brush
         self.Drafting = drafting
+
+    Name = mt_wpf.clr_property(System.String, '_name', '')
+    PreviewBrush = mt_wpf.clr_property(System.Windows.Media.Brush, '_preview_brush')
 
 
 def element_id_value(element_id):
@@ -24,20 +40,12 @@ def element_id_value(element_id):
 
 
 def element_name(element):
-    """Name of any element. ElementType subclasses hide Name from IronPython, so read it from Element."""
-    try:
-        return DB.Element.Name.GetValue(element)
-    except Exception:
-        return element.Name
+    return element.Name
 
 
 def attach_to_revit(window):
     """Parent the window to Revit's main window so it never hides behind it."""
-    try:
-        helper = System.Windows.Interop.WindowInteropHelper(window)
-        helper.Owner = System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle
-    except Exception:
-        pass
+    mt_wpf.attach_to_revit(window)
 
 
 class PropItem(object):
@@ -300,7 +308,7 @@ def make_pattern_preview(fill_pattern_element):
                     values.append(max(1.0, min(14.0, abs(seg_val) * 8.0)))
             if not values:
                 return None
-            return System.Windows.Media.DashStyle(System.Array[float](values), 0)
+            return System.Windows.Media.DashStyle(System.Array[System.Double](values), 0)
 
         def _dot_pen(color):
             pen = System.Windows.Media.Pen(to_brush(color), 1.2)

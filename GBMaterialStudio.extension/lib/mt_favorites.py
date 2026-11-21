@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import uuid
 
@@ -6,11 +7,6 @@ import mt_favorites_legacy as legacy
 import mt_favorite_store as store
 import mt_hygiene
 import mt_library
-
-try:
-    string_types = (basestring,)
-except NameError:
-    string_types = (str,)
 
 
 class FavoriteItem(legacy.FavoriteItem):
@@ -155,7 +151,7 @@ def remove_favorite(material_or_id):
     removed_uids = []
 
     def remove(db):
-        if isinstance(material_or_id, string_types):
+        if isinstance(material_or_id, str):
             matches = [x for x in db['favorites'] if x.get('id') == material_or_id]
         else:
             doc = material_or_id.Document

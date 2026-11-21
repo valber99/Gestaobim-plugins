@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
 import os
+
 import clr
 clr.AddReference('System.Windows.Forms')
+import System
 from System.Windows.Forms import Timer
 
 _HERE = os.path.dirname(__file__)
@@ -10,12 +13,9 @@ _NATIVE = None
 def _native():
     global _NATIVE
     if _NATIVE is None:
-        try:
-            import GestaoBimCursorHook
-        except ImportError:
-            clr.AddReferenceToFileAndPath(os.path.join(_HERE, 'GestaoBimCursorHook.dll'))
-            import GestaoBimCursorHook
-        _NATIVE = GestaoBimCursorHook
+        System.Reflection.Assembly.LoadFrom(os.path.join(_HERE, 'GBCursorHook.dll'))
+        from GestaoBim.Native import CursorHook
+        _NATIVE = CursorHook
     return _NATIVE
 
 
@@ -51,7 +51,6 @@ class EyedropperCursor(object):
     def __exit__(self, exc_type, exc_value, traceback):
         if self.timer is not None:
             self.timer.Stop()
-            self.timer.Tick -= self._tick
             self.timer.Dispose()
             self.timer = None
         if self.native is not None:

@@ -1,5 +1,3 @@
 title: "Editar\nmaterial"
 tooltip: "Selecione uma face para editar cor, padrões, aparência e texturas do material. Alterações são aplicadas pelos botões do editor e podem ser desfeitas no Revit."
 author: Valber
-engine:
-  clean: true

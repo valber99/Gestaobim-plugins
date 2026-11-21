@@ -1,6 +1,6 @@
 param(
-    [string]$Source = (Join-Path $PSScriptRoot 'GestaoBimCursorHook.cs'),
-    [string]$Output = (Join-Path $PSScriptRoot '..\lib\GestaoBimCursorHook.dll')
+    [string]$Source = (Join-Path $PSScriptRoot 'GBCursorHook.cs'),
+    [string]$Output = (Join-Path $PSScriptRoot '..\lib\GBCursorHook.dll')
 )
 $ErrorActionPreference = 'Stop'
 

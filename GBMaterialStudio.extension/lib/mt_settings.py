@@ -4,8 +4,6 @@
 An unreadable settings file is never overwritten: defaults are returned and the
 file is left for the user to inspect.
 """
-from __future__ import unicode_literals
-
 import io
 import json
 import os

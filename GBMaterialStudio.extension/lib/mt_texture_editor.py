@@ -1,7 +1,8 @@
 import mt_notifications
 import os
 
-from pyrevit import forms
+import mt_dialogs
+import mt_wpf
 
 from mt_services import apply_texture_slot_data, pop_errors, read_texture_slot_data
 from mt_uihelpers import (
@@ -22,7 +23,7 @@ def _to_float(text_value, default):
 
 def show_texture_editor(doc, material, slot_name, xaml_path):
     data = read_texture_slot_data(doc, material, slot_name)
-    window = forms.WPFWindow(xaml_path)
+    window = mt_wpf.Window(xaml_path)
     state = dict(data)
     changed = {"value": False}
 
@@ -92,7 +93,7 @@ def show_texture_editor(doc, material, slot_name, xaml_path):
         state["repeat_v"] = bool(window.ChkRepeatV.IsChecked)
 
     def on_change_source(sender, args):
-        path_value = forms.pick_file(
+        path_value = mt_dialogs.pick_file(
             file_ext="jpg;png;bmp;tif;tga;exr;hdr",
             title="Selecionar textura",
         )
@@ -145,7 +146,7 @@ def show_texture_editor(doc, material, slot_name, xaml_path):
             window.Close()
         else:
             reasons = pop_errors()
-            forms.alert(
+            mt_dialogs.alert(
                 "Nao foi possivel atualizar este slot de textura.\n\n{0}".format(
                     "\n".join(reasons) if reasons else "Motivo nao informado pelo Revit."
                 ),

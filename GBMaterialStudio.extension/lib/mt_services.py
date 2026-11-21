@@ -1,9 +1,14 @@
+from System.Collections.Generic import List
+
 import mt_cursor
 import mt_notifications
 import System
 
 from Autodesk.Revit.Exceptions import OperationCanceledException
-from pyrevit import DB, UI, forms
+from pyrevit import DB, UI
+
+import mt_dialogs
+import mt_wpf
 
 from mt_uihelpers import (
     APPEARANCE_SKIP,
@@ -43,6 +48,8 @@ def _unique_name(existing_names, base):
 
 
 class MaterialFaceFilter(UI.Selection.ISelectionFilter):
+    __namespace__ = mt_wpf.NAMESPACE
+
     def __init__(self, doc):
         self.doc = doc
 
@@ -62,6 +69,8 @@ class MaterialFaceFilter(UI.Selection.ISelectionFilter):
 
 
 class PaintFaceFilter(UI.Selection.ISelectionFilter):
+    __namespace__ = mt_wpf.NAMESPACE
+
     def __init__(self, doc):
         self.doc = doc
 
@@ -637,7 +646,7 @@ def apply_appearance_changes(
             try:
                 color_prop = editable.FindByName(color_prop_name)
                 if color_prop is not None:
-                    values = System.Collections.Generic.List[float](
+                    values = List[System.Double](
                         [diffuse_r, diffuse_g, diffuse_b, 1.0]
                     )
                     color_prop.SetValueAsDoubles(values)
@@ -863,7 +872,7 @@ def paint_material_on_faces(doc, uidoc, material, paint_label=None):
         except OperationCanceledException:
             break
         except Exception as error:
-            forms.alert("Nao foi possivel selecionar a face.\n\n{0}".format(error),
+            mt_dialogs.alert("Nao foi possivel selecionar a face.\n\n{0}".format(error),
                         title="Paint")
             break
         t = DB.Transaction(doc, "Pintar Material")

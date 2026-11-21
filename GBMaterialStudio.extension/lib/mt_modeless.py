@@ -8,13 +8,17 @@ to an ExternalEvent and run the next time Revit is idle.
 import traceback
 
 from Autodesk.Revit.UI import ExternalEvent, IExternalEventHandler
-from pyrevit import forms
+
+import mt_dialogs
+import mt_wpf
 
 _HELD = {}
 _DISPATCHER = None
 
 
 class _Dispatcher(IExternalEventHandler):
+    __namespace__ = mt_wpf.NAMESPACE
+
     def __init__(self):
         self.queue = []
         self.event = ExternalEvent.Create(self)
@@ -25,8 +29,7 @@ class _Dispatcher(IExternalEventHandler):
             try:
                 call()
             except Exception as error:
-                forms.alert('{0}\n\n{1}'.format(error, traceback.format_exc()),
-                            title=u'Gestão BIM')
+                mt_dialogs.alert(u'{0}\n\n{1}'.format(error, traceback.format_exc()))
 
     def GetName(self):
         return 'GBMaterialStudio.Dispatcher'

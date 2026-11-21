@@ -1,5 +1,12 @@
 import os
-from pyrevit import forms, UI
+import System
+import System.IO
+import System.Windows.Media
+import System.Windows.Media.Imaging
+from pyrevit import UI
+
+import mt_dialogs
+import mt_wpf
 import mt_favorites
 import mt_editor
 import mt_services
@@ -7,14 +14,21 @@ import System
 from mt_uihelpers import attach_to_revit, resolve_texture_path, to_brush
 
 
-class PreviewItem(object):
+class PreviewItem(System.Object):
+    """A favorite in the list. A .NET type, so WPF can bind its brush."""
+    __namespace__ = mt_wpf.NAMESPACE
+
     def __init__(self, item):
         self.data = item.data
-        self.Display = item.Display
-        self.Name = item.Name
+        self._display = item.Display
+        self._name = item.Name
         self.Source = item.Source
         self.PreviewKind = 'Cor do material'
-        self.PreviewBrush = self._preview()
+        self._preview_brush = self._preview()
+
+    Display = mt_wpf.clr_property(System.String, '_display', '')
+    Name = mt_wpf.clr_property(System.String, '_name', '')
+    PreviewBrush = mt_wpf.clr_property(System.Windows.Media.Brush, '_preview_brush')
 
     def _preview(self):
         path = (self.data.get('appearance') or {}).get('texture_path', '')
@@ -87,7 +101,7 @@ def update_details(window, item):
 
 def show_favorites(doc, uidoc):
     root = os.path.dirname(__file__)
-    window = forms.WPFWindow(os.path.join(root, 'FavoritesWindow.xaml'))
+    window = mt_wpf.Window(os.path.join(root, 'FavoritesWindow.xaml'))
     state = {'items': [], 'material': None, 'paint': False, 'note': ''}
     try:
         copied, errors = mt_favorites.sync_to_library()
@@ -100,7 +114,7 @@ def show_favorites(doc, uidoc):
 
     def search(sender=None, args=None):
         visible = filter_items(state['items'], window.Search.Text)
-        window.Favorites.ItemsSource = visible
+        window.Favorites.ItemsSource = mt_wpf.net_list(visible)
         if not state['items']:
             window.Status.Text = 'Sua biblioteca esta vazia. Abra um material e clique em Favoritar para salva-lo aqui.'
         elif not visible:
@@ -115,7 +129,7 @@ def show_favorites(doc, uidoc):
             search()
         except Exception as error:
             state['items'] = []
-            window.Favorites.ItemsSource = []
+            window.Favorites.ItemsSource = mt_wpf.net_list([])
             update_details(window, None)
             window.Status.Text = 'Nao foi possivel ler a biblioteca. Nenhum dado foi alterado: {0}'.format(error)
 
@@ -133,7 +147,7 @@ def show_favorites(doc, uidoc):
             state['paint'] = paint
             window.Close()
         except Exception as error:
-            forms.alert(str(error), title=u'Gest\u00e3o BIM | Favoritos')
+            mt_dialogs.alert(str(error), title=u'Gest\u00e3o BIM | Favoritos')
 
     def open_material(sender, args):
         load_material(False)

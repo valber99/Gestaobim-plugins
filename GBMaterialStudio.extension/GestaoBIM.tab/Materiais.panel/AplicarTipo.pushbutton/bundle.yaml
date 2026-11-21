@@ -2,5 +2,3 @@ title: "Aplicar em\ntipo"
 tooltip: "Troque o material de camadas de tipos de parede, piso, cobertura e forro. Use a seleção atual ou escolha os tipos numa lista; o destino pode ser um material do projeto ou um favorito."
 author: Gestão BIM
 context: doc-project
-engine:
-  clean: true

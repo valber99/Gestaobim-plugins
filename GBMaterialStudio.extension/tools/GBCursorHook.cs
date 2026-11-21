@@ -1,7 +1,9 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 
-public static class GestaoBimCursorHook
+namespace GestaoBim.Native
+{
+public static class CursorHook
 {
     private const int WH_CALLWNDPROCRET = 12;
     private const uint WM_SETCURSOR = 0x0020;
@@ -91,4 +93,5 @@ public static class GestaoBimCursorHook
         }
         return CallNextHookEx(hook, code, wParam, lParam);
     }
+}
 }

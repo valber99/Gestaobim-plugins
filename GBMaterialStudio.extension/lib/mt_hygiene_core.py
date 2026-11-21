@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Pure-Python rules for organizing materials. No Revit dependency.
-
-Runs on IronPython 2.7 inside Revit and on CPython 3 in the test suite.
-"""
-from __future__ import unicode_literals
-
+"""Pure-Python rules for organizing materials. No Revit dependency."""
 import re
 
 CASE_MODES = ('keep', 'title', 'upper', 'lower', 'sentence')

@@ -64,8 +64,8 @@ def layer_rows(doc, element_types):
         structure = element_type.GetCompoundStructure()
         for index in range(structure.LayerCount):
             material = doc.GetElement(structure.GetMaterialId(index))
-            function = _FUNCTION_NAMES.get(str(structure.GetLayerFunction(index)),
-                                           str(structure.GetLayerFunction(index)))
+            function = _FUNCTION_NAMES.get(structure.GetLayerFunction(index).ToString(),
+                                           structure.GetLayerFunction(index).ToString())
             rows.append(LayerRow(element_type, index, function,
                                  _millimeters(structure.GetLayerWidth(index)),
                                  material.Name if material else u'<sem material>'))

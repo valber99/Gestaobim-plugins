@@ -3,3 +3,9 @@ __pycache__/
 .pytest_cache/
 *.bak
 *.lock
+
+# DLL antiga (IronPython), ainda travada pelo Revit em algumas maquinas ate reiniciar
+GBMaterialStudio.extension/lib/GestaoBimCursorHook.dll
+
+# biblioteca local de familias do Revit (nao e codigo, e pesada)
+familias/

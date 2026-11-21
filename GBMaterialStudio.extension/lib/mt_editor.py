@@ -9,7 +9,12 @@ clr.AddReference("System.Windows.Forms")
 
 from System.Windows.Forms import DialogResult, SaveFileDialog
 
-from pyrevit import DB, UI, forms
+import System.Windows
+from System.Collections.Generic import List
+from pyrevit import DB, UI
+
+import mt_dialogs
+import mt_wpf
 
 from mt_services import (
     apply_appearance_changes,
@@ -60,7 +65,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
     api() so they run inside an ExternalEvent.
     """
     api = in_revit if modeless else (lambda function: function)
-    window = forms.WPFWindow(xaml_path)
+    window = mt_wpf.Window(xaml_path)
     texture_editor_xaml = os.path.join(
         os.path.dirname(xaml_path), "TextureEditorWindow.xaml"
     )
@@ -120,7 +125,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
 
     def set_combo_to_pattern(combo, pattern_item):
         combo.SelectedItem = (
-            pattern_item if pattern_item in combo.ItemsSource else none_item
+            pattern_item if pattern_item in list(combo.ItemsSource) else none_item
         )
 
     def find_pattern_item_by_name(pattern_name):
@@ -256,7 +261,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
     def refresh_favorites_ui():
         try:
             db_data = load_db()
-            window.LstFavorites.ItemsSource = list_favorites(db_data)
+            window.LstFavorites.ItemsSource = mt_wpf.net_list(list_favorites(db_data))
             count = len(db_data.get("favorites", []))
             current_is_favorite = is_favorite(material, db_data)
             window.FavoritesInfo.Text = (
@@ -349,7 +354,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
         textures = app_state.get("textures", {}) or {}
         source_path = resolve_texture_path(textures.get(slot_name, ""))
         if not source_path or not os.path.exists(source_path):
-            forms.alert("Nao ha textura salva neste slot.", title="Texturas")
+            mt_dialogs.alert("Nao ha textura salva neste slot.", title="Texturas")
             return
         dialog = SaveFileDialog()
         dialog.Title = "Salvar textura"
@@ -358,12 +363,12 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
             try:
                 shutil.copyfile(source_path, dialog.FileName)
             except (IOError, OSError) as error:
-                forms.alert("Nao foi possivel salvar a textura.\n\n{}".format(error), title="Texturas")
+                mt_dialogs.alert("Nao foi possivel salvar a textura.\n\n{}".format(error), title="Texturas")
                 return
             mt_notifications.toast("Textura salva em {}".format(dialog.FileName), title="Texturas")
 
     def change_texture_slot(slot_name, success_message):
-        img_path = forms.pick_file(
+        img_path = mt_dialogs.pick_file(
             file_ext="jpg;png;bmp;tif;tga;exr;hdr",
             title="Selecionar Textura",
         )
@@ -383,7 +388,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
             mt_notifications.toast(success_message, title="Sucesso")
         else:
             reasons = pop_errors()
-            forms.alert(
+            mt_dialogs.alert(
                 "Nao foi possivel trocar a textura deste slot.\n\n{}".format(
                     "\n".join(reasons) if reasons else "Verifique se o arquivo existe."
                 ),
@@ -446,10 +451,10 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
     all_patterns = get_fill_patterns(doc)
     pattern_list = [none_item] + all_patterns
     cut_pattern_list = [none_item] + [item for item in all_patterns if item.Drafting]
-    window.CmbSurfacePattern.ItemsSource = pattern_list
-    window.CmbSurfaceBgPattern.ItemsSource = pattern_list
-    window.CmbCutPattern.ItemsSource = cut_pattern_list
-    window.CmbCutBgPattern.ItemsSource = cut_pattern_list
+    window.CmbSurfacePattern.ItemsSource = mt_wpf.net_list(pattern_list)
+    window.CmbSurfaceBgPattern.ItemsSource = mt_wpf.net_list(pattern_list)
+    window.CmbCutPattern.ItemsSource = mt_wpf.net_list(cut_pattern_list)
+    window.CmbCutBgPattern.ItemsSource = mt_wpf.net_list(cut_pattern_list)
     for item in pattern_list:
         if item.Id == material.SurfaceForegroundPatternId:
             window.CmbSurfacePattern.SelectedItem = item
@@ -479,9 +484,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
 
     schema_name, appearance_props = read_appearance_asset(doc, material)
     window.SchemaName.Text = schema_name if schema_name else "N/A"
-    window.AppearanceProps.ItemsSource = appearance_props or [
-        PropItem("Info", "Sem propriedades extras relevantes para este schema.")
-    ]
+    window.AppearanceProps.ItemsSource = mt_wpf.net_list(appearance_props or [PropItem("Info", "Sem propriedades extras relevantes para este schema.")])
     update_render_color_display()
     window.SliderRoughness.Value = app_state["roughness"] * 100
     window.ValRoughness.Text = "{:.0f}%".format(app_state["roughness"] * 100)
@@ -531,7 +534,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
         window.TxtComments.Text = comments_param.AsString()
 
     def on_pick_hex(target, swatch_name, is_render=False):
-        result = forms.ask_for_color()
+        result = mt_dialogs.ask_for_color()
         if not (result and hasattr(result, "startswith") and result.startswith("#")):
             return
         r, g, b = parse_hex_color(result)
@@ -622,7 +625,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
             reasons = pop_errors()
         if not applied:
             group.RollBack()
-            forms.alert(
+            mt_dialogs.alert(
                 "Nenhuma alteracao foi aplicada.\n\n{}".format(
                     "\n".join(reasons) if reasons else "Motivo nao informado pelo Revit."
                 ),
@@ -630,10 +633,10 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
             )
             return
         group.Assimilate()
-        forms.alert("Material atualizado com sucesso!", title="Sucesso")
+        mt_dialogs.alert("Material atualizado com sucesso!", title="Sucesso")
 
     def on_new_material(sender, args):
-        new_name = forms.ask_for_string(
+        new_name = mt_dialogs.ask_for_string(
             default="{}_copy".format(material.Name),
             prompt="Nome do novo material",
             title="Novo Material",
@@ -644,7 +647,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
         new_material = duplicate_material(doc, material, new_name)
         if not new_material:
             reasons = pop_errors()
-            forms.alert(
+            mt_dialogs.alert(
                 "Nao foi possivel criar o novo material.\n\n{}".format("\n".join(reasons)),
                 title="Erro",
             )
@@ -656,7 +659,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
     def on_toggle_favorite(sender, args):
         try:
             if is_favorite(material):
-                if not forms.alert("Remover este favorito da biblioteca? Um backup sera preservado.", title="Favoritos", yes=True, no=True):
+                if not mt_dialogs.alert("Remover este favorito da biblioteca? Um backup sera preservado.", title="Favoritos", yes=True, no=True):
                     return
                 remove_favorite(material)
                 mt_notifications.toast("Material removido dos favoritos.", title="Favoritos")
@@ -665,7 +668,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
                 mt_notifications.toast("Material salvo nos favoritos.", title="Favoritos")
             refresh_favorites_ui()
         except Exception as ex:
-            forms.alert("Erro ao alterar favorito: {}".format(ex), title="Favoritos")
+            mt_dialogs.alert("Erro ao alterar favorito: {}".format(ex), title="Favoritos")
 
     def on_refresh_favorites(sender, args):
         refresh_favorites_ui()
@@ -673,14 +676,14 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
     def on_remove_favorite(sender, args):
         item = window.LstFavorites.SelectedItem
         if not item:
-            forms.alert("Selecione um favorito na lista.", title="Favoritos")
+            mt_dialogs.alert("Selecione um favorito na lista.", title="Favoritos")
             return
-        if not forms.alert("Remover este favorito da biblioteca? Um backup sera preservado.", title="Favoritos", yes=True, no=True):
+        if not mt_dialogs.alert("Remover este favorito da biblioteca? Um backup sera preservado.", title="Favoritos", yes=True, no=True):
             return
         try:
             remove_favorite(item.Id)
         except Exception as error:
-            forms.alert(str(error), title="Favoritos")
+            mt_dialogs.alert(str(error), title="Favoritos")
             return
         refresh_favorites_ui()
         mt_notifications.toast("Favorito removido.", title="Favoritos")
@@ -688,15 +691,15 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
     def on_import_favorite(sender, args):
         item = window.LstFavorites.SelectedItem
         if not item:
-            forms.alert("Selecione um favorito na lista.", title="Favoritos")
+            mt_dialogs.alert("Selecione um favorito na lista.", title="Favoritos")
             return
         try:
             target_material = get_or_create_favorite_material(doc, item.data)
         except Exception as error:
-            forms.alert(str(error), title="Favoritos - transferencia cancelada")
+            mt_dialogs.alert(str(error), title="Favoritos - transferencia cancelada")
             return
         if not target_material:
-            forms.alert(
+            mt_dialogs.alert(
                 "Este favorito salva apenas o nome do material. "
                 "Nenhum material com esse nome foi encontrado no projeto atual.",
                 title="Favoritos",
@@ -712,16 +715,16 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
     def on_paint_favorite(sender, args):
         item = window.LstFavorites.SelectedItem
         if not item:
-            forms.alert("Selecione um favorito na lista.", title="Favoritos")
+            mt_dialogs.alert("Selecione um favorito na lista.", title="Favoritos")
             return
 
         try:
             favorite_material = get_or_create_favorite_material(doc, item.data)
         except Exception as error:
-            forms.alert(str(error), title="Favoritos - transferencia cancelada")
+            mt_dialogs.alert(str(error), title="Favoritos - transferencia cancelada")
             return
         if not favorite_material:
-            forms.alert(
+            mt_dialogs.alert(
                 "Nao foi possivel carregar o favorito para pintura.",
                 title="Favoritos",
             )
@@ -745,7 +748,7 @@ def show_material_editor(doc, uidoc, material, xaml_path, modeless=False):
         window.Close()
 
     def on_editor(sender, args):
-        selection_ids = System.Collections.Generic.List[DB.ElementId]()
+        selection_ids = List[DB.ElementId]()
         selection_ids.Add(material.Id)
         uidoc.Selection.SetElementIds(selection_ids)
         editor_request["open_native"] = True

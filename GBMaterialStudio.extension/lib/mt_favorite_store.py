@@ -3,28 +3,32 @@
 
 Only a missing file invokes default_factory. Invalid or unreadable databases raise
 and are never silently replaced. Backups are retained beside the original file.
-The CPython lock is cooperative and deliberately never reclaims stale locks.
+Inside Revit the writers coordinate through a named .NET mutex, which Windows releases if
+a writer crashes. Without .NET (the test suite) a cooperative lock file is used; it
+deliberately never reclaims stale locks.
 """
-from __future__ import unicode_literals
-
 import errno
 import hashlib
 import json
 import os
-import sys
 import tempfile
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 LOCK_TIMEOUT_SECONDS = 10.0
 LOCK_POLL_SECONDS = 0.02
-_IS_IRONPYTHON = sys.platform == 'cli' or 'ironpython' in sys.version.lower()
-try:
-    _INTEGER_TYPES = (int, long)
-except NameError:
-    _INTEGER_TYPES = (int,)
+_INTEGER_TYPES = (int,)
+
+
+def _has_dotnet():
+    try:
+        import clr  # noqa: F401
+        from System.Threading import Mutex  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 class StoreError(ValueError):
@@ -173,7 +177,7 @@ def _flush(stream):
 
 
 def _backup(path, raw):
-    stamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S%fZ')
+    stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     backup = path + '.bak.' + stamp + '.' + uuid.uuid4().hex
     fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, 'wb') as stream:
@@ -183,15 +187,8 @@ def _backup(path, raw):
 
 
 def _atomic_replace(source, target, exists):
-    if _IS_IRONPYTHON:
-        from System.IO import File
-        if exists:
-            File.Replace(source, target, None)
-        else:
-            File.Move(source, target)
-    else:
-        # No delete-then-rename fallback: lack of atomic replace must fail closed.
-        os.replace(source, target)
+    # No delete-then-rename fallback: lack of atomic replace must fail closed.
+    os.replace(source, target)
 
 
 def mutate(path, default_factory, callback):
@@ -201,7 +198,7 @@ def mutate(path, default_factory, callback):
     The containing directory must already exist. All writers must use this API.
     """
     path = os.path.abspath(path)
-    lock_type = _MutexLock if _IS_IRONPYTHON else _FileLock
+    lock_type = _MutexLock if _has_dotnet() else _FileLock
     with lock_type(path):
         db, original = _read(path, default_factory)
         result = callback(db)

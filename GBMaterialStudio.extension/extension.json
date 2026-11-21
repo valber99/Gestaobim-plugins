@@ -2,7 +2,7 @@
   "name": "GBMaterialStudio",
   "description": "Estudio de materiais para o Revit: editor, favoritos com biblioteca portatil, organizacao e material por camada.",
   "author": "Gestao BIM",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "AGPL-3.0",
   "url": "https://github.com/valber99/Gestaobim-plugins"
 }
