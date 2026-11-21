@@ -37,7 +37,8 @@ removeria outros elementos. Tudo é uma entrada só de desfazer.
 ## Requisitos
 
 - Windows e Revit 2025 ou mais novo (o *Organizar materiais* usa uma API do Revit 2024+).
-- pyRevit 4.8 ou mais novo.
+- pyRevit 5 ou mais novo, com o motor CPython (Python 3.12) habilitado. A extensão não roda mais no
+  IronPython 2.7.
 
 ## Instalação
 
@@ -56,9 +57,15 @@ ou adicione a pasta do clone como caminho de extensões do pyRevit.
 
 ## Desenvolvimento
 
-O código roda dentro do Revit, em **IronPython 2.7** (limitação do pyRevit): sem f-strings, sem type
-hints, sem bibliotecas que dependam de CPython 3. Para HTTP use `urllib`/`urllib2`; para interface,
-WPF/XAML.
+O código roda dentro do Revit, no motor **CPython 3.12** do pyRevit (pythonnet). Dois cuidados que esse
+motor impõe, e que os módulos `mt_wpf` e `mt_dialogs` resolvem:
+
+- `pyrevit.forms` (janelas, alertas, listas) **não existe no CPython**. Use `mt_wpf.Window`
+  (carrega o XAML e expõe os controles como atributos) e `mt_dialogs` (`alert`, `ask_for_string`,
+  `pick_file`, `ask_for_color`, `select_from_list`).
+- Listas do WPF precisam de uma coleção .NET (`mt_wpf.net_list`), e classes Python que o WPF liga por
+  binding a pincéis precisam de propriedades .NET reais (`mt_wpf.clr_property`). Interfaces do Revit
+  (`ISelectionFilter`, `IExternalEventHandler`, ...) exigem `__namespace__ = mt_wpf.NAMESPACE`.
 
 ```powershell
 python -m pip install pytest
@@ -66,14 +73,15 @@ python -m pytest -q
 ```
 
 Os testes cobrem o que não depende do Revit: as regras de renomear e de duplicados, as configurações,
-o banco de favoritos (leitura, escrita atômica, backup, bloqueio) e um guarda que reprova sintaxe que o
-IronPython 2.7 não aceita. O que depende da API do Revit é verificado dentro do Revit.
+o banco de favoritos (leitura, escrita atômica, backup, bloqueio) e guardas das regras do CPython
+(sem `pyrevit.forms`, sem `imp`, todo botão com `#! python3`, XAML bem formado). O que depende da API do
+Revit é verificado dentro do Revit.
 
 Arquivos gerados por script (rode de novo se alterar a origem):
 
 Em `GBMaterialStudio.extension/`:
 
-- `tools/build_native.ps1` compila `lib/GestaoBimCursorHook.dll` a partir de `tools/GestaoBimCursorHook.cs`.
+- `tools/build_native.ps1` compila `lib/GBCursorHook.dll` a partir de `tools/GBCursorHook.cs`.
   Precisa do `csc.exe` do .NET Framework (já vem no Windows).
 - `tools/build_cursor.ps1` gera `lib/eyedropper.cur` (cursor do conta-gotas) a partir de `lib/gestaobim.png`.
 - `tools/build_icons.ps1` gera os ícones dos botões novos.

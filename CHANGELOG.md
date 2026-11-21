@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0
+
+### Alterado
+- **Python 3.** A extensão migrou do IronPython 2.7 (fim de vida) para o motor CPython 3.12 do pyRevit.
+  Todo botão começa com `#! python3`. Exige pyRevit 5 ou mais novo.
+- Como o `pyrevit.forms` não existe no CPython, as janelas e diálogos agora usam `mt_wpf` e `mt_dialogs`
+  (alerta, texto, arquivo, cor e lista com filtro).
+- A DLL do cursor virou `GBCursorHook.dll` (`GestaoBim.Native.CursorHook`).
+- `imp` foi trocado por `importlib` no carregador; o código de compatibilidade com Python 2 foi removido.
+
+### Testes
+- O guarda de sintaxe do IronPython 2.7 foi substituído por guardas do CPython: sem `pyrevit.forms`, sem
+  `imp`, todo botão com `#! python3`, XAML bem formado e todos os módulos listados no carregador.
+
 ## 0.1.0
 
 Primeira versão do repositório. A extensão passa a se chamar `GBMaterialStudio.extension` (antes
