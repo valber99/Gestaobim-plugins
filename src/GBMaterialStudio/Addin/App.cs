@@ -11,6 +11,8 @@ public sealed class App : IExternalApplication
     private const string TabName = "Gestão BIM";
     private const string PanelName = "Materiais";
 
+    internal const string AboutTooltip = "Mostra a versão instalada e verifica se há uma versão nova no GitHub.";
+
     public Result OnStartup(UIControlledApplication application)
     {
         try
@@ -31,7 +33,6 @@ public sealed class App : IExternalApplication
             TaskDialog.Show("Gestão BIM", $"Nao foi possivel criar a aba Gestão BIM.\n\n{error.Message}");
             return Result.Failed;
         }
-        UpdateNotifier.Start(application);
         return Result.Succeeded;
     }
 
@@ -72,9 +73,12 @@ public sealed class App : IExternalApplication
             "Veja onde cada material é usado, encontre duplicados, exclua os não usados (mesma segurança do Purge do Revit) e renomeie em lote."));
         panel.AddItem(Button("GBApplyToType", "Aplicar em\ntipo", typeof(ApplyToTypeCommand).FullName!, "aplicar-tipo",
             "Troque o material de camadas de tipos de parede, piso, cobertura e forro. Use a seleção atual ou escolha os tipos numa lista; o destino pode ser um material do projeto ou um favorito."));
+        panel.AddSeparator();
+        var about = (PushButton)panel.AddItem(Button(UpdateNotifier.ButtonName, "Sobre", typeof(AboutCommand).FullName!, "sobre", AboutTooltip));
+        UpdateNotifier.Start(application, about);
     }
 
-    private static BitmapImage Icon(string name)
+    internal static BitmapImage Icon(string name)
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"Icons.{name}.png")
                            ?? throw new InvalidOperationException($"Icone nao encontrado: {name}");

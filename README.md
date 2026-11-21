@@ -45,8 +45,8 @@ removeria outros elementos. Tudo é uma entrada só de desfazer.
 3. Abra o Revit. Na primeira vez ele pergunta se confia no add-in (não há assinatura digital ainda):
    escolha **"Sempre carregar"**.
 
-Quando sai uma versão nova, o Revit avisa na abertura (uma consulta por dia ao GitHub, em segundo plano;
-para desligar, defina a variável de ambiente `GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`).
+Quando sai uma versão nova, o botão **Sobre** ganha uma bolinha vermelha (uma consulta por dia ao GitHub, em
+segundo plano; clicar no botão consulta na hora e leva à página de download. Para desligar a consulta automática, defina a variável de ambiente `GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`).
 
 Para remover, `Desinstalar.bat`. Seus favoritos e a biblioteca não são apagados.
 

@@ -3,10 +3,11 @@
 ## 0.3.1
 
 ### Novo
-- **Aviso de atualização.** Ao abrir o Revit, o add-in consulta (em segundo plano, no máximo uma vez por dia)
-  a última release no GitHub. Se houver versão mais nova, mostra um aviso com "Abrir página de download",
-  "Lembrar depois" e "Ignorar esta versão". Sem internet, nada acontece.
-  Para desligar: variável de ambiente `GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`.
+- **Botão "Sobre" com aviso de atualização.** Mostra a versão instalada e consulta a última release no GitHub
+  na hora; se houver versão nova, oferece "Baixar a nova versão" (abre a página da release).
+- Ao abrir o Revit, o add-in faz essa consulta em segundo plano (no máximo uma vez por dia) e, se houver versão
+  nova, mostra uma **bolinha vermelha** no botão. Sem internet, nada acontece.
+  Para desligar a consulta automática: variável de ambiente `GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`.
 
 ## 0.3.0
 

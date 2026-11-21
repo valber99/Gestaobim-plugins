@@ -64,3 +64,10 @@ public sealed class ApplyToTypeCommand : IExternalCommand
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements) =>
         CommandRunner.Run(commandData, ref message, Flows.ApplyToType);
 }
+
+[Transaction(TransactionMode.Manual)]
+public sealed class AboutCommand : IExternalCommand
+{
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements) =>
+        CommandRunner.Run(commandData, ref message, _ => UpdateNotifier.ShowAbout());
+}
