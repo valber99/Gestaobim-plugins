@@ -55,12 +55,15 @@ internal static class Flows
         ExportReport report;
         var previous = Mouse.OverrideCursor;
         Mouse.OverrideCursor = Cursors.Wait;
+        var progress = new ProgressWindow();
+        progress.Show();
         try
         {
-            report = ExportService.Run(doc, request, plan);
+            report = ExportService.Run(doc, request, plan, progress.Update);
         }
         finally
         {
+            progress.Close();
             Mouse.OverrideCursor = previous;
         }
 

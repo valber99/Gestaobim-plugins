@@ -130,8 +130,12 @@ public static class ExportService
                     report.Failures.Add(error.Message);
                 }
 
-                if (request.KeepIndividualFiles)
+                // When the merge failed the individual files are all the user has, so they are kept regardless of the option.
+                var mergeFailed = report.MergedFile is null;
+                if (request.KeepIndividualFiles || mergeFailed)
                 {
+                    if (mergeFailed && !request.KeepIndividualFiles)
+                        report.Failures.Add($"Os arquivos individuais foram guardados em: {plan.IndividualFolder}");
                     Directory.CreateDirectory(plan.IndividualFolder);
                     foreach (var (_, file) in exported)
                     {
@@ -156,10 +160,23 @@ public static class ExportService
 
     private static void ExportOne(Document doc, ExportRequest request, ExportItem item, string folder, string fileName)
     {
+        var target = Path.Combine(folder, fileName + request.Extension);
+        var plotConfig = Path.Combine(folder, fileName + ".pcp");
+        var hadPlotConfig = File.Exists(plotConfig);
+
+        // The user already agreed to overwrite (the plan asked), so the old file goes first instead of trusting how Revit treats it.
+        if (File.Exists(target)) File.Delete(target);
+
         ICollection<ElementId> views = [item.Id];
         var ok = request.Dxf
             ? doc.Export(folder, fileName, views, DxfOptions(doc, request.RevitSetup))
             : doc.Export(folder, fileName, views, DwgOptions(doc, request.RevitSetup));
+
+        // Revit writes a plot-settings .pcp beside every export. It is clutter unless the user already had one.
+        if (!hadPlotConfig && File.Exists(plotConfig))
+        {
+            try { File.Delete(plotConfig); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
         if (!ok) throw new ExportException("o Revit recusou a exportacao");
     }
 

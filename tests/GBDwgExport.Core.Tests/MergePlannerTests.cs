@@ -102,6 +102,27 @@ public class MergePlannerTests
         Assert.Equal(255, MergePlanner.LayoutName(new string('x', 400)).Length);
     }
 
+    [Theory]
+    [InlineData("Model", "Model_2")]
+    [InlineData("model", "model_2")]
+    [InlineData("Layout1", "Layout1_2")]
+    [InlineData("LAYOUT2", "LAYOUT2_2")]
+    public void ReservedLayoutNamesGetASuffix(string sheetName, string expected)
+    {
+        var sheet = new SheetExtent(sheetName, "a.dwg", 0, 0, 10, 10);
+        var args = MergePlanner.Plan([sheet], new MergeOptions(OutputMode.MultipleLayouts), "o.dwg");
+
+        Assert.Contains(Commands(args), c => c.StartsWith("layout.new ") && c.Contains($"\"{expected}\""));
+    }
+
+    [Fact]
+    public void SingleLayoutNameAlsoAvoidsReservedNames()
+    {
+        var args = MergePlanner.Plan([A], new MergeOptions(OutputMode.SingleLayout, LayoutName: "Model"), "o.dwg");
+
+        Assert.Contains(Commands(args), c => c.StartsWith("layout.new ") && c.Contains("\"Model_2\""));
+    }
+
     [Fact]
     public void PortraitSwapsThePaperSides()
     {

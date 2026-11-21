@@ -80,10 +80,11 @@ public static class MergePlanner
         foreach (var placement in placements)
             Command(args, "import", new { path = Slash(placement.Sheet.File), at = new[] { placement.OffsetX, placement.OffsetY } });
 
+        // "Model" is reserved and a new drawing already has Layout1 and Layout2, so a sheet with one of those names gets a suffix.
+        var usedLayouts = new HashSet<string> { "model", "layout1", "layout2" };
         switch (options.Mode)
         {
             case OutputMode.MultipleLayouts:
-                var usedLayouts = new HashSet<string>();
                 foreach (var placement in placements)
                 {
                     var name = Unique(LayoutName(placement.Sheet.Name), usedLayouts);
@@ -102,7 +103,7 @@ public static class MergePlanner
                 // The paper keeps the long side of the chosen size and follows the content's proportion.
                 var width = aspect <= 1 ? longSide : longSide / aspect;
                 var height = aspect <= 1 ? longSide * aspect : longSide;
-                AddLayout(args, LayoutName(options.LayoutName), null, options.Landscape && width >= height,
+                AddLayout(args, Unique(LayoutName(options.LayoutName), usedLayouts), null, options.Landscape && width >= height,
                     Math.Max(width, 100), Math.Max(height, 100), Window(x0, y0, x1, y1));
                 break;
         }

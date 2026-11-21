@@ -52,6 +52,14 @@ Aba **Gestão BIM**, painel **Exportar DWG**:
   Trabalho, numa pasta com o nome do projeto; se ainda ficar longo, lista os arquivos e pede para encurtar.
 - Arquivo que já existe: pergunta "Deseja sobrescrever?".
 - Uma folha que falha não derruba as outras: o resumo no fim lista as falhas.
+- O Revit deixa um arquivo `.pcp` (configuração de plotagem) ao lado de cada exportação; o plugin o remove, a menos que
+  você já tivesse um com o mesmo nome. Um arquivo existente que você aceitou sobrescrever é apagado antes de exportar.
+- Se a mesclagem falhar, os arquivos individuais são guardados na pasta `<projeto> - individuais` mesmo que a opção
+  esteja desmarcada, para você nunca perder o que o Revit já exportou.
+- Uma janela de andamento mostra qual folha está sendo exportada. Como a API do Revit só roda na thread do próprio
+  Revit, a exportação não acontece em segundo plano: durante a mesclagem, que roda num programa à parte, a janela
+  não atualiza e o Revit pode parecer parado até ela terminar.
+- Nomes de layout reservados ("Model", "Layout1", "Layout2") ganham o sufixo `_2`.
 - O resumo também mostra **o que a mesclagem não conseguiu manter**, quando o motor avisa (ver abaixo).
 
 ### Sobre a mesclagem e o que ela pode perder
