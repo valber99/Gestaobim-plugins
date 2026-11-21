@@ -12,29 +12,35 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        project: [GBMaterialStudio.Core.Tests, GBDwgExport.Core.Tests]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - run: dotnet test tests/GBMaterialStudio.Core.Tests -c Release --nologo
+      - run: dotnet test tests/${{ matrix.project }} -c Release --nologo
 
   addin:
-    name: Add-in (Revit 2025, 2026, 2027)
+    name: Add-ins (Revit 2025, 2026, 2027)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Build and package
+      - name: GB Material Studio
         shell: pwsh
         run: ./build/package.ps1
+      - name: GB DWG Export
+        shell: pwsh
+        run: ./build/package-dwg.ps1
       - uses: actions/upload-artifact@v4
         with:
-          name: GBMaterialStudio
-          path: dist/*.zip
+          name: packages
+          path: |
+            dist/*.zip
+            dist/*.exe
 
   pyrevit-edition:
     name: pyRevit edition (Python)

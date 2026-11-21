@@ -2,8 +2,13 @@
 
 Plugins do ecossistema **Gestão BIM** para o Revit.
 
-Hoje o repositório tem o **GB Material Studio**, um estúdio de materiais dentro do Revit. Ele é um
-**add-in nativo (.NET)**: não precisa de pyRevit e não precisa de Python instalado.
+O repositório tem dois plugins, desenvolvidos separadamente e instalados do mesmo jeito. Os dois são
+**add-ins nativos (.NET)**: não precisam de pyRevit nem de Python, e dividem a aba **Gestão BIM**.
+
+| Plugin | Para que serve | Instalador |
+|---|---|---|
+| **GB Material Studio** | Estúdio de materiais: editor, favoritos, organização e material por camada | `GBMaterialStudio-Setup-<versão>.exe` |
+| **GB DWG Export** | Exporta folhas e vistas para DWG/DXF e junta folhas num só desenho, sem AutoCAD ([detalhes](docs/GB-DWG-EXPORT.md)) | `GBDwgExport-Setup-<versão>.exe` (tags `dwg-v*`) |
 
 ## O que o GB Material Studio faz
 
@@ -63,6 +68,7 @@ Um código-fonte, três compilações (uma por ano do Revit), com a API vinda do
 dotnet test tests/GBMaterialStudio.Core.Tests        # regras puras, configurações e banco de favoritos
 dotnet build src/GBMaterialStudio -c Release -p:RevitVersion=2027
 ./build/package.ps1                                  # gera o .zip e o instalador .exe em dist/ (2025, 2026, 2027)
+./build/package-dwg.ps1                              # o mesmo para o GB DWG Export (embute o cadcraft-cli)
 ```
 
 Estrutura:
@@ -78,6 +84,7 @@ Documentação:
 - [`docs/GUIA-DO-USUARIO.md`](docs/GUIA-DO-USUARIO.md): instalar, usar cada botão, onde ficam os dados, problemas comuns.
 - [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md): como o add-in é organizado e por que cada decisão foi tomada.
 - [`docs/RELEASE.md`](docs/RELEASE.md): como gerar e publicar uma versão.
+- [`docs/GB-DWG-EXPORT.md`](docs/GB-DWG-EXPORT.md): o plugin GB DWG Export (guia, arquitetura, como publicar).
 - [`CHANGELOG.md`](CHANGELOG.md): histórico de versões.
 
 ### Edição legada em pyRevit

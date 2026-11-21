@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>GB DWG Export</Name>
+    <Assembly>GBDwgExport\GBDwgExport.dll</Assembly>
+    <AddInId>B3E2A7D4-5C19-4F6A-8E0B-2D7C9A4F1E63</AddInId>
+    <FullClassName>Gestaobim.DwgExport.Addin.App</FullClassName>
+    <VendorId>GBIM</VendorId>
+    <VendorDescription>Gestão BIM - github.com/valber99/Gestaobim-plugins</VendorDescription>
+  </AddIn>
+</RevitAddIns>

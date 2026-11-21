@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- One source, one build per Revit year: dotnet build -c Release -p:RevitVersion=2027 -->
+    <RevitVersion Condition="'$(RevitVersion)' == ''">2027</RevitVersion>
+    <TargetFramework Condition="'$(RevitVersion)' == '2027'">net10.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(RevitVersion)' != '2027'">net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>GBDwgExport</AssemblyName>
+    <RootNamespace>Gestaobim.DwgExport</RootNamespace>
+    <Version>0.1.0</Version>
+    <Company>Gestão BIM</Company>
+    <Product>GB DWG Export</Product>
+    <Description>Exporta folhas e vistas do Revit para DWG/DXF e junta várias folhas num só desenho, sem precisar do AutoCAD.</Description>
+    <Copyright>AGPL-3.0</Copyright>
+    <DefineConstants>$(DefineConstants);REVIT$(RevitVersion)</DefineConstants>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\$(Configuration)\$(RevitVersion)\</OutputPath>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Revit provides these at run time, so they are compile-time only. -->
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitVersion).*" ExcludeAssets="runtime" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitVersion).*" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The pure core is compiled into this assembly: the add-in is a single DLL, with nothing to resolve in Revit. -->
+    <Compile Include="..\GBDwgExport.Core\**\*.cs" Exclude="..\GBDwgExport.Core\obj\**;..\GBDwgExport.Core\bin\**" LinkBase="Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Icons\*.png" LogicalName="Icons.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

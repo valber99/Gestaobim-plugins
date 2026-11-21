@@ -1,12 +1,13 @@
 <#
 .SYNOPSIS
-  Compila o add-in para o Revit 2025, 2026 e 2027 e gera o pacote de instalacao (.zip).
+  Compila o GB Material Studio para o Revit 2025, 2026 e 2027 e gera o pacote de instalacao (.zip e .exe).
 #>
 param(
     [string]$Configuration = 'Release',
     [int[]]$Years = @(2025, 2026, 2027)
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'common.ps1')
 
 $root = Split-Path $PSScriptRoot
 $project = Join-Path $root 'src\GBMaterialStudio\GBMaterialStudio.csproj'
@@ -61,79 +62,6 @@ CODIGO-FONTE E LICENCA
 [IO.File]::WriteAllText((Join-Path $stage 'LEIA-ME.txt'), $readme, (New-Object System.Text.UTF8Encoding($true)))
 
 $zip = Join-Path $root "dist\$name.zip"
-if (Test-Path $zip) { Remove-Item $zip -Force }
-Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
-$hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-[IO.File]::WriteAllText("$zip.sha256", "$hash  $name.zip`n")
-Write-Host "Pacote: $zip"
-Write-Host "SHA256: $hash"
-
-# Instalador .exe autoextraivel (IExpress, ja vem no Windows): extrai o zip e roda o Install.ps1.
-$iex = Join-Path $root "dist\iexpress-$version"
-if (Test-Path $iex) { Remove-Item $iex -Recurse -Force }
-New-Item -ItemType Directory -Force $iex | Out-Null
-Copy-Item $zip (Join-Path $iex 'payload.zip')
-$setup = @'
-@echo off
-chcp 65001 >nul
-title GB Material Studio - Instalador
-echo %date% %time% instalador iniciado>> "%TEMP%\gb-material-studio-setup.log"
-powershell -NoProfile -Command "if (Get-Process -Name Revit -ErrorAction SilentlyContinue) { exit 1 } else { exit 0 }"
-if errorlevel 1 (
-  echo %date% %time% revit aberto, instalacao recusada>> "%TEMP%\gb-material-studio-setup.log"
-  echo O Revit esta aberto. Feche o Revit e execute este instalador de novo.
-  echo.
-  pause
-  exit /b 1
-)
-set "T=%TEMP%\GBMaterialStudio-setup"
-if exist "%T%" rmdir /s /q "%T%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%~dp0payload.zip' -DestinationPath '%T%' -Force; & '%T%\Install.ps1'"
-echo.
-pause
-'@
-[IO.File]::WriteAllText((Join-Path $iex 'setup.cmd'), $setup.Replace("`r`n","`n").Replace("`n","`r`n"), (New-Object System.Text.UTF8Encoding($false)))
-$exe = Join-Path $root "dist\GBMaterialStudio-Setup-$version.exe"
-if (Test-Path $exe) { Remove-Item $exe -Force }
-$sed = @"
-[Version]
-Class=IEXPRESS
-SEDVersion=3
-[Options]
-PackagePurpose=InstallApp
-ShowInstallProgramWindow=0
-HideExtractAnimation=1
-UseLongFileName=1
-InsideCompressed=0
-CAB_FixedSize=0
-CAB_ResvCodeSigning=0
-RebootMode=N
-InstallPrompt=
-DisplayLicense=
-FinishMessage=
-TargetName=$exe
-FriendlyName=GB Material Studio $version
-AppLaunched=setup.cmd
-PostInstallCmd=<None>
-AdminQuietInstCmd=
-UserQuietInstCmd=
-SourceFiles=SourceFiles
-[Strings]
-FILE0="setup.cmd"
-FILE1="payload.zip"
-[SourceFiles]
-SourceFiles0=$iex\
-[SourceFiles0]
-%FILE0%=
-%FILE1%=
-"@
-$sedFile = Join-Path $iex 'setup.sed'
-[IO.File]::WriteAllText($sedFile, $sed, [Text.Encoding]::ASCII)
-& "$env:WINDIR\System32\iexpress.exe" /N /Q $sedFile | Out-Null
-$deadline = (Get-Date).AddSeconds(60)
-while (-not (Test-Path $exe) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
-if (-not (Test-Path $exe)) { throw 'IExpress nao gerou o instalador .exe.' }
-$exeHash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
-[IO.File]::WriteAllText("$exe.sha256", "$exeHash  $(Split-Path $exe -Leaf)`n")
-Write-Host "Instalador: $exe"
-Write-Host "SHA256 exe: $exeHash"
+New-ZipWithChecksum -Stage $stage -Zip $zip
+New-SetupExe -Zip $zip -Exe (Join-Path $root "dist\GBMaterialStudio-Setup-$version.exe") `
+    -Title "GB Material Studio $version" -Slug 'gb-material-studio'

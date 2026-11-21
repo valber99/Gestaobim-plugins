@@ -1,5 +1,22 @@
 # Changelog
 
+As versões do **GB DWG Export** têm tag `dwg-v<versão>` e estão listadas aqui com o prefixo "DWG".
+As do GB Material Studio têm tag `v<versão>`.
+
+## DWG 0.1.0
+
+### Novo
+- **Plugin GB DWG Export**: exporta folhas e vistas do Revit para DWG/DXF (um arquivo por folha, com a configuração de
+  exportação do projeto) e junta várias folhas num só desenho, em três modos (um layout por folha, model space e
+  layout único), sem AutoCAD.
+- A mesclagem usa o `cadcraft-cli` 0.20.1 original, embutido no instalador e conferido por SHA-256.
+- Lista de folhas em ordem natural com busca, nomes de arquivo seguros, verificação do limite de 259 caracteres do
+  caminho (com a Área de Trabalho como alternativa), confirmação antes de sobrescrever, relatório final com falhas e
+  perdas avisadas pelo motor.
+- Exportar e importar configurações (`.zip` com manifesto), botão **Sobre** com aviso de versão nova.
+- O instalador (`Install.ps1`) agora instala qualquer plugin cujo `.addin` esteja no pacote e copia ferramentas
+  compartilhadas para `%APPDATA%\GestaoBIM\Tools`.
+
 ## 0.3.1
 
 ### Novo
