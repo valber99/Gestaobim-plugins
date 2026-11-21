@@ -31,6 +31,7 @@ public sealed class App : IExternalApplication
             TaskDialog.Show("Gestão BIM", $"Nao foi possivel criar a aba Gestão BIM.\n\n{error.Message}");
             return Result.Failed;
         }
+        UpdateNotifier.Start(application);
         return Result.Succeeded;
     }
 
