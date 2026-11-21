@@ -1,0 +1,6 @@
+title: "Organizar\nmateriais"
+tooltip: "Veja onde cada material é usado, encontre duplicados, exclua os não usados (mesma segurança do Purge do Revit) e renomeie em lote."
+author: Gestão BIM
+context: doc-project
+engine:
+  clean: true

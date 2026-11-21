@@ -1,0 +1,6 @@
+title: Favoritos
+tooltip: "Abre a biblioteca de favoritos. Pesquise, abra ou aplique um material nas faces do modelo. Pressione Esc para encerrar a pintura."
+author: Valber
+context: doc-project
+engine:
+  clean: true
