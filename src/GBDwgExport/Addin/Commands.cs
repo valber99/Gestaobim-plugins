@@ -56,7 +56,7 @@ public sealed class SingleLayoutCommand : IExternalCommand
 public sealed class ExportViewsCommand : IExternalCommand
 {
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements) =>
-        CommandRunner.Run(commandData, ref message, app => Flows.Export(app, OutputMode.SeparateFiles, views: true));
+        CommandRunner.Run(commandData, ref message, app => Flows.Export(app, OutputMode.ModelSpace, views: true));
 }
 
 [Transaction(TransactionMode.Manual)]

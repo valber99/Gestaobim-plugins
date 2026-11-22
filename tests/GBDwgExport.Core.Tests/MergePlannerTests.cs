@@ -212,6 +212,114 @@ public class MergePlannerTests
         Assert.Throws<ArgumentException>(() => MergePlanner.Plan([A], new MergeOptions(OutputMode.SeparateFiles), "o.dwg"));
     }
 
+    private static SheetExtent WithPaperSpace(string name, string file, double x0, double x1) =>
+        new(name, file, x0, 0, x1, 20, PaperWidthMm: 841, PaperHeightMm: 594, OriginXMm: -216.5, OriginYMm: 94.2,
+            Space: new PaperSpace("Layout1", 6, "560A", [new ViewportCenter("5608", 2.5, 8.2), new ViewportCenter("560D", 36.8, 8.1)]));
+
+    [Fact]
+    public void ASheetWithItsPaperSpaceIsCopiedNotRebuilt()
+    {
+        var one = WithPaperSpace("P. 02", @"C:\tmp\p02.dwg", -12, 52);
+        var two = WithPaperSpace("P. 03", @"C:\tmp\p03.dwg", -15, 95);
+        var commands = Commands(MergePlanner.Plan([one, two], new MergeOptions(OutputMode.MultipleLayouts), "o.dwg"));
+
+        // The drawing takes the units Revit exported in (6 = metres).
+        Assert.Equal("units {\"insunits\":6}", commands[0]);
+        Assert.Equal(2, commands.Count(c => c.StartsWith("open ")));
+        Assert.Equal(2, commands.Count(c => c.StartsWith("close ")));
+        // The layout's own overall viewport is erased in the source, never copied.
+        Assert.Equal(2, commands.Count(c => c == "erase {\"handles\":[\"560A\"]}"));
+        Assert.DoesNotContain(commands, c => c.StartsWith("mview ") || c.StartsWith("zoom "));
+
+        // The base point is the sheet's lower-left corner, in metres.
+        Assert.Contains(commands, c => c.StartsWith("copybase ") && c.Contains("[-0.2165,0.0942]"));
+
+        // The second sheet's viewports follow its views, moved right in model space.
+        var placed = MergePlanner.Place([one, two]);
+        var expected = 36.8 + placed[1].OffsetX;
+        Assert.Contains(commands, c => c.StartsWith("viewport.set ") && c.Contains("\"560D\"")
+                                       && c.Contains(expected.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+        // The page is the sheet's paper, printed so one metre of paper space is 1000 mm.
+        var page = commands.First(c => c.StartsWith("pagesetup "));
+        Assert.Contains("\"width\":841", page);
+        Assert.Contains("\"height\":594", page);
+        Assert.Contains("\"scale\":1000", page);
+
+        // The empty layouts of a new drawing are removed at the end.
+        Assert.Equal("layout.delete {\"name\":\"Layout2\"}", commands[^1]);
+    }
+
+    [Fact]
+    public void SingleLayoutPutsTheSheetsSideBySideOnOnePage()
+    {
+        var one = WithPaperSpace("P. 02", "a.dwg", 0, 10);
+        var two = WithPaperSpace("P. 03", "b.dwg", 0, 10);
+        var commands = Commands(MergePlanner.Plan([one, two], new MergeOptions(OutputMode.SingleLayout), "o.dwg"));
+
+        Assert.Single(commands, c => c.StartsWith("layout.new "));
+        var pastes = commands.Where(c => c.StartsWith("pasteclip ")).ToList();
+        Assert.Equal("pasteclip {\"at\":[0,0]}", pastes[0]);
+        // The second sheet starts one paper width plus the gap to the right, in metres.
+        Assert.Equal("pasteclip {\"at\":[0.891,0]}", pastes[1]);
+        Assert.Contains(commands, c => c.StartsWith("pagesetup ") && c.Contains("\"width\":1732") && c.Contains("\"height\":594"));
+    }
+
+    [Fact]
+    public void ALongMergeIsSplitIntoRunsThatEachFitTheCommandLine()
+    {
+        var sheets = Enumerable.Range(1, 40).Select(i => WithPaperSpace($"Folha {i}", $@"C:\tmp\folha{i}.dwg", 0, 10)).ToList();
+        var runs = MergePlanner.PlanRuns(sheets, new MergeOptions(OutputMode.MultipleLayouts), @"C:\out\all.dwg", maxLength: 4000);
+
+        Assert.True(runs.Count > 1);
+        Assert.Equal(["run", "--metric"], runs[0].Take(2));
+        foreach (var run in runs.Skip(1)) Assert.Equal(["run", "C:/out/all.dwg", "--in-place"], run.Take(3));
+        foreach (var run in runs)
+        {
+            Assert.Equal(["--save", "C:/out/all.dwg"], run.TakeLast(2));
+            Assert.True(run.Sum(arg => arg.Length + 3) <= 4000);
+            // A sheet's copy never spans two runs: every open has its paste in the same run.
+            var commands = Commands(run);
+            Assert.Equal(commands.Count(c => c.StartsWith("open ")), commands.Count(c => c.StartsWith("pasteclip ")));
+        }
+
+        // Together the runs do exactly what the single plan does.
+        var single = Commands(MergePlanner.Plan(sheets, new MergeOptions(OutputMode.MultipleLayouts), @"C:\out\all.dwg"));
+        Assert.Equal(single, runs.SelectMany(Commands));
+    }
+
+    [Fact]
+    public void TheSheetLayoutIsTheOneWithViewports()
+    {
+        const string output = """
+            {"name":"INSUNITS","value":6}
+            [{"current":false,"name":"Layout1","tabOrder":1,"viewports":["5608","560D"]},{"current":false,"name":"Layout2","tabOrder":2,"viewports":[]}]
+            """;
+        Assert.Equal(("Layout1", 6), CadcraftOutput.ParseSheetLayout(output));
+        Assert.Null(CadcraftOutput.ParseSheetLayout("[{\"name\":\"Layout1\",\"viewports\":[]}]"));
+    }
+
+    [Fact]
+    public void ViewportsAreReadAndTheOverallOneIsSetApart()
+    {
+        const string output = """
+            {"name":"Layout1"}
+            {"count":3,"entities":[{"geometry":{"id":2,"viewCenter":{"x":2.5,"y":8.2}},"handle":"5608","type":"Viewport"},{"geometry":{"id":1,"viewCenter":{"x":6.0,"y":4.5}},"handle":"560A","type":"Viewport"},{"geometry":{"id":3,"viewCenter":{"x":36.8,"y":8.1}},"handle":"560D","type":"Viewport"}],"offset":0,"returned":3}
+            """;
+        var (overall, views) = CadcraftOutput.ParseViewports(output);
+
+        Assert.Equal("560A", overall);
+        Assert.Equal([new ViewportCenter("5608", 2.5, 8.2), new ViewportCenter("560D", 36.8, 8.1)], views);
+    }
+
+    [Theory]
+    [InlineData(6, 1000)]
+    [InlineData(4, 1)]
+    [InlineData(5, 10)]
+    [InlineData(1, 25.4)]
+    [InlineData(0, 1)]
+    public void DrawingUnitsBecomeMillimetres(int insUnits, double mm) => Assert.Equal(mm, MergePlanner.MillimetersPerUnit(insUnits));
+
     private static List<string> Commands(IReadOnlyList<string> args)
     {
         var result = new List<string>();

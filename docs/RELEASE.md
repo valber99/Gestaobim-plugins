@@ -53,7 +53,17 @@ O código que usa a API do Revit só pode ser testado dentro do Revit. Com o Rev
 
 O teste abre o Revit com dados isolados e um login de teste e roda o GB Famílias por dentro (login, catálogo, busca,
 baixar, carregar e posicionar, família que o usuário já tinha, sem internet, sem login) e o botão **Sobre** dos três.
-Os comandos do Material Studio e do DWG Export e as janelas (cliques) continuam sendo testados à mão: abra o Revit,
+O DWG Export tem o próprio autoteste, que só exige o Revit daquele ano fechado (os outros anos podem estar abertos):
+
+```powershell
+./build/revit-selftest-dwg.ps1 -Year 2025 -Models C:\caminho\projeto1.rvt, C:\caminho\projeto2.rvt
+```
+
+Ele exporta folhas em cada modo de mesclagem (inclusive com a configuração de exportação do projeto) e vistas no model
+space, em cópias dos projetos que nunca são salvas, confere layouts, viewports e carimbo, e grava um PNG de cada layout
+em `%TEMP%\gbdwg-selftest-<ano>\saida` para conferir a olho.
+
+Os comandos do Material Studio e as janelas (cliques) continuam sendo testados à mão: abra o Revit,
 confira a aba "Gestão BIM", **Configurações → Entrar** e inserir uma família que ainda não foi baixada.
 
 Antes de publicar, confira também o status do servidor (saúde do serviço de arquivos). A versão do plugin precisa ser

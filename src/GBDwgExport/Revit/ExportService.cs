@@ -99,7 +99,8 @@ public static class ExportService
                     ExportOne(doc, request, item, workFolder, fileName);
                     var file = Path.Combine(workFolder, fileName + request.Extension);
                     if (!File.Exists(file)) throw new ExportException("o Revit nao gerou o arquivo");
-                    exported.Add(new CadcraftBridge.MergeInput(label, file, item.PaperWidthMm, item.PaperHeightMm));
+                    exported.Add(new CadcraftBridge.MergeInput(label, file, item.PaperWidthMm, item.PaperHeightMm,
+                        item.OriginXMm, item.OriginYMm, item.IsSheet));
                     if (!merging) report.Written.Add(file);
                 }
                 catch (Exception error)
@@ -110,7 +111,7 @@ public static class ExportService
 
             if (merging && exported.Count > 0)
             {
-                progress?.Invoke("Juntando as folhas num so desenho...");
+                progress?.Invoke(request.Items.Any(item => item.IsSheet) ? "Juntando as folhas num so desenho..." : "Juntando as vistas num so desenho...");
                 try
                 {
                     var merge = CadcraftBridge.Merge(exported,
@@ -120,6 +121,7 @@ public static class ExportService
                     report.MergedSummary = merge.Summary;
                     report.Losses.AddRange(merge.Losses);
                     report.Written.Add(merge.File);
+                    CopyImages(workFolder, request.Folder, report);
                 }
                 catch (BridgeException error)
                 {
@@ -152,6 +154,30 @@ public static class ExportService
         return report;
     }
 
+    private static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"];
+
+    /// <summary>
+    /// Revit writes the images of a sheet (logos, renders) as files beside the DWG, which refers to them by name.
+    /// The merged drawing keeps those references, so the images go to the output folder with it.
+    /// </summary>
+    private static void CopyImages(string workFolder, string folder, ExportReport report)
+    {
+        foreach (var image in Directory.EnumerateFiles(workFolder)
+                     .Where(file => ImageExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)))
+        {
+            var target = Path.Combine(folder, Path.GetFileName(image));
+            try
+            {
+                File.Copy(image, target, overwrite: true);
+                report.Written.Add(target);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                report.Failures.Add($"Imagem {Path.GetFileName(image)}: {error.Message}");
+            }
+        }
+    }
+
     private static void ExportOne(Document doc, ExportRequest request, ExportItem item, string folder, string fileName)
     {
         var target = Path.Combine(folder, fileName + request.Extension);
@@ -164,7 +190,7 @@ public static class ExportService
         ICollection<ElementId> views = [item.Id];
         var ok = request.Dxf
             ? doc.Export(folder, fileName, views, DxfOptions(doc, request.RevitSetup))
-            : doc.Export(folder, fileName, views, DwgOptions(doc, request.RevitSetup));
+            : doc.Export(folder, fileName, views, DwgOptions(doc, request.RevitSetup, merged: request.Mode != OutputMode.SeparateFiles));
 
         // Revit writes a plot-settings .pcp beside every export. It is clutter unless the user already had one.
         if (!hadPlotConfig && File.Exists(plotConfig))
@@ -174,13 +200,21 @@ public static class ExportService
         if (!ok) throw new ExportException("o Revit recusou a exportacao");
     }
 
-    /// <summary>The project's own export setup when one is chosen, else sensible defaults.</summary>
-    public static DWGExportOptions DwgOptions(Document doc, string setup)
+    /// <summary>
+    /// The project's own export setup when one is chosen, else sensible defaults. When the files are going to be merged,
+    /// views are always written into the sheet's model space: a setup that exports them as external references
+    /// (MergedViews off) writes each view to its own file, which the merge would leave behind in the work folder.
+    /// </summary>
+    public static DWGExportOptions DwgOptions(Document doc, string setup, bool merged = false)
     {
         if (!string.IsNullOrEmpty(setup))
         {
             var options = DWGExportOptions.GetPredefinedOptions(doc, setup);
-            if (options is not null) return options;
+            if (options is not null)
+            {
+                if (merged) options.MergedViews = true;
+                return options;
+            }
         }
         return new DWGExportOptions
         {

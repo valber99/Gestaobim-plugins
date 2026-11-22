@@ -68,9 +68,9 @@
                 <GroupBox Header="Resultado">
                     <StackPanel>
                         <RadioButton x:Name="LayoutsRadio" Content="Um desenho, um layout por folha" IsChecked="True" Checked="OnModeChanged"/>
-                        <RadioButton x:Name="ModelRadio" Content="Um desenho, folhas no model space" Checked="OnModeChanged"/>
+                        <RadioButton x:Name="ModelRadio" Content="Um desenho, tudo no model space" Checked="OnModeChanged"/>
                         <RadioButton x:Name="SingleRadio" Content="Um desenho, um só layout com tudo" Checked="OnModeChanged"/>
-                        <RadioButton x:Name="SeparateRadio" Content="Um arquivo por folha (sem juntar)" Checked="OnModeChanged"/>
+                        <RadioButton x:Name="SeparateRadio" Content="Um arquivo por folha ou vista (sem juntar)" Checked="OnModeChanged"/>
                         <TextBlock x:Name="ModeHint" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="#FF555B66"/>
                     </StackPanel>
                 </GroupBox>

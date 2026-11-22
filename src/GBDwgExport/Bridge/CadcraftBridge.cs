@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using Gestaobim.DwgExport.Core;
 
 namespace Gestaobim.DwgExport.Bridge;
@@ -59,30 +60,58 @@ public static class CadcraftBridge
 
     public sealed record MergeResult(string File, IReadOnlyList<string> Losses, CadcraftOutput.Summary? Summary);
 
-    /// <summary>A sheet to merge: its label, its exported file and the paper it uses in Revit (when known).</summary>
-    public sealed record MergeInput(string Name, string File, double? PaperWidthMm, double? PaperHeightMm);
+    /// <summary>
+    /// A sheet or view to merge: its label, its exported file, the paper the sheet uses in Revit and the sheet's
+    /// lower-left corner in sheet coordinates (both in millimetres, when known). A view has no paper.
+    /// </summary>
+    public sealed record MergeInput(string Name, string File, double? PaperWidthMm, double? PaperHeightMm,
+        double? OriginXMm = null, double? OriginYMm = null, bool IsSheet = true);
 
-    /// <summary>Merges the exported sheets (name, file) into <paramref name="output"/> and reports what the tool could not keep.</summary>
+    /// <summary>Merges the exported sheets or views into <paramref name="output"/> and reports what the tool could not keep.</summary>
     public static MergeResult Merge(IReadOnlyList<MergeInput> sheets, MergeOptions options, string output)
     {
+        var layouts = options.Mode is OutputMode.MultipleLayouts or OutputMode.SingleLayout;
         var extents = new List<SheetExtent>();
         foreach (var sheet in sheets)
         {
             var (x0, y0, x1, y1) = ReadExtents(sheet.File);
-            extents.Add(new SheetExtent(sheet.Name, sheet.File, x0, y0, x1, y1, sheet.PaperWidthMm, sheet.PaperHeightMm));
+            var space = layouts && sheet.IsSheet ? ReadPaperSpace(sheet.File) : null;
+            extents.Add(new SheetExtent(sheet.Name, sheet.File, x0, y0, x1, y1, sheet.PaperWidthMm, sheet.PaperHeightMm,
+                sheet.OriginXMm, sheet.OriginYMm, space));
         }
 
         var folder = Path.GetDirectoryName(output);
         if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
+        if (File.Exists(output)) File.Delete(output);
 
-        var plan = MergePlanner.Plan(extents, options, output);
-        var result = Run(plan);
-        if (result.ExitCode != 0 || !File.Exists(output))
-            throw new BridgeException($"A mesclagem falhou: {FirstLine(result.Error)}");
+        var errors = new StringBuilder();
+        foreach (var run in MergePlanner.PlanRuns(extents, options, output))
+        {
+            var result = Run(run);
+            errors.AppendLine(result.Error);
+            if (result.ExitCode != 0 || !File.Exists(output))
+                throw new BridgeException($"A mesclagem falhou: {FirstLine(result.Error)}");
+        }
 
         var info = Run(["info", output, "--compact"]);
         var summary = info.ExitCode == 0 ? CadcraftOutput.ParseSummary(info.Output) : null;
-        return new MergeResult(output, CadcraftOutput.ParseLosses(result.Error), summary);
+        return new MergeResult(output, CadcraftOutput.ParseLosses(errors.ToString()).Distinct().ToList(), summary);
+    }
+
+    /// <summary>
+    /// The paper space Revit wrote for a sheet: the layout with its viewports, and the drawing units. Null when the file
+    /// has no layout with a viewport, so the sheet falls back to a layout framing its model space.
+    /// </summary>
+    public static PaperSpace? ReadPaperSpace(string file)
+    {
+        var layouts = Run(["run", file, "--cmd", "getvar {\"name\":\"INSUNITS\"}", "--cmd", "layout.list {}"]);
+        if (layouts.ExitCode != 0 || CadcraftOutput.ParseSheetLayout(layouts.Output) is not { } sheet) return null;
+
+        var layoutSet = "layout.set " + JsonSerializer.Serialize(new { name = sheet.Layout });
+        var viewports = Run(["run", file, "--cmd", layoutSet, "--cmd", "entities {\"type\":\"viewport\",\"limit\":100000}"]);
+        if (viewports.ExitCode != 0) return null;
+        var (overall, views) = CadcraftOutput.ParseViewports(viewports.Output);
+        return views.Count == 0 ? null : new PaperSpace(sheet.Layout, sheet.InsUnits, overall, views);
     }
 
     private static string FirstLine(string text) =>

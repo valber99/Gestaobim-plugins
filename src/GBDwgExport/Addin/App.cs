@@ -15,6 +15,7 @@ public sealed class App : IExternalApplication
         try
         {
             BuildRibbon(application);
+            Revit.SelfTest.Attach(application); // so age com GB_DWG_EXPORT_SELFTEST definida (teste automatizado no Revit)
         }
         catch (Exception error)
         {

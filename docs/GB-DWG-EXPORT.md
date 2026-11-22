@@ -23,10 +23,10 @@ Aba **Gestão BIM**, painel **Exportar DWG**:
 
 | Botão | O que faz |
 |---|---|
-| **Exportar folhas** | **Um só DWG**, com um layout por folha, cada layout no **mesmo papel que a folha usa no Revit**. |
-| **Model space** | Um só desenho com as folhas lado a lado no model space. |
-| **Layout único** | Um só desenho com um único layout que mostra todas as folhas. |
-| **Exportar vistas** | Plantas, cortes, elevações, 3D e outras vistas (não só folhas), um arquivo por vista, pelo motor do Revit. |
+| **Exportar folhas** | **Um só DWG**: cada folha vira um layout **igual à folha do Revit** (carimbo, tabelas, textos e viewports, no mesmo papel) e todas as vistas ficam lado a lado no model space. |
+| **Model space** | Um só desenho com todas as vistas das folhas lado a lado no model space, sem layouts. |
+| **Layout único** | Um só desenho com as folhas lado a lado num único layout, e as vistas lado a lado no model space. |
+| **Exportar vistas** | Plantas, cortes, elevações, 3D e outras vistas (não só folhas): por padrão **um só DWG com as vistas lado a lado no model space**, ou um arquivo por vista. |
 | **Exportar / Importar configurações** | Salva as configurações num `.zip` e lê um `.zip` de outra máquina. |
 | **Sobre** (painel **Geral**) | Botão único de todos os plugins Gestão BIM: mostra a versão de cada um e consulta o GitHub; uma bolinha vermelha avisa que há versão nova. |
 
@@ -34,18 +34,23 @@ Aba **Gestão BIM**, painel **Exportar DWG**:
 
 - **Lista:** folhas (ou vistas) em ordem natural (A2 vem antes de A10), com busca por número, nome ou tipo.
   **Marcar todas** marca as que estão visíveis na busca.
-- **Resultado:** por padrão, **um só desenho com um layout por folha**. As outras opções são folhas lado a lado no
-  model space, um só layout com todas as folhas, e "um arquivo por folha (sem juntar)", que é o que o Revit exporta
-  sozinho. Os botões do painel só escolhem o modo inicial; dá para trocar na janela. Para vistas só existe um
-  arquivo por vista.
+- **Resultado:** por padrão, **um só desenho com um layout por folha**. Cada layout é o espaço de papel que o Revit
+  exporta para a folha (carimbo, tabelas, notas, legendas e as viewports), e o model space junta as vistas de todas
+  as folhas, lado a lado. As outras opções são tudo no model space (sem layouts), um só layout com todas as folhas
+  lado a lado, e "um arquivo por folha ou vista (sem juntar)", que é o que o Revit exporta sozinho. Os botões do
+  painel só escolhem o modo inicial; dá para trocar na janela. Para vistas existem "tudo no model space" (as vistas
+  marcadas lado a lado num só DWG) e um arquivo por vista.
 - **Papel dos layouts:** não é uma escolha. Cada layout usa **o papel da folha no Revit**, lido do contorno da folha
   (por exemplo, A1, A0 ou A3), em paisagem ou retrato como a folha está. Medidas a até 3 mm de um papel A0 a A4
   (o Revit costuma informar 840 x 594 para um A1) viram o papel exato; um tamanho fora do padrão é mantido como
-  está. A janela de visualização do layout ocupa a página inteira e enquadra a folha toda.
+  está. A página é plotada em escala 1:1 com o papel (num desenho em metros, 1 unidade = 1000 mm).
 - **Arquivo:** DWG ou DXF; nome "Número - Nome da folha" ou só o número (nos arquivos separados); e a
   **configuração de exportação do Revit** (as de *Exportar > Opções > Configuração de DWG/DXF* do projeto). Sem
   escolher, o plugin usa padrões: vistas mescladas, planos de referência e caixas de corte ocultos, cores indexadas,
-  sólidos como malha e a unidade do projeto. O desenho único leva o nome do projeto.
+  sólidos como malha e a unidade do projeto. O desenho único leva o nome do projeto. Ao juntar, as vistas são sempre
+  exportadas mescladas na folha, mesmo que a configuração escolhida as exporte como referências externas (xref):
+  esses arquivos ficariam numa pasta temporária e o desenho perderia as vistas. As imagens que o Revit grava ao lado
+  do DWG (logos, renders) são copiadas para a pasta de destino junto com o desenho.
 - **Pasta de destino** e **Abrir a pasta ao terminar**. As escolhas ficam salvas em `%APPDATA%\GestaoBIM\DwgExport`.
 
 ### Nomes de arquivos e erros
@@ -112,11 +117,17 @@ build/package-dwg.ps1  compila 2025/2026/2027, embute o cadcraft-cli e gera .zip
 - **`cadcraft-cli` original, sem modificação.** É baixado de uma versão fixa, conferido por SHA-256 e embutido com as
   licenças (MIT/Apache-2.0, OFL das fontes). Como processo externo, sem biblioteca vinculada e sem alterar nada do
   código dele. As marcas ArtCraft e CADCraft não são usadas como nome do nosso produto.
-- **Como uma mesclagem funciona.** Para cada folha, `cadcraft-cli info` dá os limites do conteúdo. As folhas são
-  importadas lado a lado (com um espaço de 25% da maior largura) e, conforme o modo, cria-se um layout com uma
-  janela de visualização do tamanho da página enquadrando cada folha (`layout.new`, `pagesetup`, `mview`, `zoom`).
-  A página de cada layout tem o papel da folha no Revit; no layout único, o lado maior é o do maior papel entre as
-  folhas e a página segue a proporção do conjunto.
+- **Como uma mesclagem funciona.** Para cada arquivo, `cadcraft-cli info` dá os limites do model space, e o model
+  space de cada um é importado lado a lado (com um espaço de 25% da maior largura). Para cada folha, o plugin lê o
+  layout que o Revit escreveu (o que tem viewports), as unidades (`INSUNITS`) e as viewports. Na mesclagem, ele abre o
+  DWG da folha, apaga a viewport geral do layout (a de id 1, que não é uma vista), aponta cada viewport para onde a
+  vista foi parar no model space (`viewport.set center`), copia o espaço de papel com o canto inferior esquerdo da
+  folha como ponto base (`copybase`), fecha o arquivo sem salvar e cola num layout novo (`pasteclip`). O canto vem
+  de `ViewSheet.Outline.Min`: as coordenadas de folha do Revit são as do espaço de papel do DWG. A página tem o papel
+  da folha, com escala igual a milímetros por unidade. Os Layout1 e Layout2 vazios do desenho novo são apagados.
+  Se o espaço de papel não puder ser lido, a folha volta ao método antigo (uma janela de visualização enquadrando o
+  model space). Como o Windows limita a linha de comando a 32 767 caracteres, uma mesclagem longa é dividida em
+  várias execuções, cada uma reabrindo o desenho que a anterior salvou.
 - **Sem telemetria.** Nada é enviado a lugar nenhum além da consulta de versão ao GitHub (uma vez por dia, em segundo
   plano; `GB_DWG_EXPORT_NO_UPDATE_CHECK=1` desliga).
 - **Sem encerrar processos de terceiros.** Não há AutoCAD no fluxo.
@@ -131,7 +142,8 @@ build/package-dwg.ps1  compila 2025/2026/2027, embute o cadcraft-cli e gera .zip
 
 - `dotnet test tests/GBDwgExport.Core.Tests`: nomes, ordem natural, planejamento da mesclagem, configurações, pacote de
   configurações, regras de atualização e leitura da saída do motor.
-- A camada do Revit (exportação, janela, faixa) só pode ser testada dentro do Revit.
+- A camada do Revit só pode ser testada dentro do Revit: `build/revit-selftest-dwg.ps1 -Year <ano> -Models <rvt>...`
+  roda `Revit/SelfTest.cs` numa sessão própria do Revit (ver `docs/RELEASE.md`). A janela e a faixa são testadas à mão.
 
 ### Variáveis de ambiente
 

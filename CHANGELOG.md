@@ -4,6 +4,26 @@ Desde a **0.4.0** os três plugins saem num instalador único, com uma versão s
 Antes disso, cada um tinha a sua: **GB DWG Export** com tag `dwg-v<versão>` (prefixo "DWG" abaixo), **GB Famílias**
 com `familias-v<versão>` (prefixo "Famílias") e GB Material Studio com `v<versão>`.
 
+## 0.4.1 — GB DWG Export: folhas completas no DWG mesclado
+
+### Corrigido
+- GB DWG Export: a folha mesclada saía **sem carimbo, tabelas, textos e legendas**. O layout só enquadrava o model
+  space, e tudo o que o Revit põe no espaço de papel se perdia. Agora cada layout é **o espaço de papel da folha**,
+  copiado do DWG que o Revit exporta, com as viewports apontando para as vistas no model space.
+- GB DWG Export: com uma configuração de exportação do projeto que grava as vistas como xref (`MergedViews` desligado),
+  as vistas sumiam do desenho mesclado. Ao juntar, as vistas agora são sempre mescladas na folha.
+- GB DWG Export: as imagens que o Revit grava ao lado do DWG (logos, renders) são copiadas para a pasta do desenho
+  mesclado.
+- GB DWG Export: uma mesclagem com muitas folhas é dividida em várias execuções do motor, para não passar do limite
+  da linha de comando do Windows.
+
+### Alterado
+- GB DWG Export: o **model space** junta todas as vistas, de todas as folhas, lado a lado (plantas, cortes, fachadas).
+- GB DWG Export: o **layout único** põe as folhas inteiras lado a lado numa só página.
+- GB DWG Export: **Exportar vistas** junta as vistas marcadas num só DWG, lado a lado no model space (o padrão), ou
+  grava um arquivo por vista.
+- GB DWG Export: os layouts Layout1 e Layout2 vazios não aparecem mais no desenho mesclado.
+
 ## 0.4.0 — instalador único Gestão BIM
 
 A partir desta versão os três plugins saem juntos, com **uma versão só** e a tag `v<versão>`.

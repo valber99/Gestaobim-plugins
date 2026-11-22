@@ -100,10 +100,12 @@ public partial class ExportWindow : Window
         var merging = Mode != OutputMode.SeparateFiles;
         ModeHint.Text = Mode switch
         {
-            OutputMode.MultipleLayouts => "Um só DWG, com um layout para cada folha, no mesmo papel que a folha usa no Revit.",
-            OutputMode.ModelSpace => "Um só DWG com as folhas lado a lado no model space.",
-            OutputMode.SingleLayout => "Um só DWG com as folhas lado a lado, todas mostradas num único layout.",
-            _ => "Cada folha vira um arquivo, exatamente como o Revit exporta.",
+            OutputMode.MultipleLayouts => "Um só DWG: cada folha vira um layout igual à do Revit (carimbo, tabelas, textos e viewports, no mesmo papel), e todas as vistas ficam lado a lado no model space.",
+            OutputMode.ModelSpace => ViewsSelected
+                ? "Um só DWG com as vistas marcadas lado a lado no model space."
+                : "Um só DWG com todas as vistas das folhas lado a lado no model space, sem layouts.",
+            OutputMode.SingleLayout => "Um só DWG com as folhas lado a lado num único layout, e todas as vistas lado a lado no model space.",
+            _ => ViewsSelected ? "Cada vista vira um arquivo, exatamente como o Revit exporta." : "Cada folha vira um arquivo, exatamente como o Revit exporta.",
         };
         var modeAvailable = CadcraftAvailable || !merging;
         StatusText.Text = modeAvailable ? "" : "O motor de mesclagem não foi encontrado. Rode o instalador de novo.";
@@ -115,9 +117,9 @@ public partial class ExportWindow : Window
     {
         if (!_ready) return;
         ShowItems(ViewsSelected);
-        // Views are not sheets: merging them into layouts makes no sense, so only separate files stay available.
-        foreach (var radio in new[] { LayoutsRadio, ModelRadio, SingleRadio }) radio.IsEnabled = !ViewsSelected;
-        if (ViewsSelected) SeparateRadio.IsChecked = true;
+        // Views have no paper: they are merged side by side in model space, or kept as separate files.
+        foreach (var radio in new[] { LayoutsRadio, SingleRadio }) radio.IsEnabled = !ViewsSelected;
+        if (ViewsSelected && Mode is OutputMode.MultipleLayouts or OutputMode.SingleLayout) ModelRadio.IsChecked = true;
         RefreshMode();
     }
 

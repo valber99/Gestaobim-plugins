@@ -77,7 +77,8 @@ public class CadcraftIntegrationTests : IDisposable
         var summary = CadcraftOutput.ParseSummary(infoJson)!;
         var baseline = CadcraftOutput.ParseSummary(Run(["info", one.File, "--compact"]).Out)!;
 
-        Assert.Equal(baseline.Layouts.Count + expectedNewLayouts, summary.Layouts.Count);
+        // The empty Layout1 and Layout2 of a new drawing go once the sheets have their own layouts.
+        Assert.Equal(expectedNewLayouts == 0 ? baseline.Layouts.Count : expectedNewLayouts, summary.Layouts.Count);
         // Two sheets were imported, so the merged drawing holds more than one of them.
         Assert.True(summary.Entities > baseline.Entities);
     }
@@ -126,5 +127,77 @@ public class CadcraftIntegrationTests : IDisposable
         var summary = CadcraftOutput.ParseSummary(Run(["info", output, "--compact"]).Out)!;
         Assert.Contains("Planta Térrea", summary.Layouts);
         Assert.Contains("Corte AA", summary.Layouts);
+    }
+
+    private static string Json(object value) => System.Text.Json.JsonSerializer.Serialize(value);
+
+    /// <summary>
+    /// A drawing shaped like a Revit sheet export: a view in model space (a 30 x 20 rectangle at <paramref name="modelX"/>)
+    /// and, in a layout, an A3 title block whose lower-left corner is at -100,50 (as Revit writes sheet coordinates),
+    /// with a viewport at 1:100 showing the view.
+    /// </summary>
+    private string RevitLikeSheet(string name, double modelX)
+    {
+        var path = Path.Combine(_folder, name);
+        var (code, _, err) = Run(["run", "--metric",
+            "--cmd", "rectang " + Json(new { p1 = new[] { modelX, 0.0 }, p2 = new[] { modelX + 30000, 20000.0 } }),
+            "--cmd", "layout.new " + Json(new { name = "Folha", viewport = false }),
+            "--cmd", "layout.set " + Json(new { name = "Folha" }),
+            "--cmd", "rectang " + Json(new { p1 = new[] { -100.0, 50 }, p2 = new[] { 320.0, 347 } }),
+            "--cmd", "text " + Json(new { at = new[] { 200.0, 60 }, text = "CARIMBO " + name, height = 5 }),
+            "--cmd", "mview " + Json(new { p1 = new[] { -90.0, 100 }, p2 = new[] { 230.0, 330 } }),
+            "--cmd", "viewport.set " + Json(new { handle = "{last}", scale = 0.01, center = new[] { modelX + 15000, 10000.0 } }),
+            "--save", path]);
+        Assert.True(code == 0 && File.Exists(path), err);
+        return path;
+    }
+
+    private SheetExtent RevitLikeExtent(string name, string file)
+    {
+        var extent = Extent(name, file);
+        var layouts = Run(["run", file, "--cmd", "getvar {\"name\":\"INSUNITS\"}", "--cmd", "layout.list {}"]);
+        var sheet = CadcraftOutput.ParseSheetLayout(layouts.Out);
+        Assert.True(sheet is not null, layouts.Err);
+        var viewports = Run(["run", file, "--cmd", "layout.set " + Json(new { name = sheet!.Value.Layout }),
+            "--cmd", "entities {\"type\":\"viewport\",\"limit\":1000}"]);
+        var (overall, views) = CadcraftOutput.ParseViewports(viewports.Out);
+        Assert.Single(views);
+        return extent with
+        {
+            PaperWidthMm = 420, PaperHeightMm = 297, OriginXMm = -100, OriginYMm = 50,
+            Space = new PaperSpace(sheet.Value.Layout, sheet.Value.InsUnits, overall, views),
+        };
+    }
+
+    [Fact]
+    public void EachSheetKeepsItsOwnPaperSpaceAndItsViewportFollowsTheMovedView()
+    {
+        if (_cli is null) return;
+
+        var one = RevitLikeExtent("Planta", RevitLikeSheet("planta.dwg", 0));
+        var two = RevitLikeExtent("Corte", RevitLikeSheet("corte.dwg", 0));
+        var output = Path.Combine(_folder, "folhas.dwg");
+
+        foreach (var run in MergePlanner.PlanRuns([one, two], new MergeOptions(OutputMode.MultipleLayouts), output, maxLength: 1500))
+        {
+            var (code, _, err) = Run(run);
+            Assert.True(code == 0, err);
+        }
+
+        var summary = CadcraftOutput.ParseSummary(Run(["info", output, "--compact"]).Out)!;
+        Assert.Equal(["Planta", "Corte"], summary.Layouts);
+
+        // The second sheet's view was moved right in model space; its viewport must look at the new place.
+        var placed = MergePlanner.Place([one, two]);
+        var (_, views) = CadcraftOutput.ParseViewports(Run(["run", output, "--cmd", "layout.set {\"name\":\"Corte\"}",
+            "--cmd", "entities {\"type\":\"viewport\",\"limit\":1000}"]).Out);
+        var view = Assert.Single(views);
+        Assert.Equal(15000 + placed[1].OffsetX, view.X, 3);
+        Assert.Equal(10000 + placed[1].OffsetY, view.Y, 3);
+
+        // The title block was copied with its lower-left corner at 0,0 of the layout.
+        var texts = Run(["run", output, "--cmd", "layout.set {\"name\":\"Corte\"}", "--cmd", "entities {\"type\":\"text\",\"limit\":10}"]).Out;
+        Assert.Contains("CARIMBO corte.dwg", texts);
+        Assert.Contains("\"x\":300", texts);
     }
 }
