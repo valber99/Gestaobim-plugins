@@ -1,7 +1,8 @@
 # GB DWG Export
 
-Plugin do Revit (2025, 2026 e 2027) que exporta folhas e vistas para DWG/DXF e junta várias folhas num só desenho,
-**sem precisar do AutoCAD**. Faz parte do Gestão BIM e usa o mesmo instalador e a mesma aba do GB Material Studio.
+Plugin do Revit (2025, 2026 e 2027) que exporta folhas e vistas para DWG/DXF e junta tudo num só desenho, **sem
+precisar do AutoCAD**: cada folha vira um layout igual à folha do Revit, e as vistas ficam lado a lado no model space.
+Faz parte do Gestão BIM e usa o mesmo instalador e a mesma aba do GB Material Studio.
 
 ## Guia do usuário
 
@@ -40,10 +41,13 @@ Aba **Gestão BIM**, painel **Exportar DWG**:
   lado a lado, e "um arquivo por folha ou vista (sem juntar)", que é o que o Revit exporta sozinho. Os botões do
   painel só escolhem o modo inicial; dá para trocar na janela. Para vistas existem "tudo no model space" (as vistas
   marcadas lado a lado num só DWG) e um arquivo por vista.
-- **Papel dos layouts:** não é uma escolha. Cada layout usa **o papel da folha no Revit**, lido do contorno da folha
-  (por exemplo, A1, A0 ou A3), em paisagem ou retrato como a folha está. Medidas a até 3 mm de um papel A0 a A4
+- **Papel dos layouts:** não é uma escolha. Cada layout usa **o papel da folha no Revit**, lido do **carimbo** da
+  folha (por exemplo, A1, A0 ou A3), em paisagem ou retrato como a folha está. Medidas a até 3 mm de um papel A0 a A4
   (o Revit costuma informar 840 x 594 para um A1) viram o papel exato; um tamanho fora do padrão é mantido como
-  está. A página é plotada em escala 1:1 com o papel (num desenho em metros, 1 unidade = 1000 mm).
+  está. Uma folha sem carimbo usa o contorno da folha. A página é plotada em escala 1:1 com o papel (num desenho em
+  metros, 1 unidade = 1000 mm).
+- **Vistas fora do carimbo:** se a folha no Revit tem vistas "estacionadas" fora do carimbo, elas também vão para o
+  layout, na mesma posição, fora da página (como no Revit). Para que não apareçam, tire-as da folha antes de exportar.
 - **Arquivo:** DWG ou DXF; nome "Número - Nome da folha" ou só o número (nos arquivos separados); e a
   **configuração de exportação do Revit** (as de *Exportar > Opções > Configuração de DWG/DXF* do projeto). Sem
   escolher, o plugin usa padrões: vistas mescladas, planos de referência e caixas de corte ocultos, cores indexadas,
@@ -79,8 +83,8 @@ entidades, camadas, blocos e layouts; a única perda avisada foi de cotas em arc
 Por isso:
 
 - o resumo mostra as perdas que o motor avisa;
-- se precisar do conteúdo completo, "Um arquivo por folha (sem juntar)" entrega o que o Revit exporta, sem passar
-  pelo motor;
+- se precisar do conteúdo completo, "Um arquivo por folha ou vista (sem juntar)" entrega o que o Revit exporta, sem
+  passar pelo motor;
 - **abra o resultado no AutoCAD ou no DWG TrueView e confira antes de entregar ao cliente.**
 
 Fontes SHX não são lidas pelo motor, e entidades que ele não conhece podem ser descartadas sem aviso.
@@ -90,20 +94,22 @@ Fontes SHX não são lidas pelo motor, e entidades que ele não conhece podem se
 ```
 src/GBDwgExport.Core   regras puras, sem Revit (testadas em Windows e Linux)
 src/GBDwgExport        o add-in: faixa, comandos, janela WPF, exportação e ponte com o motor
-tests/GBDwgExport.Core.Tests   testes xUnit do Core
+tests/GBDwgExport.Core.Tests   testes xUnit do Core (e integração com o cadcraft-cli, quando instalado)
 build/package-dwg.ps1  compila 2025/2026/2027, embute o cadcraft-cli e gera .zip e .exe
+build/revit-selftest-dwg.ps1   autoteste dentro do Revit (ver "Testes")
 ```
 
 | Arquivo | Papel |
 |---|---|
 | `Core/Naming.cs` | Nomes de arquivo seguros, nomes únicos, limite de caminho, ordem natural |
-| `Core/MergePlanner.cs` | Posiciona as folhas lado a lado, ajusta o papel ao padrão A0 a A4 e monta os comandos do `cadcraft-cli` para cada modo |
-| `Core/CadcraftOutput.cs` | Lê o que o `cadcraft-cli` imprime: limites do desenho, resumo e perdas avisadas |
+| `Core/MergePlanner.cs` | Posiciona as vistas lado a lado no model space, ajusta o papel ao padrão A0 a A4 e monta os comandos do `cadcraft-cli` para cada modo: copiar o espaço de papel de cada folha, a página, a limpeza dos layouts vazios. Divide mesclagens longas em várias execuções (`PlanRuns`) |
+| `Core/CadcraftOutput.cs` | Lê o que o `cadcraft-cli` imprime: limites do desenho, resumo, perdas avisadas, o layout da folha (`INSUNITS` e `layout.list`) e as viewports |
 | `Core/Settings.cs` | Configurações em JSON, pacote `.zip` de configurações com manifesto, caminhos |
 | `Core/Updates.cs` | Aviso de atualização; considera as tags `v*` do instalador único |
-| `Revit/SheetSource.cs` | Folhas e vistas exportáveis |
-| `Revit/ExportService.cs` | Plano (nomes, conflitos, caminhos longos) e exportação pelo motor do Revit |
-| `Bridge/CadcraftBridge.cs` | Roda o `cadcraft-cli` como processo externo, com tempo limite |
+| `Revit/SheetSource.cs` | Folhas e vistas exportáveis; papel e canto de cada folha, lidos do carimbo |
+| `Revit/ExportService.cs` | Plano (nomes, conflitos, caminhos longos), exportação pelo motor do Revit (vistas sempre mescladas ao juntar) e cópia das imagens |
+| `Revit/SelfTest.cs` | Autoteste dentro do Revit; só age com `GB_DWG_EXPORT_SELFTEST` definida |
+| `Bridge/CadcraftBridge.cs` | Roda o `cadcraft-cli` como processo externo, com tempo limite; lê o espaço de papel de cada folha e executa a mesclagem |
 | `UI/ExportWindow.*` | A janela de exportação |
 | `Addin/*` | Faixa de opções, comandos, fluxos e aviso de atualização |
 
@@ -122,9 +128,12 @@ build/package-dwg.ps1  compila 2025/2026/2027, embute o cadcraft-cli e gera .zip
   layout que o Revit escreveu (o que tem viewports), as unidades (`INSUNITS`) e as viewports. Na mesclagem, ele abre o
   DWG da folha, apaga a viewport geral do layout (a de id 1, que não é uma vista), aponta cada viewport para onde a
   vista foi parar no model space (`viewport.set center`), copia o espaço de papel com o canto inferior esquerdo da
-  folha como ponto base (`copybase`), fecha o arquivo sem salvar e cola num layout novo (`pasteclip`). O canto vem
-  de `ViewSheet.Outline.Min`: as coordenadas de folha do Revit são as do espaço de papel do DWG. A página tem o papel
-  da folha, com escala igual a milímetros por unidade. Os Layout1 e Layout2 vazios do desenho novo são apagados.
+  folha como ponto base (`copybase`), fecha o arquivo sem salvar e cola num layout novo (`pasteclip`). O canto é o
+  mínimo da caixa dos carimbos na folha (`get_BoundingBox(sheet)`), porque as coordenadas de folha do Revit são as do
+  espaço de papel do DWG. `ViewSheet.Outline` só entra numa folha sem carimbo: ele também cobre vistas deixadas fora
+  do carimbo. A página tem o papel da folha, com escala igual a milímetros por unidade. Os Layout1 e Layout2 vazios
+  do desenho novo são apagados. No layout único, o espaço de papel de cada folha é colado ao lado do anterior, com
+  50 mm de papel entre eles.
   Se o espaço de papel não puder ser lido, a folha volta ao método antigo (uma janela de visualização enquadrando o
   model space). Como o Windows limita a linha de comando a 32 767 caracteres, uma mesclagem longa é dividida em
   várias execuções, cada uma reabrindo o desenho que a anterior salvou.
@@ -134,16 +143,31 @@ build/package-dwg.ps1  compila 2025/2026/2027, embute o cadcraft-cli e gera .zip
 
 ### Diferenças em relação a outros exportadores
 
-- **Layout único** aqui é feito pela mesclagem (um layout mostrando todas as folhas), e não por uma folha temporária
-  no Revit. O resultado para o cliente é parecido, e o projeto do Revit nunca é alterado.
+- **Layout único** aqui é feito pela mesclagem (as folhas inteiras lado a lado num layout), e não por uma folha
+  temporária no Revit. O resultado para o cliente é parecido, e o projeto do Revit nunca é alterado.
 - Não há agrupamento por conjuntos de folhas nesta versão.
 
 ### Testes
 
-- `dotnet test tests/GBDwgExport.Core.Tests`: nomes, ordem natural, planejamento da mesclagem, configurações, pacote de
-  configurações, regras de atualização e leitura da saída do motor.
-- A camada do Revit só pode ser testada dentro do Revit: `build/revit-selftest-dwg.ps1 -Year <ano> -Models <rvt>...`
-  roda `Revit/SelfTest.cs` numa sessão própria do Revit (ver `docs/RELEASE.md`). A janela e a faixa são testadas à mão.
+- `dotnet test tests/GBDwgExport.Core.Tests`: nomes, ordem natural, planejamento da mesclagem (cópia do espaço de
+  papel, layout único, divisão em várias execuções), configurações, pacote de configurações, regras de atualização e
+  leitura da saída do motor. Com o `cadcraft-cli` instalado, os testes de integração rodam o motor de verdade, inclusive
+  numa folha com espaço de papel montada como a do Revit (carimbo com o canto fora da origem e viewport a 1:100).
+- A camada do Revit é testada dentro do Revit, numa sessão própria:
+
+  ```powershell
+  ./build/revit-selftest-dwg.ps1 -Year 2025 -Models C:\caminho\projeto1.rvt, C:\caminho\projeto2.rvt -WorkDir F:\teste
+  ```
+
+  O script compila e instala o plugin só no Revit daquele ano (que precisa estar fechado; os outros anos podem estar
+  abertos), copia os projetos para `-WorkDir` e abre o Revit com `GB_DWG_EXPORT_SELFTEST`. O `Revit/SelfTest.cs` abre
+  cada cópia desanexada, escolhe as duas folhas com mais vistas e exporta em cada modo de mesclagem, com e sem a
+  configuração de exportação do projeto, e as vistas no model space. Ele confere se há um layout por folha, uma
+  viewport por viewport do Revit (legendas incluídas), o carimbo no papel, o model space com as vistas e a ausência de
+  Layout1/Layout2. Nunca salva os projetos. O relatório e um PNG de cada layout ficam em `<WorkDir>\saida`. Os
+  temporários do Revit também vão para `-WorkDir` (projetos grandes pedem alguns GB livres; o padrão é `%TEMP%`).
+  Na 0.4.1 passou no Revit 2025 com dois projetos reais (65 verificações).
+- A janela e a faixa são testadas à mão.
 
 ### Variáveis de ambiente
 
@@ -152,6 +176,8 @@ build/package-dwg.ps1  compila 2025/2026/2027, embute o cadcraft-cli e gera .zip
 | `GB_DWG_EXPORT_HOME` | Muda a pasta de configurações (padrão `%APPDATA%\GestaoBIM\DwgExport`) |
 | `GB_CADCRAFT_CLI` | Usa outro `cadcraft-cli.exe` |
 | `GB_DWG_EXPORT_NO_UPDATE_CHECK=1` | Desliga a consulta automática de versão |
+| `GB_DWG_EXPORT_SELFTEST` | Pasta do relatório do autoteste; com ela, o plugin roda o autoteste ao abrir o Revit (só para testes) |
+| `GB_DWG_EXPORT_SELFTEST_MODELS` | Projetos `.rvt` do autoteste, separados por `;` |
 
 ## Publicar uma versão
 

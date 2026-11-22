@@ -56,12 +56,15 @@ baixar, carregar e posicionar, família que o usuário já tinha, sem internet, 
 O DWG Export tem o próprio autoteste, que só exige o Revit daquele ano fechado (os outros anos podem estar abertos):
 
 ```powershell
-./build/revit-selftest-dwg.ps1 -Year 2025 -Models C:\caminho\projeto1.rvt, C:\caminho\projeto2.rvt
+./build/revit-selftest-dwg.ps1 -Year 2025 -Models C:\caminho\projeto1.rvt, C:\caminho\projeto2.rvt -WorkDir F:\teste
 ```
 
 Ele exporta folhas em cada modo de mesclagem (inclusive com a configuração de exportação do projeto) e vistas no model
 space, em cópias dos projetos que nunca são salvas, confere layouts, viewports e carimbo, e grava um PNG de cada layout
-em `%TEMP%\gbdwg-selftest-<ano>\saida` para conferir a olho.
+em `<WorkDir>\saida` para conferir a olho. Use projetos com folhas de verdade (carimbo, várias vistas, legenda). As
+cópias e os temporários do Revit ficam em `-WorkDir` (padrão `%TEMP%\gbdwg-selftest-<ano>`): com projetos grandes,
+escolha um disco com alguns GB livres, senão o Revit falha ao abrir ("Insufficient disk space"). Ele instala o DWG
+Export compilado do código atual no Revit daquele ano. Detalhes em [GB-DWG-EXPORT.md](GB-DWG-EXPORT.md#testes).
 
 Os comandos do Material Studio e as janelas (cliques) continuam sendo testados à mão: abra o Revit,
 confira a aba "Gestão BIM", **Configurações → Entrar** e inserir uma família que ainda não foi baixada.

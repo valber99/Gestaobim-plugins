@@ -9,7 +9,7 @@ a aba **Gestão BIM**.
 | Plugin | Para que serve |
 |---|---|
 | **GB Material Studio** | Estúdio de materiais: editor, favoritos, organização e material por camada |
-| **GB DWG Export** | Exporta folhas e vistas para DWG/DXF e junta folhas num só desenho, sem AutoCAD ([detalhes](docs/GB-DWG-EXPORT.md)) |
+| **GB DWG Export** | Exporta folhas e vistas para DWG/DXF e junta tudo num só desenho, sem AutoCAD: cada folha vira um layout igual à do Revit e as vistas ficam lado a lado no model space ([detalhes](docs/GB-DWG-EXPORT.md)) |
 | **GB Famílias** | Biblioteca de famílias com busca por texto e por imagem (IA local), filtros, categorias, favoritos e coleções; baixa e insere a família no projeto ([detalhes](docs/GB-FAMILIAS.md)) |
 
 O instalador leva os três plugins, o catálogo de famílias (banco com previews e dados de busca) e a busca por IA. Só os
