@@ -12,6 +12,8 @@ com `familias-v<versão>` (prefixo "Famílias") e GB Material Studio com `v<vers
   copiado do DWG que o Revit exporta, com as viewports apontando para as vistas no model space.
 - GB DWG Export: com uma configuração de exportação do projeto que grava as vistas como xref (`MergedViews` desligado),
   as vistas sumiam do desenho mesclado. Ao juntar, as vistas agora são sempre mescladas na folha.
+- GB DWG Export: o papel do layout vem do **carimbo** da folha. O contorno da folha, usado antes, inclui as vistas
+  deixadas fora do carimbo e dava um papel enorme (2824 x 1544 mm numa folha A2).
 - GB DWG Export: as imagens que o Revit grava ao lado do DWG (logos, renders) são copiadas para a pasta do desenho
   mesclado.
 - GB DWG Export: uma mesclagem com muitas folhas é dividida em várias execuções do motor, para não passar do limite
