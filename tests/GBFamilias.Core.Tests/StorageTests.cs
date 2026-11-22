@@ -1,4 +1,4 @@
-﻿using Gestaobim.Familias.Core;
+using Gestaobim.Familias.Core;
 
 namespace GBFamilias.Core.Tests;
 
@@ -147,50 +147,40 @@ public sealed class SettingsTests : IDisposable
     [Fact]
     public void RoundTrips()
     {
-        new FamiliasSettings { LibraryDb = @"D:\x\gbfam.sqlite", LibraryRoot = @"D:\x\fam", GbfamExe = @"D:\g.exe", SemanticEnabled = false }.Save();
+        new FamiliasSettings { DownloadsFolder = @"D:\familias", CacheLimitGb = 7, GbfamExe = @"D:\g.exe" }.Save();
         var loaded = FamiliasSettings.Load();
-        Assert.Equal(@"D:\x\gbfam.sqlite", loaded.LibraryDb);
-        Assert.Equal(@"D:\x\fam", loaded.LibraryRoot);
+        Assert.Equal(@"D:\familias", loaded.DownloadsFolder);
+        Assert.Equal(7, loaded.CacheLimitGb);
         Assert.Equal(@"D:\g.exe", loaded.GbfamExe);
-        Assert.False(loaded.SemanticEnabled);
     }
 
     [Fact]
-    public void ReadsTheExactJsonTheLibraryInstallerWrites()
+    public void ConfiguracaoDoInstaladorDaBibliotecaViraAPastaDasFamilias()
     {
-        // Saida real do instalador da biblioteca (PowerShell ConvertTo-Json): recuo de 4 espacos e "chave":  valor.
-        Directory.CreateDirectory(_dir);
-        File.WriteAllText(Path.Combine(_dir, "settings.json"), """
+        // Saida real do instalador da biblioteca 0.1 (PowerShell ConvertTo-Json): recuo de 4 espacos e "chave":  valor.
+        var root = Path.Combine(_dir, "Biblioteca", "familias");
+        Directory.CreateDirectory(root);
+        File.WriteAllText(Path.Combine(_dir, "settings.json"), $$"""
             {
-                "library_db":  "C:\\ProgramData\\GestaoBIM\\Biblioteca\\gbfam.sqlite",
-                "library_root":  "C:\\ProgramData\\GestaoBIM\\Biblioteca\\familias",
+                "library_db":  "{{Path.Combine(_dir, "Biblioteca", "gbfam.sqlite").Replace("\\", "\\\\")}}",
+                "library_root":  "{{root.Replace("\\", "\\\\")}}",
                 "gbfam_exe":  "",
                 "semantic_enabled":  true
             }
             """);
         var s = FamiliasSettings.Load();
-        Assert.Equal(@"C:\ProgramData\GestaoBIM\Biblioteca\gbfam.sqlite", s.LibraryDb);
-        Assert.Equal(@"C:\ProgramData\GestaoBIM\Biblioteca\familias", s.LibraryRoot);
-        Assert.Equal("", s.GbfamExe); // vazio = procurar automaticamente
-        Assert.True(s.SemanticEnabled);
+        Assert.Equal(root, s.DownloadsFolder); // tudo o que ja tinha continua disponivel, sem baixar de novo
+        Assert.Equal("", s.GbfamExe); // vazio = o instalado
+        Assert.Equal(0, s.CacheLimitGb);
     }
 
     [Fact]
     public void MissingFileGivesDefaults()
     {
         var s = FamiliasSettings.Load();
-        Assert.True(s.SemanticEnabled);
-        Assert.EndsWith("gbfam.sqlite", s.LibraryDb);
-    }
-
-    [Fact]
-    public void ProblemsNameWhatIsMissing()
-    {
-        var s = new FamiliasSettings { Mode = LibraryMode.Local, LibraryDb = Path.Combine(_dir, "nao.sqlite"), LibraryRoot = Path.Combine(_dir, "nada") };
-        Assert.Equal(2, s.Problems().Count);
-        Directory.CreateDirectory(s.LibraryRoot);
-        File.WriteAllText(s.LibraryDb, "x");
-        Assert.Empty(s.Problems());
+        Assert.Equal("", s.DownloadsFolder);
+        Assert.Equal(0, s.CacheLimitGb); // sem limite
+        Assert.Equal("", s.GbfamExe);
     }
 }
 
@@ -215,41 +205,57 @@ public class ServerSettingsTests : IDisposable
     }
 
     [Fact]
-    public void InstalacaoNovaComecaNoModoServidorSemPastaDefinida()
+    public void InstalacaoNovaUsaOServidorSemPastaDefinidaESemLimite()
     {
         var s = FamiliasSettings.Load();
-        Assert.Equal(LibraryMode.Server, s.Mode);
         Assert.Equal("", s.DownloadsFolder);
-        Assert.Equal(10, s.CacheLimitGb);
+        Assert.Equal(0, s.CacheLimitGb);
         Assert.Equal(Path.Combine(_dir, "local", "catalog.sqlite"), s.EffectiveDb);
         Assert.Empty(s.Problems()); // a biblioteca abre: o catalogo vem no instalador
         Assert.Contains("pasta", s.DownloadProblem(), StringComparison.OrdinalIgnoreCase); // mas para baixar a pasta e obrigatoria
     }
 
     [Fact]
-    public void ConfiguracaoDaVersao010SemModeContinuaLocal()
+    public void ModoLocalDaVersao010MigraParaOServidorComAPastaDaBiblioteca()
     {
+        var root = Path.Combine(_dir, "Biblioteca", "familias");
+        Directory.CreateDirectory(root);
         Directory.CreateDirectory(Path.Combine(_dir, "roaming"));
         File.WriteAllText(Path.Combine(_dir, "roaming", "settings.json"),
-            """{"library_db":"C:\\Biblioteca\\gbfam.sqlite","library_root":"C:\\Biblioteca\\familias","semantic_enabled":false}""");
+            $$"""{"library_db":"C:\\Biblioteca\\gbfam.sqlite","library_root":"{{root.Replace("\\", "\\\\")}}","semantic_enabled":false}""");
         var s = FamiliasSettings.Load();
-        Assert.Equal(LibraryMode.Local, s.Mode);
-        Assert.Equal(@"C:\Biblioteca\gbfam.sqlite", s.EffectiveDb);
-        Assert.Equal(@"C:\Biblioteca\familias", s.EffectiveRoot);
-        Assert.False(s.SemanticEnabled);
+        Assert.Equal(root, s.EffectiveRoot);
+        Assert.Equal(FamiliasPaths.CatalogDb, s.EffectiveDb); // o catalogo do instalador, nao o banco antigo
+        s.Save();
+        var json = File.ReadAllText(Path.Combine(_dir, "roaming", "settings.json"));
+        Assert.Contains("\"server\"", json);
+        Assert.DoesNotContain("library_root", json);
     }
 
     [Fact]
-    public void ModoServidorUsaOCatalogoLocalEAPastaDeDownloads()
+    public void MigracaoNaoTrocaUmaPastaJaEscolhidaNemUsaPastaQueNaoExiste()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "roaming"));
+        File.WriteAllText(Path.Combine(_dir, "roaming", "settings.json"),
+            """{"mode":"local","library_root":"Z:\\nao\\existe"}""");
+        Assert.Equal("", FamiliasSettings.Load().DownloadsFolder);
+        var chosen = Path.Combine(_dir, "escolhida");
+        File.WriteAllText(Path.Combine(_dir, "roaming", "settings.json"),
+            $$"""{"mode":"server","library_root":"{{_dir.Replace("\\", "\\\\")}}","downloads_folder":"{{chosen.Replace("\\", "\\\\")}}"}""");
+        Assert.Equal(chosen, FamiliasSettings.Load().DownloadsFolder);
+    }
+
+    [Fact]
+    public void SalvaOsValoresDaTela()
     {
         var downloads = Path.Combine(_dir, "baixadas");
-        var s = new FamiliasSettings { Mode = LibraryMode.Server, DownloadsFolder = downloads, CacheLimitGb = 3, SyncEveryHours = 2 };
+        var s = new FamiliasSettings { DownloadsFolder = downloads, CacheLimitGb = 3, SyncEveryHours = 2 };
         Assert.Empty(s.Problems());
         Assert.Equal(downloads, s.EffectiveRoot);
-        Assert.Equal(FamiliasPaths.CatalogDb, s.EffectiveDb);
         s.Save();
         var back = FamiliasSettings.Load();
-        Assert.Equal((LibraryMode.Server, downloads, 3, 2), (back.Mode, back.DownloadsFolder, back.CacheLimitGb, back.SyncEveryHours));
+        Assert.Equal((downloads, 3, 2), (back.DownloadsFolder, back.CacheLimitGb, back.SyncEveryHours));
+        Assert.DoesNotContain("gbfam_exe", File.ReadAllText(Path.Combine(_dir, "roaming", "settings.json"))); // nada de caminho do motor na tela nem no arquivo
     }
 
     [Fact]
@@ -258,7 +264,7 @@ public class ServerSettingsTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_dir, "roaming"));
         File.WriteAllText(Path.Combine(_dir, "roaming", "settings.json"), "{\"mode\":\"server\",\"cache_limit_gb\":-5,\"sync_every_hours\":0,\"downloads_folder\":\"\"}");
         var s = FamiliasSettings.Load();
-        Assert.Equal((10, 6), (s.CacheLimitGb, s.SyncEveryHours));
+        Assert.Equal((0, 6), (s.CacheLimitGb, s.SyncEveryHours));
     }
 
     [Fact]
@@ -282,22 +288,21 @@ public class ServerSettingsTests : IDisposable
         Assert.Empty(blank.Problems());
         Assert.NotNull(blank.DownloadProblem());
         Assert.Null(new FamiliasSettings { DownloadsFolder = Path.Combine(_dir, "ok") }.DownloadProblem());
-        Assert.Null(new FamiliasSettings { Mode = LibraryMode.Local }.DownloadProblem()); // modo local nao baixa nada
     }
 }
 
 public class UpdateTests
 {
     [Theory]
-    [InlineData("familias-v0.2.1", "0.2.1")]
-    [InlineData("familias-v1.0.0-beta", "1.0.0")]
+    [InlineData("v0.2.1", "0.2.1")]
+    [InlineData("V1.0.0-beta", "1.0.0")]
     public void ParsesOwnTags(string tag, string expected) =>
         Assert.Equal(UpdateRules.Normalize(Version.Parse(expected)), UpdateRules.ParseVersion(tag));
 
     [Theory]
     [InlineData("dwg-v0.1.0")]
-    [InlineData("v1.0.0")]
-    [InlineData("familias-vabc")]
+    [InlineData("familias-v1.0.0")]
+    [InlineData("vabc")]
     [InlineData(null)]
     public void IgnoresOtherPluginsTags(string? tag) => Assert.Null(UpdateRules.ParseVersion(tag));
 
@@ -306,11 +311,11 @@ public class UpdateTests
     {
         const string json = """
             [
-              {"tag_name":"dwg-v9.0.0","html_url":"https://github.com/a/b/releases/1","draft":false,"prerelease":false},
-              {"tag_name":"familias-v0.2.0","html_url":"https://github.com/a/b/releases/2","draft":false,"prerelease":false},
-              {"tag_name":"familias-v0.3.0","html_url":"https://github.com/a/b/releases/3","draft":true,"prerelease":false},
-              {"tag_name":"familias-v0.4.0","html_url":"https://github.com/a/b/releases/4","draft":false,"prerelease":true},
-              {"tag_name":"familias-v0.2.5","html_url":"https://evil.example/x","draft":false,"prerelease":false}
+              {"tag_name":"familias-v9.0.0","html_url":"https://github.com/a/b/releases/1","draft":false,"prerelease":false},
+              {"tag_name":"v0.2.0","html_url":"https://github.com/a/b/releases/2","draft":false,"prerelease":false},
+              {"tag_name":"v0.3.0","html_url":"https://github.com/a/b/releases/3","draft":true,"prerelease":false},
+              {"tag_name":"v0.4.0","html_url":"https://github.com/a/b/releases/4","draft":false,"prerelease":true},
+              {"tag_name":"v0.2.5","html_url":"https://evil.example/x","draft":false,"prerelease":false}
             ]
             """;
         var newer = UpdateRules.ParseNewer(json, new Version(0, 1, 0));
@@ -322,7 +327,7 @@ public class UpdateTests
 
     [Fact]
     public void ShortVersionsAreNormalized() =>
-        Assert.Null(UpdateRules.ParseNewer("""[{"tag_name":"familias-v0.1","html_url":"https://github.com/a/b","draft":false,"prerelease":false}]""", new Version(0, 1)));
+        Assert.Null(UpdateRules.ParseNewer("""[{"tag_name":"v0.1","html_url":"https://github.com/a/b","draft":false,"prerelease":false}]""", new Version(0, 1)));
 
     [Theory]
     [InlineData("2027", 2027, null)]

@@ -92,25 +92,14 @@ public static class UpdateNotifier
     private static IEnumerable<string> Details()
     {
         var settings = FamiliasSettings.Load();
-        if (settings.Mode == LibraryMode.Server)
-        {
-            var catalog = CatalogSync.LocalVersion(settings.EffectiveDb);
-            yield return catalog > 0
-                ? $"Catálogo: versão {catalog}" + (LibraryService.Current is { } open ? $", {open.Index.All.Count} famílias (biblioteca aberta). Busca por IA: {open.SemanticDetail}" : "")
-                : "Catálogo NÃO instalado: rode o instalador de novo.";
-            yield return string.IsNullOrWhiteSpace(settings.DownloadsFolder)
-                ? "Pasta das famílias baixadas: ainda não escolhida."
-                : $"Pasta das famílias baixadas: {settings.DownloadsFolder}";
-            yield return LibraryService.GetSession().Auth.HasSession ? "Conta: conectada ao servidor." : "Conta: não conectada (o login é pedido ao baixar uma família).";
-        }
-        else
-        {
-            yield return LibraryService.Current is { } lib
-                ? $"Biblioteca aberta: {lib.Index.All.Count} famílias. Busca por IA: {lib.SemanticDetail}"
-                : settings.Problems().Count == 0
-                    ? "Biblioteca encontrada (abra o painel Biblioteca para carregar)."
-                    : "Biblioteca NÃO encontrada: " + settings.Problems()[0];
-        }
+        var catalog = CatalogSync.LocalVersion(settings.EffectiveDb);
+        yield return catalog > 0
+            ? $"Catálogo: versão {catalog}" + (LibraryService.Current is { } open ? $", {open.Index.All.Count} famílias (biblioteca aberta). Busca por IA: {open.SemanticDetail}" : "")
+            : "Catálogo NÃO instalado: rode o instalador de novo.";
+        yield return string.IsNullOrWhiteSpace(settings.DownloadsFolder)
+            ? "Pasta das famílias baixadas: ainda não escolhida."
+            : $"Pasta das famílias baixadas: {settings.DownloadsFolder}";
+        yield return LibraryService.GetSession().Auth.HasSession ? "Conta: conectada ao servidor." : "Conta: não conectada (o login é pedido ao baixar uma família).";
         yield return settings.ResolveGbfam(Path.GetDirectoryName(typeof(UpdateNotifier).Assembly.Location)) is not null
             ? "(motor de busca por IA encontrado)"
             : "(motor de busca por IA NÃO encontrado: rode o instalador de novo)";

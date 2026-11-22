@@ -157,14 +157,21 @@ public enum DownloadPhase
 
 public sealed record DownloadProgress(DownloadPhase Phase, long Done, long Total, int WaitSeconds);
 
-/// <summary>Mantem a pasta de downloads dentro do limite apagando as familias menos usadas. Nunca mexe em pasta de rede.</summary>
+/// <summary>
+/// Mantem a pasta de downloads dentro do limite apagando as familias menos usadas. Nunca mexe em pasta de rede e, com
+/// <paramref name="deletable"/>, so apaga os arquivos dessa lista (os que o plugin baixou): as familias que o usuario ja
+/// tinha na pasta contam no total, mas nunca sao apagadas.
+/// </summary>
 public static class CacheEvictor
 {
-    public static long Evict(string root, long limitBytes, IReadOnlyCollection<string>? protect = null, TimeSpan? minAge = null)
+    public static long Evict(string root, long limitBytes, IReadOnlyCollection<string>? protect = null, TimeSpan? minAge = null,
+        IReadOnlySet<string>? deletable = null)
     {
         if (limitBytes <= 0 || DownloadFolder.IsNetworkPath(root) || !Directory.Exists(root)) return 0;
         var guarded = new HashSet<string>((protect ?? []).Select(Path.GetFullPath), StringComparer.OrdinalIgnoreCase);
         var recent = DateTime.UtcNow - (minAge ?? TimeSpan.FromMinutes(10));
+        var full = Path.GetFullPath(root);
+        var prefix = full.EndsWith(Path.DirectorySeparatorChar) ? full : full + Path.DirectorySeparatorChar;
 
         var files = new DirectoryInfo(root).EnumerateFiles("*.rfa", SearchOption.AllDirectories)
             .Select(f => (File: f, Used: Latest(f.LastAccessTimeUtc, f.LastWriteTimeUtc)))
@@ -175,6 +182,7 @@ public static class CacheEvictor
         {
             if (total - freed <= limitBytes) break;
             if (used > recent || guarded.Contains(file.FullName)) continue;
+            if (deletable is not null && !deletable.Contains(file.FullName[prefix.Length..])) continue;
             try
             {
                 var size = file.Length;

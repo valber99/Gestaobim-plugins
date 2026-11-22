@@ -89,15 +89,15 @@ public class UpdateTests
     private static string List(params string[] releases) => "[" + string.Join(",", releases) + "]";
 
     [Theory]
-    [InlineData("dwg-v0.2.1", 0, 2, 1)]
-    [InlineData("dwg-v1.0", 1, 0, 0)]
-    [InlineData("DWG-V1.2.3-beta", 1, 2, 3)]
+    [InlineData("v0.2.1", 0, 2, 1)]
+    [InlineData("v1.0", 1, 0, 0)]
+    [InlineData("V1.2.3-beta", 1, 2, 3)]
     public void ParsesPrefixedTags(string tag, int major, int minor, int build) =>
         Assert.Equal(new Version(major, minor, build, 0), UpdateRules.ParseVersion(tag));
 
     [Theory]
-    [InlineData("v0.3.1")]
-    [InlineData("dwg-vabc")]
+    [InlineData("dwg-v0.3.1")]
+    [InlineData("vabc")]
     [InlineData("")]
     [InlineData(null)]
     public void OtherTagsAreNotThisPlugin(string? tag) => Assert.Null(UpdateRules.ParseVersion(tag));
@@ -105,14 +105,14 @@ public class UpdateTests
     [Fact]
     public void PicksTheNewestOfThisPluginAndIgnoresTheOthers()
     {
-        var json = List(Release("v9.0.0"), Release("dwg-v0.2.0"), Release("dwg-v0.3.0"), Release("dwg-v0.1.0"));
-        Assert.Equal("dwg-v0.3.0", UpdateRules.ParseNewer(json, new Version(0, 1, 0, 0))?.Tag);
+        var json = List(Release("dwg-v9.0.0"), Release("v0.2.0"), Release("v0.3.0"), Release("v0.1.0"));
+        Assert.Equal("v0.3.0", UpdateRules.ParseNewer(json, new Version(0, 1, 0, 0))?.Tag);
     }
 
     [Fact]
     public void SameOrOlderIsIgnored()
     {
-        var json = List(Release("dwg-v0.1.0"));
+        var json = List(Release("v0.1.0"));
         Assert.Null(UpdateRules.ParseNewer(json, new Version(0, 1, 0, 0)));
         Assert.Null(UpdateRules.ParseNewer(json, new Version(0, 2, 0, 0)));
     }
@@ -121,9 +121,9 @@ public class UpdateTests
     public void PrereleaseDraftForeignUrlAndGarbageAreIgnored()
     {
         var current = new Version(0, 1, 0, 0);
-        Assert.Null(UpdateRules.ParseNewer(List(Release("dwg-v9.0.0", pre: true)), current));
-        Assert.Null(UpdateRules.ParseNewer(List(Release("dwg-v9.0.0", draft: true)), current));
-        Assert.Null(UpdateRules.ParseNewer(List(Release("dwg-v9.0.0", url: "https://evil.example/x")), current));
+        Assert.Null(UpdateRules.ParseNewer(List(Release("v9.0.0", pre: true)), current));
+        Assert.Null(UpdateRules.ParseNewer(List(Release("v9.0.0", draft: true)), current));
+        Assert.Null(UpdateRules.ParseNewer(List(Release("v9.0.0", url: "https://evil.example/x")), current));
         Assert.Null(UpdateRules.ParseNewer("not json", current));
         Assert.Null(UpdateRules.ParseNewer("{}", current));
     }

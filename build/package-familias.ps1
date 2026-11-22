@@ -15,6 +15,8 @@ param(
     # O IExpress trava com este payload (~0,7 GB), entao o .exe usa o instalador proprio (build/SetupStub.cs, o .zip
     # colado no fim, conferido por SHA-256). -NoExe gera so o .zip.
     [switch]$NoExe,
+    # So compila e monta a pasta em dist\ (o instalador unico, package-gestaobim.ps1, junta os tres plugins).
+    [switch]$StageOnly,
     # O catalogo (banco) vai dentro do instalador. Vem da pasta gerada por 'gbfam export-catalog'.
     [string]$CatalogDir = $env:GBFAM_CATALOG_DIR
 )
@@ -118,6 +120,7 @@ CODIGO-FONTE E LICENCA
 [IO.File]::WriteAllText((Join-Path $stage 'LEIA-ME.txt'), $readme, (New-Object System.Text.UTF8Encoding($true)))
 
 $zip = Join-Path $root "dist\$name.zip"
+if ($StageOnly) { return $stage }
 New-ZipWithChecksum -Stage $stage -Zip $zip
 if (-not $NoExe) {
     New-LargeSetupExe -Zip $zip -Exe (Join-Path $root "dist\GBFamilias-Setup-$version.exe") -Slug 'gb-familias'

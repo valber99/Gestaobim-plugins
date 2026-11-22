@@ -4,7 +4,9 @@
 #>
 param(
     [string]$Configuration = 'Release',
-    [int[]]$Years = @(2025, 2026, 2027)
+    [int[]]$Years = @(2025, 2026, 2027),
+    # So compila e monta a pasta em dist\ (o instalador unico, package-gestaobim.ps1, junta os tres plugins).
+    [switch]$StageOnly
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')
@@ -62,5 +64,6 @@ CODIGO-FONTE E LICENCA
 [IO.File]::WriteAllText((Join-Path $stage 'LEIA-ME.txt'), $readme, (New-Object System.Text.UTF8Encoding($true)))
 
 $zip = Join-Path $root "dist\$name.zip"
+if ($StageOnly) { return $stage }
 New-ZipWithChecksum -Stage $stage -Zip $zip
 New-LargeSetupExe -Zip $zip -Exe (Join-Path $root "dist\GBMaterialStudio-Setup-$version.exe") -Slug 'gb-material-studio'

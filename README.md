@@ -2,14 +2,18 @@
 
 Plugins do ecossistema **Gestão BIM** para o Revit.
 
-O repositório tem três plugins, desenvolvidos separadamente e instalados do mesmo jeito. Todos são
-**add-ins nativos (.NET)**: não precisam de pyRevit nem de Python, e dividem a aba **Gestão BIM**.
+O repositório tem três plugins, que saem juntos num **instalador único** (`GestaoBIM-Setup-<versão>.exe`, uma versão
+para os três, tag `v<versão>`). Todos são **add-ins nativos (.NET)**: não precisam de pyRevit nem de Python, e dividem
+a aba **Gestão BIM**.
 
-| Plugin | Para que serve | Instalador |
-|---|---|---|
-| **GB Material Studio** | Estúdio de materiais: editor, favoritos, organização e material por camada | `GBMaterialStudio-Setup-<versão>.exe` |
-| **GB DWG Export** | Exporta folhas e vistas para DWG/DXF e junta folhas num só desenho, sem AutoCAD ([detalhes](docs/GB-DWG-EXPORT.md)) | `GBDwgExport-Setup-<versão>.exe` (tags `dwg-v*`) |
-| **GB Famílias** | Biblioteca de famílias com busca por texto e por imagem (IA local), filtros, categorias, favoritos e coleções; baixa e insere a família no projeto ([detalhes](docs/GB-FAMILIAS.md)) | `GBFamilias-<versão>.zip` (tags `familias-v*`); o catálogo vai no instalador e cada família é baixada do servidor, com login |
+| Plugin | Para que serve |
+|---|---|
+| **GB Material Studio** | Estúdio de materiais: editor, favoritos, organização e material por camada |
+| **GB DWG Export** | Exporta folhas e vistas para DWG/DXF e junta folhas num só desenho, sem AutoCAD ([detalhes](docs/GB-DWG-EXPORT.md)) |
+| **GB Famílias** | Biblioteca de famílias com busca por texto e por imagem (IA local), filtros, categorias, favoritos e coleções; baixa e insere a família no projeto ([detalhes](docs/GB-FAMILIAS.md)) |
+
+O instalador leva os três plugins, o catálogo de famílias (banco com previews e dados de busca) e a busca por IA. Só os
+arquivos `.rfa` das famílias ficam de fora: cada um é baixado do servidor, com login, quando você o insere.
 
 ## O que o GB Material Studio faz
 
@@ -47,8 +51,9 @@ removeria outros elementos. Tudo é uma entrada só de desfazer.
 ## Instalação
 
 1. Baixe da página de [Releases](https://github.com/valber99/Gestaobim-plugins/releases) o instalador
-   **`GBMaterialStudio-Setup-<versão>.exe`** (ou o `.zip`, se preferir instalar pelo `Instalar.bat`).
-2. Feche o Revit e dê dois cliques no `.exe` (ele recusa instalar com o Revit aberto). O Windows pode avisar que o
+   **`GestaoBIM-Setup-<versão>.exe`** (ou o `.zip`, se preferir instalar pelo `Instalar.bat`).
+2. Feche o Revit e dê dois cliques no `.exe` (ele recusa instalar com o Revit aberto, confere a integridade do pacote e
+   não pede administrador). O Windows pode avisar que o
    editor é desconhecido, porque o instalador não é assinado: clique em "Mais informações" e "Executar assim mesmo".
 3. Abra o Revit. Na primeira vez ele pergunta se confia no add-in (não há assinatura digital ainda):
    escolha **"Sempre carregar"**.
@@ -68,11 +73,11 @@ Um código-fonte, três compilações (uma por ano do Revit), com a API vinda do
 ```powershell
 dotnet test tests/GBMaterialStudio.Core.Tests        # regras puras, configurações e banco de favoritos
 dotnet build src/GBMaterialStudio -c Release -p:RevitVersion=2027
-./build/package.ps1                                  # gera o .zip e o instalador .exe em dist/ (2025, 2026, 2027)
-./build/package-dwg.ps1                              # o mesmo para o GB DWG Export (embute o cadcraft-cli)
 dotnet test tests/GBFamilias.Core.Tests              # GB Famílias: índice, filtros, busca, favoritos, caminhos
-./build/package-familias.ps1                         # GB Famílias: plugin + motor de IA + modelos, .zip (~0,7 GB)
 cargo test --release --manifest-path tools/gbfam/Cargo.toml   # o motor gbfam (catálogo assinado, delta)
+./build/package-gestaobim.ps1                        # o instalador único em dist/ (~0,7 GB): os três plugins,
+                                                     # o catálogo e a busca por IA (ver docs/RELEASE.md)
+./build/revit-selftest.ps1 -Year 2027                # teste dentro do Revit real (com o Revit fechado)
 ```
 
 Estrutura:

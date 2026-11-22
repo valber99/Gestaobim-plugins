@@ -8,19 +8,19 @@ namespace Gestaobim.Familias.Core;
 public sealed record ReleaseInfo(Version Version, string Tag, string Url);
 
 /// <summary>
-/// Regras de atualizacao deste plugin. O repositorio publica varios plugins, entao cada um usa o seu prefixo de tag
-/// (aqui "familias-v") e vale a versao mais nova com esse prefixo.
+/// Regras de atualizacao. Os tres plugins Gestao BIM saem num instalador unico, numa release so, com tag "v<versao>"
+/// (as tags antigas "familias-v" e "dwg-v" sao ignoradas). Vale a versao mais nova com esse prefixo.
 /// </summary>
 public static class UpdateRules
 {
-    public const string TagPrefix = "familias-v";
+    public const string TagPrefix = "v";
     public const string ReleasesApi = "https://api.github.com/repos/valber99/Gestaobim-plugins/releases?per_page=30";
     public static readonly TimeSpan CheckInterval = TimeSpan.FromHours(24);
 
     public static Version Normalize(Version version) =>
         new(version.Major, version.Minor, Math.Max(version.Build, 0), Math.Max(version.Revision, 0));
 
-    /// <summary>"familias-v0.2.1" vira 0.2.1. Tag sem o prefixo, ou que nao e versao, vira null.</summary>
+    /// <summary>"v0.4.1" vira 0.4.1. Tag sem o prefixo, ou que nao e versao, vira null.</summary>
     public static Version? ParseVersion(string? tag)
     {
         if (string.IsNullOrWhiteSpace(tag) || !tag.StartsWith(TagPrefix, StringComparison.OrdinalIgnoreCase)) return null;

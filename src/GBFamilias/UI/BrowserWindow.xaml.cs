@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
@@ -62,10 +62,7 @@ public partial class BrowserWindow : Window
         var settings = FamiliasSettings.Load();
         if (settings.Problems().Count > 0)
         {
-            var intro = settings.Mode == LibraryMode.Server
-                ? "Antes de começar, escolha a pasta onde as famílias baixadas serão guardadas."
-                : "A biblioteca ainda nao foi encontrada. Informe onde estao o banco e a pasta das familias.";
-            if (!SettingsWindow.Edit(null, intro)) return;
+            if (!SettingsWindow.Edit(null, "A pasta das famílias configurada não está acessível. Escolha outra pasta.")) return;
             settings = FamiliasSettings.Load();
         }
 
@@ -106,8 +103,7 @@ public partial class BrowserWindow : Window
     }
 
     private static bool SameSettings(FamiliasSettings a, FamiliasSettings b) =>
-        a.Mode == b.Mode && a.EffectiveDb == b.EffectiveDb && a.EffectiveRoot == b.EffectiveRoot && a.GbfamExe == b.GbfamExe
-        && a.SemanticEnabled == b.SemanticEnabled && a.CacheLimitGb == b.CacheLimitGb;
+        a.EffectiveDb == b.EffectiveDb && a.EffectiveRoot == b.EffectiveRoot && a.GbfamExe == b.GbfamExe && a.CacheLimitGb == b.CacheLimitGb;
 
     private BrowserWindow(LibraryService lib)
     {
@@ -115,17 +111,13 @@ public partial class BrowserWindow : Window
         InitializeComponent();
         Title = $"GB Famílias — {lib.Index.All.Count} famílias";
         ResultsList.ItemsSource = _cards;
-        AiCheck.IsChecked = lib.Settings.SemanticEnabled;
-        AiCheck.IsEnabled = lib.Settings.SemanticEnabled;
+        AiCheck.IsChecked = true;
         _favorites = lib.User.Favorites();
 
         _debounce.Tick += (_, _) => { _debounce.Stop(); Refresh(); };
         BuildFacetPanels();
         RebuildCollections();
-        var server = lib.Session is not null;
-        OnlyDownloadedCheck.Visibility = server ? Visibility.Visible : Visibility.Collapsed;
-        SyncButton.Visibility = server && lib.Settings.CatalogSync ? Visibility.Visible : Visibility.Collapsed;
-        AccountButton.Visibility = server ? Visibility.Visible : Visibility.Collapsed;
+        SyncButton.Visibility = lib.Settings.CatalogSync ? Visibility.Visible : Visibility.Collapsed;
         UpdateAccountUi();
         _ready = true;
 
@@ -133,8 +125,8 @@ public partial class BrowserWindow : Window
         {
             Refresh();
             SearchBox.Focus();
-            if (lib.Settings.SemanticEnabled) _ = StartAiAsync();
-            if (server && lib.Settings.CatalogSync) _ = CheckCatalogAsync(force: false);
+            _ = StartAiAsync();
+            if (lib.Settings.CatalogSync) _ = CheckCatalogAsync(force: false);
         };
         // ao voltar do Explorer ou de outro computador da rede, a marca "baixada" reflete o disco
         Activated += (_, _) => RefreshDownloadedMarks();
@@ -163,13 +155,13 @@ public partial class BrowserWindow : Window
         if (!_ready) return;
         _spec.Text = SearchBox.Text.Trim();
         _spec.OnlyWithPreview = OnlyPreviewCheck.IsChecked == true;
-        _spec.Extra = OnlyDownloadedCheck.IsChecked == true && _lib.Session is not null ? _lib.IsAvailable : null;
+        _spec.Extra = OnlyDownloadedCheck.IsChecked == true ? _lib.IsAvailable : null;
         ApplyCollectionToSpec();
 
         var version = ++_version;
         _semanticCts?.Cancel();
         var sort = CurrentSort;
-        var aiOn = AiCheck.IsChecked == true && _lib.Settings.SemanticEnabled;
+        var aiOn = AiCheck.IsChecked == true;
         var wantsSemantic = aiOn && (_spec.Text.Length > 0 || _imageQuery is not null);
 
         if (_imageQuery is null)
@@ -258,7 +250,7 @@ public partial class BrowserWindow : Window
     private void AppendPage()
     {
         foreach (var record in _results.Skip(_shown).Take(PageSize))
-            _cards.Add(new CardItem(record, _thumbs, _lib.Db, _favorites.Contains(record.Sha), _lib.Session is null ? null : _lib.IsAvailable));
+            _cards.Add(new CardItem(record, _thumbs, _lib.Db, _favorites.Contains(record.Sha), _lib.IsAvailable));
         _shown = _cards.Count;
         var remaining = _results.Count - _shown;
         ShowMoreButton.Visibility = remaining > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -431,7 +423,7 @@ public partial class BrowserWindow : Window
 
     private void UpdateAiStatus()
     {
-        if (AiCheck.IsChecked != true || !_lib.Settings.SemanticEnabled)
+        if (AiCheck.IsChecked != true)
         {
             AiStatusText.Text = "";
             return;
@@ -565,7 +557,7 @@ public partial class BrowserWindow : Window
             InsertButton.Content = have ? "Inserir no projeto" : "Baixar e inserir";
         }
         FavoriteButton.Content = card.IsFavorite ? "★ Favorita" : "☆ Favoritar";
-        SimilarButton.IsEnabled = r.HasPreview && _lib.Settings.SemanticEnabled;
+        SimilarButton.IsEnabled = r.HasPreview;
     }
 
     private void OnSelectedCardChanged(object? sender, PropertyChangedEventArgs e)

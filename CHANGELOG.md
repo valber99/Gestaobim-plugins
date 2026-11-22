@@ -1,8 +1,37 @@
 # Changelog
 
-As versões do **GB DWG Export** têm tag `dwg-v<versão>` e estão listadas aqui com o prefixo "DWG".
-As do **GB Famílias** têm tag `familias-v<versão>` e o prefixo "Famílias".
-As do GB Material Studio têm tag `v<versão>`.
+Desde a **0.4.0** os três plugins saem num instalador único, com uma versão só e a tag `v<versão>`.
+Antes disso, cada um tinha a sua: **GB DWG Export** com tag `dwg-v<versão>` (prefixo "DWG" abaixo), **GB Famílias**
+com `familias-v<versão>` (prefixo "Famílias") e GB Material Studio com `v<versão>`.
+
+## 0.4.0 — instalador único Gestão BIM
+
+A partir desta versão os três plugins saem juntos, com **uma versão só** e a tag `v<versão>`.
+
+### Alterado
+- **Instalador único** `GestaoBIM-Setup-0.4.0.exe`: os três plugins, o catálogo de famílias (banco com previews e
+  dados de busca) e a busca por IA (`gbfam.exe` e modelos). Só os `.rfa` das famílias ficam de fora (vêm do servidor).
+  Não há mais instaladores separados por plugin.
+- GB Famílias, **Configurações** com só três coisas: a **pasta das famílias**, o **espaço usado** (**Sem limite**, o
+  novo padrão, ou **Limitar a N GB**) e a **conta**. Saíram da tela o modo "Pasta local (avançado)", o caminho do
+  `gbfam.exe` e a chave da busca por IA (a busca por IA está sempre disponível; a janela da biblioteca tem a chave dela).
+- GB Famílias, **pasta onde você já tem famílias**: o plugin reconhece as que já estão lá (pelo caminho da biblioteca
+  ou, se estiverem organizadas do seu jeito, pelo nome do arquivo e o tamanho), confere o SHA-256 ao inserir e não
+  baixa de novo.
+- GB Famílias: o **modo local saiu**. Quem usava a 0.1 com a biblioteca numa pasta passa ao servidor sozinho, com a
+  pasta da biblioteca como pasta das famílias (tudo o que já tinha continua disponível).
+- O aviso de versão nova dos três plugins usa a release única (`v*`).
+
+### Corrigido
+- GB Famílias: **Configurações → Entrar** dava erro ("Não é possível definir a propriedade Owner para uma Window que não
+  tenha sido exibida antes"). O login abre por cima da própria janela de Configurações.
+- GB Famílias: com limite de espaço, a limpeza podia apagar famílias que o usuário já tinha na pasta. Agora só apaga
+  as que o próprio plugin baixou.
+
+### Testes
+- 168 testes xUnit do GB Famílias (eram 163), 74 do DWG Export, 51 do Material Studio, 12 em Rust.
+- Teste dentro dos Revit 2025, 2026 e 2027 instalado pelo `.exe` único, com as verificações novas: login com a janela
+  de andamento, família que o usuário já tinha em outra subpasta (usada sem login e sem baixar) e a limpeza do cache.
 
 ## DWG 0.1.1 e Material Studio 0.3.2
 

@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Gestaobim.Familias.Core;
@@ -7,7 +6,10 @@ using Gestaobim.Familias.Revit;
 
 namespace Gestaobim.Familias.UI;
 
-/// <summary>De onde vem a biblioteca, onde ficam as famílias baixadas, a conta e a busca por IA. Montada em código.</summary>
+/// <summary>
+/// As unicas configuracoes do usuario: a pasta das familias baixadas, o limite do cache e a conta. O resto e padrao
+/// (catalogo e busca por IA instalados, familias vindas do servidor). Montada em codigo.
+/// </summary>
 public static class SettingsWindow
 {
     /// <summary>Mostra a janela. Devolve true se o usuário salvou.</summary>
@@ -15,86 +17,67 @@ public static class SettingsWindow
     {
         var settings = FamiliasSettings.Load();
         var panel = new StackPanel { Margin = new Thickness(16) };
+        var hintBrush = System.Windows.Media.Brushes.Gray;
 
         if (intro is not null)
             panel.Children.Add(new TextBlock { Text = intro, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12), Foreground = System.Windows.Media.Brushes.DarkSlateGray });
 
-        TextBox AddRow(Panel parent, string label, string value, string? hint, Func<string?, string?> pick)
+        // ---- pasta das familias baixadas
+        panel.Children.Add(new TextBlock { Text = "Pasta das famílias do Revit", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 2) });
+        var folder = new TextBox { Text = settings.DownloadsFolder, Padding = new Thickness(4) };
+        var browse = new Button { Content = "Procurar…", Margin = new Thickness(6, 0, 0, 0), Padding = new Thickness(10, 4, 10, 4) };
+        browse.Click += (_, _) =>
         {
-            parent.Children.Add(new TextBlock { Text = label, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 8, 0, 2) });
-            var box = new TextBox { Text = value, Padding = new Thickness(4) };
-            var button = new Button { Content = "Procurar…", Margin = new Thickness(6, 0, 0, 0), Padding = new Thickness(10, 4, 10, 4) };
-            button.Click += (_, _) => { if (pick(box.Text) is { } chosen) box.Text = chosen; };
-            var row = new DockPanel();
-            DockPanel.SetDock(button, Dock.Right);
-            row.Children.Add(button);
-            row.Children.Add(box);
-            parent.Children.Add(row);
-            if (hint is not null)
-                parent.Children.Add(new TextBlock { Text = hint, FontSize = 11, Foreground = System.Windows.Media.Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
-            return box;
-        }
+            if (Dialogs.PickFolder(folder.Text, "Pasta onde ficam (ou vão ficar) as famílias do Revit") is { } chosen) folder.Text = chosen;
+        };
+        var folderRow = new DockPanel();
+        DockPanel.SetDock(browse, Dock.Right);
+        folderRow.Children.Add(browse);
+        folderRow.Children.Add(folder);
+        panel.Children.Add(folderRow);
+        panel.Children.Add(new TextBlock
+        {
+            Text = "As famílias baixadas do servidor ficam aqui. Se você já tem famílias numa pasta (ou a biblioteca inteira), escolha essa pasta: "
+                 + "as que já estão lá são reconhecidas e não são baixadas de novo. Pode ser local ou de rede.",
+            FontSize = 11, Foreground = hintBrush, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0),
+        });
 
-        // ---- modo
-        var server = new RadioButton { Content = "Servidor (recomendado): o catálogo fica no computador e cada família é baixada ao inserir", IsChecked = settings.Mode == LibraryMode.Server, Margin = new Thickness(0, 0, 0, 4) };
-        var local = new RadioButton { Content = "Pasta local (avançado): banco e famílias já estão numa pasta ou numa rede", IsChecked = settings.Mode == LibraryMode.Local };
-        panel.Children.Add(server);
-        panel.Children.Add(local);
+        // ---- cache
+        panel.Children.Add(new TextBlock { Text = "Espaço usado pelas famílias baixadas", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 14, 0, 4) });
+        var unlimited = new RadioButton { Content = "Sem limite", IsChecked = settings.CacheLimitGb == 0, Margin = new Thickness(0, 0, 0, 4) };
+        var limited = new RadioButton { Content = "Limitar a", IsChecked = settings.CacheLimitGb > 0, VerticalAlignment = VerticalAlignment.Center };
+        var gb = new TextBox { Text = settings.CacheLimitGb > 0 ? settings.CacheLimitGb.ToString() : "10", Width = 60, Padding = new Thickness(4), Margin = new Thickness(6, 0, 6, 0), IsEnabled = settings.CacheLimitGb > 0 };
+        limited.Checked += (_, _) => gb.IsEnabled = true;
+        unlimited.Checked += (_, _) => gb.IsEnabled = false;
+        var limitRow = new StackPanel { Orientation = Orientation.Horizontal };
+        limitRow.Children.Add(limited);
+        limitRow.Children.Add(gb);
+        limitRow.Children.Add(new TextBlock { Text = "GB", VerticalAlignment = VerticalAlignment.Center });
+        panel.Children.Add(unlimited);
+        panel.Children.Add(limitRow);
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Com limite, as famílias baixadas menos usadas são apagadas (podem ser baixadas de novo). Famílias que já estavam na pasta e pastas de rede nunca são apagadas.",
+            FontSize = 11, Foreground = hintBrush, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0),
+        });
 
-        // ---- servidor
-        var serverPanel = new StackPanel();
-        var downloads = AddRow(serverPanel, "Pasta das famílias baixadas (obrigatória para baixar)", settings.DownloadsFolder,
-            "As famílias baixadas ficam aqui, na mesma estrutura de pastas da biblioteca. Pode ser local ou de rede (uma pasta de rede compartilhada serve a todos e nunca é limpa pelo plugin).",
-            start => Dialogs.PickFolder(start, "Pasta onde as famílias baixadas serão guardadas"));
-        serverPanel.Children.Add(new TextBlock { Text = "Limite do cache em GB (0 = sem limite)", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 10, 0, 2) });
-        var limit = new TextBox { Text = settings.CacheLimitGb.ToString(), Width = 80, Padding = new Thickness(4), HorizontalAlignment = HorizontalAlignment.Left };
-        serverPanel.Children.Add(limit);
-
+        // ---- conta
         var session = LibraryService.GetSession();
-        var account = new TextBlock { Margin = new Thickness(0, 12, 0, 4) };
+        var account = new TextBlock { Margin = new Thickness(0, 14, 0, 4), FontWeight = FontWeights.SemiBold };
         var signIn = new Button { Content = "Entrar", Padding = new Thickness(14, 4, 14, 4), Margin = new Thickness(0, 0, 8, 0) };
         var signOut = new Button { Content = "Sair", Padding = new Thickness(14, 4, 14, 4) };
         void UpdateAccount()
         {
-            account.Text = session.Auth.HasSession ? "Conta: conectado ao servidor." : "Conta: não conectado. Entre para baixar o catálogo e as famílias.";
+            account.Text = session.Auth.HasSession ? "Conta: conectada ao servidor." : "Conta: não conectada. Entre para baixar as famílias.";
             signIn.IsEnabled = !session.Auth.HasSession;
             signOut.IsEnabled = session.Auth.HasSession;
         }
-        signIn.Click += (_, _) => { ServerFlows.SignIn(Application.Current?.MainWindow); UpdateAccount(); };
-        signOut.Click += (_, _) => { session.Auth.Logout(); UpdateAccount(); };
-        UpdateAccount();
         var accountButtons = new StackPanel { Orientation = Orientation.Horizontal };
         accountButtons.Children.Add(signIn);
         accountButtons.Children.Add(signOut);
-        serverPanel.Children.Add(account);
-        serverPanel.Children.Add(accountButtons);
-
-        // ---- local
-        var localPanel = new StackPanel();
-        var db = AddRow(localPanel, "Banco da biblioteca (gbfam.sqlite)", settings.LibraryDb, null,
-            start => Dialogs.PickFile("Banco SQLite|*.sqlite;*.db|Todos os arquivos|*.*", "Banco da biblioteca", Path.GetDirectoryName(start ?? "")));
-        var root = AddRow(localPanel, "Pasta das famílias (.rfa)", settings.LibraryRoot,
-            "Os caminhos do banco são relativos a esta pasta. Para uma biblioteca compartilhada, aponte para a pasta de rede.",
-            start => Dialogs.PickFolder(start, "Pasta que contém as famílias da biblioteca"));
-
-        panel.Children.Add(serverPanel);
-        panel.Children.Add(localPanel);
-        void ShowMode()
-        {
-            serverPanel.Visibility = server.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            localPanel.Visibility = server.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
-        }
-        server.Checked += (_, _) => ShowMode();
-        local.Checked += (_, _) => ShowMode();
-        ShowMode();
-
-        // ---- comum
-        var exe = AddRow(panel, "gbfam.exe (busca por IA)", settings.GbfamExe,
-            "Deixe em branco para procurar automaticamente (%APPDATA%\\GestaoBIM\\Tools\\gbfam).",
-            start => Dialogs.PickFile("gbfam.exe|gbfam.exe|Programas|*.exe", "Motor de busca por IA", Path.GetDirectoryName(start ?? "")));
-
-        var ai = new CheckBox { Content = "Ligar a busca por IA (entende o sentido da busca e aceita imagens)", IsChecked = settings.SemanticEnabled, Margin = new Thickness(0, 14, 0, 0) };
-        panel.Children.Add(ai);
+        panel.Children.Add(account);
+        panel.Children.Add(accountButtons);
+        UpdateAccount();
 
         var problems = new TextBlock { Foreground = System.Windows.Media.Brushes.Firebrick, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0) };
         panel.Children.Add(problems);
@@ -108,35 +91,35 @@ public static class SettingsWindow
 
         var window = new Window
         {
-            Title = "GB Famílias — Configurações", Content = panel, Width = 680, SizeToContent = SizeToContent.Height,
+            Title = "GB Famílias — Configurações", Content = panel, Width = 620, SizeToContent = SizeToContent.Height,
             ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false,
-            WindowStartupLocation = owner is null ? WindowStartupLocation.CenterScreen : WindowStartupLocation.CenterOwner,
+            WindowStartupLocation = owner is { IsVisible: true } ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen,
             FontFamily = new System.Windows.Media.FontFamily("Segoe UI"), FontSize = 13,
             Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF7, 0xF8, 0xFA)),
         };
-        if (owner is not null) window.Owner = owner; else Dialogs.Attach(window);
+        if (owner is { IsVisible: true }) window.Owner = owner; else Dialogs.Attach(window);
+
+        // O login abre a janela de andamento por cima DESTA (que esta visivel).
+        signIn.Click += (_, _) => { ServerFlows.SignIn(window); UpdateAccount(); };
+        signOut.Click += (_, _) => { session.Auth.Logout(); UpdateAccount(); };
 
         save.Click += (_, _) =>
         {
-            if (!int.TryParse(limit.Text.Trim(), out var limitGb) || limitGb < 0)
+            var limitGb = 0;
+            if (limited.IsChecked == true && (!int.TryParse(gb.Text.Trim(), out limitGb) || limitGb < 1))
             {
-                problems.Text = "O limite do cache deve ser um número inteiro de GB (0 = sem limite).";
+                problems.Text = "O limite deve ser um número inteiro de GB (1 ou mais).";
                 return;
             }
-            var candidate = new FamiliasSettings
-            {
-                Mode = server.IsChecked == true ? LibraryMode.Server : LibraryMode.Local,
-                LibraryDb = db.Text.Trim(), LibraryRoot = root.Text.Trim(),
-                DownloadsFolder = downloads.Text.Trim(), CacheLimitGb = limitGb, SyncEveryHours = settings.SyncEveryHours,
-                GbfamExe = exe.Text.Trim(), SemanticEnabled = ai.IsChecked == true,
-            };
-            var found = candidate.Problems();
+            settings.DownloadsFolder = folder.Text.Trim();
+            settings.CacheLimitGb = limitGb;
+            var found = settings.Problems();
             if (found.Count > 0)
             {
                 problems.Text = string.Join("\n", found);
                 return;
             }
-            candidate.Save();
+            settings.Save();
             window.DialogResult = true;
         };
 

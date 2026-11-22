@@ -1,84 +1,85 @@
 # Como publicar uma versão
 
-Passo a passo para gerar e publicar uma release do add-in.
+Os três plugins (GB Material Studio, GB DWG Export e GB Famílias) saem juntos, num **instalador único** e numa
+**release só** no GitHub, com **uma versão para os três** e tag `v<versão>`.
 
 ## 1. Preparar
 
-1. Altere `<Version>` em `src/GBMaterialStudio/GBMaterialStudio.csproj` (por exemplo, `0.3.2`). Esse número é o
-   que o botão **Sobre** compara com a última release do GitHub.
+1. Altere `<Version>` nos três `.csproj` (`src/GBMaterialStudio`, `src/GBDwgExport`, `src/GBFamilias`) para o mesmo
+   número (por exemplo, `0.4.1`). O script de pacote recusa versões diferentes. Esse número é o que o botão **Sobre**
+   compara com a última release `v*` do GitHub.
 2. Atualize o `CHANGELOG.md` com uma seção para a versão.
-3. Rode os testes: `dotnet test tests/GBMaterialStudio.Core.Tests`.
+3. Rode os testes:
+   ```powershell
+   dotnet test tests/GBMaterialStudio.Core.Tests
+   dotnet test tests/GBDwgExport.Core.Tests
+   dotnet test tests/GBFamilias.Core.Tests
+   cargo test --release --manifest-path tools/gbfam/Cargo.toml
+   ```
 
 ## 2. Empacotar
 
+O pacote é gerado na máquina de quem publica porque leva o `gbfam.exe` e os modelos de IA, que não estão no
+repositório, e o **catálogo** de famílias (gerado fora do repositório com `gbfam export-catalog`):
+
 ```powershell
-./build/package.ps1
+cargo build --release --manifest-path tools/gbfam/Cargo.toml     # o gbfam.exe
+./build/package-gestaobim.ps1
 ```
 
-O script compila para o Revit 2025, 2026 e 2027 e gera em `dist/`:
+O script compila os três plugins para o Revit 2025, 2026 e 2027, junta tudo e gera em `dist/`:
 
 | Arquivo | Para quê |
 |---|---|
-| `GBMaterialStudio-<versão>.zip` e `.sha256` | Pacote com `Instalar.bat`, `Desinstalar.bat` e as três compilações |
-| `GBMaterialStudio-Setup-<versão>.exe` e `.sha256` | Instalador (`build/SetupStub.cs`): confere o SHA-256, extrai o `.zip` e roda o `Install.ps1` |
+| `GestaoBIM-Setup-<versão>.exe` e `.sha256` | O instalador (~0,7 GB): os três plugins, o catálogo, a busca por IA (gbfam + modelos) e o cadcraft-cli. Só os `.rfa` ficam de fora. |
+| `GestaoBIM-<versão>.zip` e `.sha256` | O mesmo conteúdo, com `Instalar.bat` e `Desinstalar.bat` |
 
-O `.exe` recusa instalar com o Revit aberto e registra o que fez em `%TEMP%\gb-material-studio-setup.log`.
+O `.exe` é o instalador próprio `build/SetupStub.cs` (o IExpress travava com esse tamanho), compilado pelo `csc` do .NET
+Framework que vem no Windows, com o `.zip` colado no fim. Ele confere o SHA-256 do pacote, recusa instalar com o Revit
+aberto, não pede administrador e roda o `Install.ps1` (`/quiet` não pausa no fim). O log fica em
+`%TEMP%\gestaobim-setup.log`. O catálogo só é trocado se o do pacote for mais novo que o instalado.
+
+Os scripts de cada plugin (`package.ps1`, `package-dwg.ps1`, `package-familias.ps1`) continuam gerando pacotes
+separados para desenvolvimento, mas **não são publicados**. `package-catalog.ps1` gera um pacote só com o catálogo.
 
 ## 3. Testar no Revit
 
-O código que usa a API do Revit só pode ser testado dentro do Revit.
+O código que usa a API do Revit só pode ser testado dentro do Revit. Com o Revit fechado:
 
-1. Feche o Revit e instale o pacote (`Instalar.bat` ou o `.exe`).
-2. Abra o Revit e confira: aba "Gestão BIM", painel "Materiais" com os seis botões.
-3. Teste os fluxos alterados. Para o aviso de atualização, o botão **Sobre** consulta o GitHub; só aparece a
-   bolinha quando a última release publicada é mais nova que a instalada.
+```powershell
+./dist/GestaoBIM-Setup-<versão>.exe /quiet
+./build/revit-selftest.ps1 -Year 2025 -SkipInstall      # e 2026, 2027
+```
+
+O teste abre o Revit com dados isolados e um login de teste e roda o GB Famílias por dentro (login, catálogo, busca,
+baixar, carregar e posicionar, família que o usuário já tinha, sem internet, sem login) e o botão **Sobre** dos três.
+Os comandos do Material Studio e do DWG Export e as janelas (cliques) continuam sendo testados à mão: abra o Revit,
+confira a aba "Gestão BIM", **Configurações → Entrar** e inserir uma família que ainda não foi baixada.
+
+Antes de publicar, confira também o status do servidor (saúde do serviço de arquivos). A versão do plugin precisa ser
+igual ou maior que o `min_plugin` do catálogo publicado.
 
 ## 4. Publicar
 
 ```powershell
 git push                      # como valber99, ver a nota abaixo
 gh release create v<versão> `
-  dist/GBMaterialStudio-<versão>.zip dist/GBMaterialStudio-<versão>.zip.sha256 `
-  dist/GBMaterialStudio-Setup-<versão>.exe dist/GBMaterialStudio-Setup-<versão>.exe.sha256 `
-  --title "GB Material Studio <versão>" --notes-file notas.md
+  dist/GestaoBIM-Setup-<versão>.exe dist/GestaoBIM-Setup-<versão>.exe.sha256 `
+  dist/GestaoBIM-<versão>.zip dist/GestaoBIM-<versão>.zip.sha256 `
+  --title "Gestão BIM <versão>" --notes-file notas.md --latest
 ```
 
-Nas notas, diga o que foi verificado em execução e o que não foi (por exemplo, quais versões do Revit foram
-abertas), e lembre do aviso "Complemento não certificado" e do aviso do Windows sobre o `.exe`.
+Nas notas, diga o que foi verificado em execução e o que não foi, e lembre do aviso "Complemento não certificado" e
+do aviso do Windows sobre o `.exe`. Confira os direitos de redistribuição das famílias e as licenças dos modelos (o
+`LEIA-ME.txt` do pacote lista as fontes).
 
 **Conta do GitHub:** o repositório é de `valber99`. Se o `gh` estiver logado em outra conta, use
 `GH_TOKEN="$(gh auth token --user valber99)"` em cada comando e faça o push com
 `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push`.
 
-## GB Famílias
-
-Tag `familias-v<versão>` (a versão vem de `src/GBFamilias/GBFamilias.csproj`). O pacote é gerado na máquina de quem
-publica porque leva o `gbfam.exe` e os modelos de IA, que não estão no repositório. O **catálogo** (banco com as
-famílias) vai **dentro do instalador**; o servidor só entrega os `.rfa`:
-
-```powershell
-cargo build --release --manifest-path tools/gbfam/Cargo.toml     # o gbfam.exe
-./build/package-familias.ps1                 # dist/GBFamilias-<versão>.zip e GBFamilias-Setup-<versão>.exe (~0,7 GB cada)
-./build/package-catalog.ps1                  # dist/GBFamilias-Catalogo-<v>.zip (só o catálogo, alguns MB)
-```
-
-Os `.exe` dos três plugins são o instalador próprio `build/SetupStub.cs` (o IExpress travava com o tamanho do GB
-Famílias), compilado pelo `csc` do .NET Framework que vem no Windows, com o `.zip` colado no fim. Ele confere o SHA-256
-do pacote, recusa instalar com o Revit aberto e roda o `Install.ps1` (`/quiet` não pausa no fim).
-
-Para testar a release instalada (e não uma compilação nova), feche o Revit, rode os `.exe` e depois
-`./build/revit-selftest.ps1 -Year <ano> -SkipInstall`.
-
-**Releases no GitHub:** o Material Studio lê a release marcada como *Latest*. Publique as do DWG Export e do GB Famílias
-com `--latest=false` e a do Material Studio por último.
-
-O pacote completo da biblioteca (`package-library.ps1`) **não é mais publicado**. Antes de publicar uma versão:
-rode `dotnet test tests/GBFamilias.Core.Tests` e `cargo test --release` em `tools/gbfam`, confira o status do
-servidor (saúde do serviço de arquivos) e teste a janela num Revit real (**inserir uma família que ainda não foi baixada**).
-A versão do plugin precisa ser igual ou maior que o `min_plugin` do catálogo publicado.
-
-Detalhes, parâmetros e limites em [`GB-FAMILIAS.md`](GB-FAMILIAS.md#publicar). Confira os direitos de redistribuição
-das famílias e as licenças dos modelos (o `LEIA-ME.txt` do pacote lista as fontes).
+**Releases antigas:** até a 0.3.2 / 0.2.0 / 0.1.1 cada plugin tinha a sua release (`v*`, `familias-v*`, `dwg-v*`). Desde
+a 0.4.0 os três procuram atualização só nas tags `v*`. Quem tem o Material Studio 0.3.2 recebe o aviso da 0.4.0 (ele já
+lia `v*`), e o botão Sobre é único, então o aviso aparece para os três.
 
 ## 5. CI
 
@@ -93,5 +94,5 @@ das famílias e as licenças dos modelos (o `LEIA-ME.txt` do pacote lista as fon
 
 - O add-in e o instalador não são assinados (o Revit e o Windows avisam). Assinar exige um certificado de
   assinatura de código.
-- O teste automático dentro do Revit (`build/revit-selftest.ps1`) cobre o GB Famílias e o botão Sobre dos três plugins,
-  nos Revit 2025, 2026 e 2027; os comandos do Material Studio e do DWG Export continuam sendo testados à mão.
+- O teste automático dentro do Revit não clica nas janelas; os comandos do Material Studio e do DWG Export continuam
+  sendo testados à mão.

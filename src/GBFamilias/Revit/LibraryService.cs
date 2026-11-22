@@ -33,8 +33,7 @@ public sealed class LibraryService : IDisposable
     /// <summary>A sessao do servidor (login, downloads, catalogo): uma por processo do Revit.</summary>
     public static ServerSession GetSession() => _session ??= new ServerSession();
 
-    /// <summary>Nulo no modo local.</summary>
-    public ServerSession? Session { get; }
+    public ServerSession Session { get; }
 
     public FamiliasSettings Settings { get; }
     public LibraryDb Db { get; }
@@ -46,14 +45,13 @@ public sealed class LibraryService : IDisposable
     public string SemanticDetail { get; private set; } = "";
     private Task? _starting;
 
-    private LibraryService(FamiliasSettings settings, LibraryDb db, LibraryIndex index, ServerSession? session)
+    private LibraryService(FamiliasSettings settings, LibraryDb db, LibraryIndex index, ServerSession session)
     {
         Settings = settings;
         Session = session;
         Db = db;
         Index = index;
-        SemanticState = settings.SemanticEnabled ? SemanticState.Off : SemanticState.Unavailable;
-        if (!settings.SemanticEnabled) SemanticDetail = "Busca por IA desligada nas configuracoes.";
+        SemanticState = SemanticState.Off;
     }
 
     /// <summary>O provedor do SQLite precisa ser iniciado uma vez por processo.</summary>
@@ -73,17 +71,13 @@ public sealed class LibraryService : IDisposable
 
         Current?.Dispose();
         Current = null;
-        ServerSession? session = null;
-        if (settings.Mode == LibraryMode.Server)
-        {
-            session = GetSession();
-            if (settings.CatalogSync) ServerSession.ApplyPending(settings.EffectiveDb); // catalogo novo baixado numa sessao anterior
-            if (!File.Exists(settings.EffectiveDb))
-                throw new CatalogMissingException(settings.CatalogSync
-                    ? "O catalogo da biblioteca ainda nao foi baixado do servidor."
-                    : $"O catalogo da biblioteca nao esta instalado neste computador ({settings.EffectiveDb}).\n\nRode de novo o instalador do GB Familias: o catalogo vai junto com ele.");
-            session.Downloaded.Refresh(settings.EffectiveRoot);
-        }
+        var session = GetSession();
+        if (settings.CatalogSync) ServerSession.ApplyPending(settings.EffectiveDb); // catalogo novo baixado numa sessao anterior
+        if (!File.Exists(settings.EffectiveDb))
+            throw new CatalogMissingException(settings.CatalogSync
+                ? "O catalogo da biblioteca ainda nao foi baixado do servidor."
+                : $"O catalogo da biblioteca nao esta instalado neste computador ({settings.EffectiveDb}).\n\nRode de novo o instalador Gestao BIM: o catalogo vai junto com ele.");
+        session.Downloaded.Refresh(settings.EffectiveRoot);
         var db = LibraryDb.Open(settings.EffectiveDb);
         try
         {
@@ -105,27 +99,36 @@ public sealed class LibraryService : IDisposable
 
     public string? FamilyPath(FamilyRecord record) => FamiliasPaths.ResolveFamilyPath(Settings.EffectiveRoot, record.RelPath);
 
-    /// <summary>Modo local: tudo esta na pasta. Modo servidor: so o que ja foi baixado.</summary>
-    public bool IsAvailable(FamilyRecord record) => Session is null || Session.Downloaded.IsDownloaded(record);
+    /// <summary>Ja esta na pasta das familias baixadas (no caminho do catalogo ou, pelo nome e tamanho, em outra subpasta)?</summary>
+    public bool IsAvailable(FamilyRecord record) => Session.Downloaded.IsDownloaded(record);
+
+    private string LedgerFile => DownloadLedger.FileFor(FamiliasPaths.LocalHome, Settings.EffectiveRoot);
 
     /// <summary>
-    /// Garante o arquivo da familia: no modo servidor baixa (um de cada vez), confere o hash e limpa o cache se passar
-    /// do limite; no modo local so confere que o arquivo existe. Devolve o caminho pronto para o Revit carregar.
+    /// Garante o arquivo da familia: usa o que ja esta na pasta se o SHA-256 conferir (inclusive uma familia que o usuario
+    /// ja tinha, em outra subpasta); senao baixa do servidor (um de cada vez), confere o hash e limpa o cache se passar do
+    /// limite. Devolve o caminho pronto para o Revit carregar.
     /// </summary>
     public async Task<string> EnsureFamilyFileAsync(FamilyRecord record, IProgress<DownloadProgress>? progress, CancellationToken cancel)
     {
-        if (Session is null)
+        var root = Settings.EffectiveRoot;
+        if (Session.Downloaded.FindRelative(record) is { } existing
+            && FamiliasPaths.ResolveFamilyPath(root, existing) is { } existingPath
+            && !string.Equals(existingPath, FamilyPath(record), StringComparison.OrdinalIgnoreCase))
         {
-            var local = FamilyPath(record) ?? throw new InvalidOperationException("O caminho desta familia no banco e invalido (fora da pasta da biblioteca).");
-            if (!File.Exists(local)) throw new FileNotFoundException($"O arquivo desta familia nao esta na pasta da biblioteca:\n{local}\n\nConfira a pasta das familias nas configuracoes.");
-            return local;
+            // Mesmo nome e tamanho em outra subpasta: so serve se for o mesmo arquivo (SHA-256 do catalogo).
+            if (await Task.Run(() => DownloadManager.IsValidLocal(existingPath, record.Sha), cancel).ConfigureAwait(false)) return existingPath;
+            Session.Downloaded.Forget(existing);
         }
 
-        var result = await Session.Downloads.EnsureAsync(record, Settings.EffectiveRoot, progress, cancel).ConfigureAwait(false);
+        var result = await Session.Downloads.EnsureAsync(record, root, progress, cancel).ConfigureAwait(false);
         Session.Downloaded.MarkDownloaded(record, new FileInfo(result.Path).Length);
-        if (result.Status == DownloadStatus.Downloaded && Settings.CacheLimitGb > 0)
+        if (result.Status != DownloadStatus.Downloaded) return result.Path;
+
+        var ledger = new DownloadLedger(LedgerFile);
+        ledger.Add(record.RelPath);
+        if (Settings.CacheLimitGb > 0)
         {
-            var root = Settings.EffectiveRoot;
             var limit = Settings.CacheLimitGb * 1024L * 1024 * 1024;
             var keep = result.Path;
             var session = Session;
@@ -133,9 +136,10 @@ public sealed class LibraryService : IDisposable
             {
                 try
                 {
-                    if (CacheEvictor.Evict(root, limit, [keep]) > 0) session.Downloaded.Refresh(root);
+                    // So apaga o que o plugin baixou: as familias que o usuario ja tinha na pasta ficam.
+                    if (CacheEvictor.Evict(root, limit, [keep], deletable: ledger.Load()) > 0) session.Downloaded.Refresh(root);
                 }
-                catch (IOException)
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                 {
                 }
             });
@@ -148,7 +152,7 @@ public sealed class LibraryService : IDisposable
     /// <summary>Sobe o servidor de IA se ainda nao subiu. Seguro chamar varias vezes. Nunca lanca: o estado diz o que houve.</summary>
     public Task EnsureSemanticAsync()
     {
-        if (!Settings.SemanticEnabled || SemanticState is SemanticState.Ready or SemanticState.Unavailable) return Task.CompletedTask;
+        if (SemanticState is SemanticState.Ready or SemanticState.Unavailable) return Task.CompletedTask;
         return _starting ??= StartSemantic();
     }
 
@@ -159,7 +163,7 @@ public sealed class LibraryService : IDisposable
         if (exe is null)
         {
             SemanticState = SemanticState.Unavailable;
-            SemanticDetail = "gbfam.exe nao encontrado. Rode o instalador de novo ou informe o caminho nas configuracoes.";
+            SemanticDetail = "Motor da busca por IA nao encontrado. Rode o instalador Gestao BIM de novo.";
             return;
         }
         try

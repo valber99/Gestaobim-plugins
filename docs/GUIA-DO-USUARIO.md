@@ -6,10 +6,10 @@ Estúdio de materiais para o Revit 2025, 2026 e 2027. Não precisa de pyRevit ne
 
 **Instalar ou atualizar**
 
-1. Baixe `GBMaterialStudio-Setup-<versão>.exe` na página de
-   [Releases](https://github.com/valber99/Gestaobim-plugins/releases).
-2. **Feche o Revit** e dê dois cliques no `.exe`. Ele instala em todos os Revit 2025, 2026 e 2027 que encontrar
-   e recusa instalar se o Revit estiver aberto.
+1. Baixe o instalador único `GestaoBIM-Setup-<versão>.exe` na página de
+   [Releases](https://github.com/valber99/Gestaobim-plugins/releases). Ele traz os três plugins Gestão BIM.
+2. **Feche o Revit** e dê dois cliques no `.exe`. Ele instala em todos os Revit 2025, 2026 e 2027 que encontrar,
+   confere a integridade do pacote, não pede administrador e recusa instalar se o Revit estiver aberto.
 3. O Windows pode avisar que o editor é desconhecido, porque o instalador não é assinado. Clique em
    "Mais informações" e depois em "Executar assim mesmo".
 4. Abra o Revit. Na primeira vez ele pergunta se confia no add-in: escolha **"Sempre carregar"**.

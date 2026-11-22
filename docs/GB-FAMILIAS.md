@@ -3,7 +3,8 @@
 Biblioteca de famílias do Revit com **busca por texto e por imagem**, filtros, categorias, favoritos e coleções.
 Aparece como o painel **Famílias** na aba **Gestão BIM**, junto dos outros plugins.
 
-Este documento tem o guia do usuário, a arquitetura e como publicar. Tags de release: `familias-v<versão>`.
+Este documento tem o guia do usuário, a arquitetura e como publicar. Desde a 0.4.0 o GB Famílias sai no **instalador
+único Gestão BIM** (`GestaoBIM-Setup-<versão>.exe`, tag `v<versão>`), junto dos outros dois plugins.
 
 ## Guia do usuário
 
@@ -16,12 +17,15 @@ O que já foi baixado funciona offline.
 
 ### Instalar
 
-1. Feche o Revit, extraia `GBFamilias-<versão>.zip` e dê dois cliques em `Instalar.bat`. Ele instala o plugin nos Revit
-   2025, 2026 e 2027, o motor de busca por IA (`gbfam.exe` e os modelos, ~1 GB) em `%APPDATA%\GestaoBIM\Tools` e o
-   **catálogo** em `%LOCALAPPDATA%\GestaoBIM\Familias` (só troca o que já existe se o do pacote for mais novo).
+1. Feche o Revit e dê dois cliques em `GestaoBIM-Setup-<versão>.exe` (ou, no `.zip`, em `Instalar.bat`). Ele instala os
+   três plugins nos Revit 2025, 2026 e 2027, o motor de busca por IA (`gbfam.exe` e os modelos, ~1 GB) em
+   `%APPDATA%\GestaoBIM\Tools` e o **catálogo** em `%LOCALAPPDATA%\GestaoBIM\Familias` (só troca o que já existe se o
+   do pacote for mais novo). Nada disso precisa ser configurado.
 2. Abra o Revit: painel **Famílias**, botão **Biblioteca**. A busca já funciona.
 3. Na primeira vez que inserir uma família:
-   - escolha a **pasta das famílias baixadas** (obrigatória; pode ser local ou de rede);
+   - escolha a **pasta das famílias** (obrigatória; pode ser local ou de rede). Se você **já tem famílias** numa pasta
+     (ou a biblioteca inteira), escolha essa pasta: as que já estão lá aparecem como **✓ baixada** e não são baixadas
+     de novo;
    - entre com a sua conta (abre o navegador; o administrador cria as contas).
 
 ### Buscar
@@ -81,12 +85,19 @@ adulterado ou versão mais antiga que a instalada são recusados. Só vale a pen
 
 ### Configurações
 
-**Famílias > Configurações**:
+**Famílias > Configurações** tem só três coisas; o resto é padrão (catálogo e busca por IA instalados, famílias vindas
+do servidor):
 
-- **Servidor (recomendado)**: pasta das famílias baixadas (obrigatória), limite do cache em GB (0 = sem limite;
-  uma pasta de rede **nunca** é limpa pelo plugin) e a conta (**Entrar** / **Sair**).
-- **Pasta local (avançado)**: banco e pasta das famílias já prontos (o pacote offline do administrador, ou uma rede).
-- `gbfam.exe` (vazio = procura sozinho) e se a busca por IA está ligada.
+- **Pasta das famílias do Revit**: onde as famílias baixadas ficam. Pode ser uma pasta onde você **já tem famílias**:
+  o plugin as reconhece, primeiro pelo mesmo caminho da biblioteca e, se você organizou do seu jeito, pelo **nome do
+  arquivo e o tamanho** em qualquer subpasta. Ao inserir, confere o SHA-256; se o arquivo não for o mesmo do catálogo,
+  baixa o certo do servidor (na estrutura de pastas da biblioteca).
+- **Espaço usado**: **Sem limite** (padrão) ou **Limitar a N GB**. Com limite, as famílias **baixadas pelo plugin** menos
+  usadas são apagadas (podem ser baixadas de novo); as que já estavam na pasta e as pastas de rede **nunca** são apagadas.
+- **Conta**: **Entrar** / **Sair**.
+
+Quem usava a 0.1 com a biblioteca numa pasta ("pasta local") passa a usar o servidor sozinho: a pasta da biblioteca
+vira a pasta das famílias, então tudo o que já tinha continua disponível, sem baixar de novo.
 
 Ficam em `%APPDATA%\GestaoBIM\Familias\settings.json`. Favoritos, coleções e recentes ficam em `user-data.json` na
 mesma pasta: por usuário. O catálogo e o login ficam em `%LOCALAPPDATA%\GestaoBIM\Familias` (o login é protegido
@@ -100,14 +111,15 @@ dois downloads simultâneos do mesmo arquivo não se atrapalham.
 
 | Sintoma | O que fazer |
 |---|---|
-| "O catálogo da biblioteca não está instalado neste computador" | Rode de novo o `Instalar.bat` do GB Famílias (o catálogo vai junto) ou o pacote `GBFamilias-Catalogo`. |
-| Pede a pasta das famílias baixadas ao inserir | É obrigatória para baixar (a busca funciona sem ela): escolha uma pasta onde você tenha permissão de gravar (o caminho deve ter até 150 caracteres). |
+| "O catálogo da biblioteca não está instalado neste computador" | Rode de novo o instalador Gestão BIM (o catálogo vai junto) ou o pacote `GBFamilias-Catalogo`. |
+| Pede a pasta das famílias ao inserir | É obrigatória para baixar (a busca funciona sem ela): escolha uma pasta onde você tenha permissão de gravar (o caminho deve ter até 150 caracteres). |
+| Tenho a família na pasta, mas ela não aparece como baixada | O plugin reconhece pelo caminho da biblioteca ou pelo nome do arquivo **e** o tamanho. Um arquivo renomeado ou de outra versão (tamanho diferente) não é reconhecido: o plugin baixa o do catálogo. |
 | "Sua conta não tem permissão" | A conta existe, mas falta o papel de acesso. Fale com o administrador. |
 | "Entre com a sua conta" / "A sessão expirou" | Clique em **Entrar** (barra de status ou Configurações). |
 | "Sem conexão com o servidor" | As famílias já baixadas e a busca continuam funcionando. Tente de novo quando a internet voltar. |
 | "O servidor limitou os downloads" | Há um limite por minuto e por dia. O plugin espera e tenta de novo; se passar da cota do dia, volte amanhã. |
 | "A assinatura do catálogo NÃO confere" | O catálogo foi recusado por segurança. Avise o administrador; o plugin segue com o catálogo antigo. |
-| "IA indisponível" no canto da janela | Passe o mouse para ver o motivo. Em geral falta o `gbfam.exe`: rode o instalador do plugin de novo. A busca por texto e os filtros continuam funcionando. |
+| "IA indisponível" no canto da janela | Passe o mouse para ver o motivo. Em geral falta o `gbfam.exe`: rode o instalador Gestão BIM de novo. A busca por texto e os filtros continuam funcionando. |
 | Uma família sem preview | ~1% da biblioteca não traz miniatura; ela aparece como "sem preview" e continua pesquisável pelo nome e pela descrição. |
 
 ## Arquitetura
@@ -116,7 +128,7 @@ dois downloads simultâneos do mesmo arquivo não se atrapalham.
 src/GBFamilias.Core          regras puras (sem Revit): índice, filtros, busca, favoritos, caminhos, cliente de IA
 src/GBFamilias.Core/Server   login (OAuth PKCE), cliente do servidor, catálogo (assinatura, delta), downloads
 src/GBFamilias               o add-in: comandos, janela WPF e a camada do Revit (inserir, despachar eventos, DPAPI)
-tests/GBFamilias.Core.Tests  162 testes xUnit
+tests/GBFamilias.Core.Tests  168 testes xUnit
 tools/gbfam                  o motor em Rust: ingestão, IA generativa, embeddings, busca, catálogo e o servidor local (gbfam)
 installer, build             manifesto .addin, instaladores e empacotamento
 ```
@@ -125,7 +137,7 @@ O **servidor de arquivos e autenticação** é mantido separadamente deste repos
 
 Mesmo padrão dos outros plugins: um código-fonte e uma compilação por ano do Revit (`-p:RevitVersion=2025|2026|2027`),
 o Core compilado dentro da DLL do add-in, a aba **Gestão BIM** compartilhada, o `Install.ps1` genérico, o botão
-**Sobre** único com aviso de atualização (prefixo de tag `familias-v`; `src/GBShared/AboutHub.cs`, ver abaixo) e ferramentas em
+**Sobre** único com aviso de atualização (tag `v<versão>`, a do instalador único; `src/GBShared/AboutHub.cs`, ver abaixo) e ferramentas em
 `%APPDATA%\GestaoBIM\Tools`.
 
 ### Contrato público da API

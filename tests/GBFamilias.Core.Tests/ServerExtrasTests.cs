@@ -60,6 +60,68 @@ public sealed class DownloadedIndexTests : IDisposable
     }
 
     [Fact]
+    public void ReconheceFamiliaQueOUsuarioJaTinhaEmOutraSubpastaPeloNomeETamanho()
+    {
+        Write("Minhas familias\\Moveis\\Mesa 375.rfa", 300);
+        var index = new DownloadedIndex();
+        index.Refresh(_root);
+        var rec = Rec("#MOBILIARIO\\Mesas\\Mesa 375.rfa", 300);
+        Assert.True(index.IsDownloaded(rec));
+        Assert.Equal("Minhas familias\\Moveis\\Mesa 375.rfa", index.FindRelative(rec));
+        Assert.False(index.IsDownloaded(Rec("#MOBILIARIO\\Mesas\\Mesa 375.rfa", 301)), "mesmo nome, tamanho diferente: outra familia");
+        Assert.False(index.IsDownloaded(Rec("#MOBILIARIO\\Mesas\\Mesa 375.rfa", 0)), "sem tamanho no catalogo, so vale o caminho exato");
+    }
+
+    [Fact]
+    public void PrefereOCaminhoDoCatalogoAoNome()
+    {
+        Write("outra\\Porta.rfa", 10);
+        Write("#PORTAS\\Porta.rfa", 10);
+        var index = new DownloadedIndex();
+        index.Refresh(_root);
+        Assert.Equal("#PORTAS\\Porta.rfa", index.FindRelative(Rec("#PORTAS\\Porta.rfa", 10)));
+    }
+
+    [Fact]
+    public void EsquecerUmArquivoQueNaoConfereTiraDoIndice()
+    {
+        Write("x\\Cadeira.rfa", 20);
+        var index = new DownloadedIndex();
+        index.Refresh(_root);
+        var rec = Rec("#CADEIRAS\\Cadeira.rfa", 20);
+        Assert.Equal("x\\Cadeira.rfa", index.FindRelative(rec));
+        index.Forget("x\\Cadeira.rfa");
+        Assert.Null(index.FindRelative(rec));
+    }
+
+    [Fact]
+    public void LimpezaDoCacheSoApagaOQueOPluginBaixou()
+    {
+        Write("minhas\\Antiga.rfa", 500);
+        Write("#PORTAS\\Baixada.rfa", 500);
+        var old = DateTime.UtcNow.AddDays(-30);
+        foreach (var f in Directory.GetFiles(_root, "*.rfa", SearchOption.AllDirectories)) { File.SetLastWriteTimeUtc(f, old); File.SetLastAccessTimeUtc(f, old); }
+        var ledgerFile = DownloadLedger.FileFor(Path.Combine(_root, "..", Path.GetFileName(_root) + "-home"), _root);
+        var ledger = new DownloadLedger(ledgerFile);
+        ledger.Add("#PORTAS/Baixada.rfa");
+        var freed = CacheEvictor.Evict(_root, 1, deletable: ledger.Load());
+        Assert.Equal(500, freed);
+        Assert.True(File.Exists(Path.Combine(_root, "minhas", "Antiga.rfa")), "a familia que o usuario ja tinha nunca e apagada");
+        Assert.False(File.Exists(Path.Combine(_root, "#PORTAS", "Baixada.rfa")));
+        Directory.Delete(Path.GetDirectoryName(Path.GetDirectoryName(ledgerFile))!, true);
+    }
+
+    [Fact]
+    public void RegistroDasBaixadasESeparadoPorPastaENaoFicaDentroDela()
+    {
+        var a = DownloadLedger.FileFor(@"C:\home", @"D:\Familias");
+        Assert.Equal(a, DownloadLedger.FileFor(@"C:\home", @"d:\familias\"));
+        Assert.NotEqual(a, DownloadLedger.FileFor(@"C:\home", @"E:\Familias"));
+        Assert.StartsWith(@"C:\home\baixadas\", a);
+        Assert.Empty(new DownloadLedger(Path.Combine(_root, "nao-existe", "x.txt")).Load());
+    }
+
+    [Fact]
     public void FiltroExtraRestringeResultadosEContagens()
     {
         var index = TestSupport.SampleIndex();

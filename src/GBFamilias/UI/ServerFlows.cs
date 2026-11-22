@@ -30,10 +30,11 @@ public static class ServerFlows
         var window = new Window
         {
             Title = title, Content = panel, Width = 460, SizeToContent = SizeToContent.Height, ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false, WindowStartupLocation = owner is null ? WindowStartupLocation.CenterScreen : WindowStartupLocation.CenterOwner,
+            ShowInTaskbar = false, WindowStartupLocation = owner is { IsVisible: true } ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen,
             FontFamily = new System.Windows.Media.FontFamily("Segoe UI"), FontSize = 13,
         };
-        if (owner is not null) window.Owner = owner; else Dialogs.Attach(window);
+        // So uma janela visivel pode ser dona (o WPF recusa uma que nunca foi exibida); senao, a janela do Revit.
+        if (owner is { IsVisible: true }) window.Owner = owner; else Dialogs.Attach(window);
 
         cancel.Click += (_, _) => cts.Cancel();
         window.Closing += (_, _) => cts.Cancel();

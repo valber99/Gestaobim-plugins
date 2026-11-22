@@ -7,8 +7,8 @@ Plugin do Revit (2025, 2026 e 2027) que exporta folhas e vistas para DWG/DXF e j
 
 ### Instalar
 
-1. Baixe `GBDwgExport-Setup-<versão>.exe` na página de [Releases](https://github.com/valber99/Gestaobim-plugins/releases)
-   (as versões deste plugin têm a tag `dwg-v<versão>`).
+1. Baixe o instalador único `GestaoBIM-Setup-<versão>.exe` na página de
+   [Releases](https://github.com/valber99/Gestaobim-plugins/releases) (tag `v<versão>`; ele traz os três plugins Gestão BIM).
 2. Feche o Revit e dê dois cliques no `.exe`. Ele recusa instalar com o Revit aberto.
 3. O Windows pode avisar que o editor é desconhecido (o instalador não é assinado): "Mais informações" e
    "Executar assim mesmo".
@@ -95,7 +95,7 @@ build/package-dwg.ps1  compila 2025/2026/2027, embute o cadcraft-cli e gera .zip
 | `Core/MergePlanner.cs` | Posiciona as folhas lado a lado, ajusta o papel ao padrão A0 a A4 e monta os comandos do `cadcraft-cli` para cada modo |
 | `Core/CadcraftOutput.cs` | Lê o que o `cadcraft-cli` imprime: limites do desenho, resumo e perdas avisadas |
 | `Core/Settings.cs` | Configurações em JSON, pacote `.zip` de configurações com manifesto, caminhos |
-| `Core/Updates.cs` | Aviso de atualização; só considera tags `dwg-v*` |
+| `Core/Updates.cs` | Aviso de atualização; considera as tags `v*` do instalador único |
 | `Revit/SheetSource.cs` | Folhas e vistas exportáveis |
 | `Revit/ExportService.cs` | Plano (nomes, conflitos, caminhos longos) e exportação pelo motor do Revit |
 | `Bridge/CadcraftBridge.cs` | Roda o `cadcraft-cli` como processo externo, com tempo limite |
@@ -143,13 +143,6 @@ build/package-dwg.ps1  compila 2025/2026/2027, embute o cadcraft-cli e gera .zip
 
 ## Publicar uma versão
 
-Igual ao [GB Material Studio](RELEASE.md), com estas diferenças: o script é `build/package-dwg.ps1`, a versão está em
-`src/GBDwgExport/GBDwgExport.csproj`, a tag é `dwg-v<versão>` e a release deve ser criada com `--latest=false`, para
-que o aviso do GB Material Studio (que consulta a "última release") continue apontando para ele.
-
-```powershell
-./build/package-dwg.ps1
-gh release create dwg-v<versão> dist/GBDwgExport-<versão>.zip dist/GBDwgExport-<versão>.zip.sha256 `
-  dist/GBDwgExport-Setup-<versão>.exe dist/GBDwgExport-Setup-<versão>.exe.sha256 `
-  --latest=false --title "GB DWG Export <versão>" --notes-file notas.md
-```
+Desde a 0.4.0 o DWG Export sai no instalador único Gestão BIM, com a mesma versão dos outros dois plugins e a tag
+`v<versão>`: veja [RELEASE.md](RELEASE.md). `build/package-dwg.ps1` continua gerando um pacote só dele para
+desenvolvimento (embute o cadcraft-cli conferido por checksum). As releases antigas tinham a tag `dwg-v<versão>`.

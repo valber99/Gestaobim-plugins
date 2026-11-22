@@ -9,18 +9,18 @@ public sealed record ReleaseInfo(Version Version, string Tag, string Url);
 
 /// <summary>
 /// Update rules for this plugin. The repository publishes several plugins, so each plugin's releases carry its own
-/// tag prefix (here "dwg-v") and the latest one of that prefix is what counts.
+/// tag prefix "v" (the single Gestao BIM installer; the old "dwg-v" tags are ignored) and the latest one counts.
 /// </summary>
 public static class UpdateRules
 {
-    public const string TagPrefix = "dwg-v";
+    public const string TagPrefix = "v";
     public const string ReleasesApi = "https://api.github.com/repos/valber99/Gestaobim-plugins/releases?per_page=30";
     public static readonly TimeSpan CheckInterval = TimeSpan.FromHours(24);
 
     public static Version Normalize(Version version) =>
         new(version.Major, version.Minor, Math.Max(version.Build, 0), Math.Max(version.Revision, 0));
 
-    /// <summary>"dwg-v0.2.1" becomes 0.2.1. A tag without the prefix, or not a version, becomes null.</summary>
+    /// <summary>"v0.4.1" becomes 0.4.1. A tag without the prefix, or not a version, becomes null.</summary>
     public static Version? ParseVersion(string? tag)
     {
         if (string.IsNullOrWhiteSpace(tag) || !tag.StartsWith(TagPrefix, StringComparison.OrdinalIgnoreCase)) return null;

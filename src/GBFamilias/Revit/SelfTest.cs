@@ -111,11 +111,22 @@ internal static class SelfTest
 
         var settings = FamiliasSettings.Load();
         log.Check("sem pasta de downloads a biblioteca abre, mas baixar pede a pasta",
-            new FamiliasSettings { Mode = LibraryMode.Server }.Problems().Count == 0 && new FamiliasSettings { Mode = LibraryMode.Server }.DownloadProblem() is not null);
-        log.Check("configuracao do modo servidor sem problemas", settings.Mode == LibraryMode.Server && settings.Problems().Count == 0 && settings.DownloadProblem() is null,
-            $"{settings.Mode}; pasta {settings.DownloadsFolder}; {string.Join("|", settings.Problems())}");
+            new FamiliasSettings().Problems().Count == 0 && new FamiliasSettings().DownloadProblem() is not null);
+        log.Check("configuracao sem problemas", settings.Problems().Count == 0 && settings.DownloadProblem() is null,
+            $"pasta {settings.DownloadsFolder}; cache {settings.CacheLimitGb} GB; {string.Join("|", settings.Problems())}");
         var session = LibraryService.GetSession();
         log.Check("o login salvo (DPAPI) foi encontrado", session.Auth.HasSession);
+
+        // A janela de andamento (login) aceita como dona uma janela que nunca foi exibida (o erro da 0.2.0 no "Entrar").
+        Exception? ownerError = null;
+        try
+        {
+            var hidden = new System.Windows.Window();
+            var failure = Gestaobim.Familias.UI.ServerFlows.RunWithProgress(hidden, "teste", "teste", (_, _) => Task.CompletedTask);
+            ownerError = failure;
+        }
+        catch (Exception error) { ownerError = error; }
+        log.Check("janela de andamento abre com dona nunca exibida (login nas Configuracoes)", ownerError is null, ownerError?.Message ?? "");
 
         // ---- catalogo
         LibraryService.Close();
@@ -239,6 +250,29 @@ internal static class SelfTest
         try { Sync(() => lib.EnsureFamilyFileAsync(notDownloaded, null, CancellationToken.None)); }
         catch (AuthRequiredException) { needsLogin = true; }
         log.Check("sem login, baixar pede o login", needsLogin);
+
+        // ---- pasta onde o usuario ja tem familias, organizadas do jeito dele (outra subpasta): reconhece e usa sem baixar
+        if (placed is not null && lib.FamilyPath(placed) is { } placedPath && File.Exists(placedPath))
+        {
+            var mine = Path.Combine(Path.GetTempPath(), "gbfam-selftest-minhas-" + year);
+            if (Directory.Exists(mine)) Directory.Delete(mine, true);
+            var copy = Path.Combine(mine, "Minhas familias", "Moveis", Path.GetFileName(placedPath));
+            Directory.CreateDirectory(Path.GetDirectoryName(copy)!);
+            File.Copy(placedPath, copy);
+            var other = new FamiliasSettings { DownloadsFolder = mine, CacheLimitGb = 1, GbfamExe = settings.GbfamExe };
+            var mineLib = LibraryService.Open(other);
+            log.Check("familia que o usuario ja tinha (outra subpasta) aparece como baixada", mineLib.IsAvailable(placed));
+            string? used = null;
+            try { used = Sync(() => mineLib.EnsureFamilyFileAsync(placed, null, CancellationToken.None)); }
+            catch (Exception error) { log.Info("usar a familia ja existente: " + error.Message); }
+            log.Check("e usada sem login e sem baixar (SHA-256 confere)", string.Equals(used, copy, StringComparison.OrdinalIgnoreCase), used ?? "");
+            // limite de 1 GB numa pasta com familias do usuario: a limpeza nunca apaga o que nao foi baixado pelo plugin
+            CacheEvictor.Evict(mine, 1, minAge: TimeSpan.Zero,
+                deletable: new DownloadLedger(DownloadLedger.FileFor(FamiliasPaths.LocalHome, mine)).Load());
+            log.Check("a limpeza do cache nunca apaga familias que o usuario ja tinha", File.Exists(copy));
+            LibraryService.Close();
+            try { Directory.Delete(mine, true); } catch (IOException) { }
+        }
 
         LibraryService.Close();
     }

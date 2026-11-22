@@ -8,7 +8,9 @@ param(
     [int[]]$Years = @(2025, 2026, 2027),
     # Versao do CADCraft embutida e o SHA-256 do ZIP portatil de Windows dessa versao (SHA256SUMS.txt da release).
     [string]$CadcraftVersion = '0.20.1',
-    [string]$CadcraftSha256 = '76904b4accff32fbc995adc9bb0137ecd982aa403cf79a281e3f10b48ca14778'
+    [string]$CadcraftSha256 = '76904b4accff32fbc995adc9bb0137ecd982aa403cf79a281e3f10b48ca14778',
+    # So compila e monta a pasta em dist\ (o instalador unico, package-gestaobim.ps1, junta os tres plugins).
+    [switch]$StageOnly
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')
@@ -103,5 +105,6 @@ CODIGO-FONTE E LICENCA
 [IO.File]::WriteAllText((Join-Path $stage 'LEIA-ME.txt'), $readme, (New-Object System.Text.UTF8Encoding($true)))
 
 $zip = Join-Path $root "dist\$name.zip"
+if ($StageOnly) { return $stage }
 New-ZipWithChecksum -Stage $stage -Zip $zip
 New-LargeSetupExe -Zip $zip -Exe (Join-Path $root "dist\GBDwgExport-Setup-$version.exe") -Slug 'gb-dwg-export'
