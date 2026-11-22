@@ -111,6 +111,10 @@ Write-Host "Revit aberto (PID $($process.Id)). Aguardando o relatorio (ate $Time
 
 # Na primeira vez o Revit pergunta se confia no add-in (assinatura): escolhe "Sempre carregar".
 function Confirm-AddinDialog([int]$processId) {
+    # A automacao da interface pode falhar enquanto o Revit cria/destroi janelas (COMException): tenta de novo no proximo ciclo.
+    try { Confirm-AddinDialogCore $processId } catch { }
+}
+function Confirm-AddinDialogCore([int]$processId) {
     $root = [Windows.Automation.AutomationElement]::RootElement
     $cond = New-Object Windows.Automation.PropertyCondition ([Windows.Automation.AutomationElement]::ProcessIdProperty, $processId)
     foreach ($w in $root.FindAll([Windows.Automation.TreeScope]::Children, $cond)) {
