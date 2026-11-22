@@ -1,0 +1,8 @@
+/target
+.env
+.models/
+missing.json
+previews_gerados/
+*.log
+pgdata/
+

@@ -2,13 +2,14 @@
 
 Plugins do ecossistema **Gestão BIM** para o Revit.
 
-O repositório tem dois plugins, desenvolvidos separadamente e instalados do mesmo jeito. Os dois são
+O repositório tem três plugins, desenvolvidos separadamente e instalados do mesmo jeito. Todos são
 **add-ins nativos (.NET)**: não precisam de pyRevit nem de Python, e dividem a aba **Gestão BIM**.
 
 | Plugin | Para que serve | Instalador |
 |---|---|---|
 | **GB Material Studio** | Estúdio de materiais: editor, favoritos, organização e material por camada | `GBMaterialStudio-Setup-<versão>.exe` |
 | **GB DWG Export** | Exporta folhas e vistas para DWG/DXF e junta folhas num só desenho, sem AutoCAD ([detalhes](docs/GB-DWG-EXPORT.md)) | `GBDwgExport-Setup-<versão>.exe` (tags `dwg-v*`) |
+| **GB Famílias** | Biblioteca de famílias com busca por texto e por imagem (IA local), filtros, categorias, favoritos e coleções; baixa e insere a família no projeto ([detalhes](docs/GB-FAMILIAS.md)) | `GBFamilias-<versão>.zip` (tags `familias-v*`); o catálogo vai no instalador e cada família é baixada do servidor, com login |
 
 ## O que o GB Material Studio faz
 
@@ -52,7 +53,7 @@ removeria outros elementos. Tudo é uma entrada só de desfazer.
 3. Abra o Revit. Na primeira vez ele pergunta se confia no add-in (não há assinatura digital ainda):
    escolha **"Sempre carregar"**.
 
-Quando sai uma versão nova, o botão **Sobre** ganha uma bolinha vermelha (uma consulta por dia ao GitHub, em
+Quando sai uma versão nova de qualquer plugin, o botão **Sobre** (um só para todos, no painel **Geral**) ganha uma bolinha vermelha (uma consulta por dia ao GitHub, em
 segundo plano; clicar no botão consulta na hora e leva à página de download. Para desligar a consulta automática, defina a variável de ambiente `GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`).
 
 Para remover, `Desinstalar.bat`. Seus favoritos e a biblioteca não são apagados.
@@ -69,6 +70,9 @@ dotnet test tests/GBMaterialStudio.Core.Tests        # regras puras, configuraç
 dotnet build src/GBMaterialStudio -c Release -p:RevitVersion=2027
 ./build/package.ps1                                  # gera o .zip e o instalador .exe em dist/ (2025, 2026, 2027)
 ./build/package-dwg.ps1                              # o mesmo para o GB DWG Export (embute o cadcraft-cli)
+dotnet test tests/GBFamilias.Core.Tests              # GB Famílias: índice, filtros, busca, favoritos, caminhos
+./build/package-familias.ps1                         # GB Famílias: plugin + motor de IA + modelos, .zip (~0,7 GB)
+cargo test --release --manifest-path tools/gbfam/Cargo.toml   # o motor gbfam (catálogo assinado, delta)
 ```
 
 Estrutura:
@@ -76,6 +80,7 @@ Estrutura:
 - `src/GBMaterialStudio.Core` — regras puras e o banco de favoritos (sem Revit; testado em Windows e Linux).
 - `src/GBMaterialStudio` — o add-in: comandos, janelas (WPF/XAML) e a camada que usa a API do Revit.
 - `tests/GBMaterialStudio.Core.Tests` — testes xUnit.
+- `src/GBFamilias*`, `tests/GBFamilias.Core.Tests`, `tools/gbfam` — o plugin GB Famílias, seus testes e o motor em Rust.
 - `installer` e `build` — manifesto `.addin`, instaladores e empacotamento.
 - `GBMaterialStudio.extension` — **edição legada em pyRevit** (mantida só como referência, ver abaixo).
 
@@ -85,6 +90,7 @@ Documentação:
 - [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md): como o add-in é organizado e por que cada decisão foi tomada.
 - [`docs/RELEASE.md`](docs/RELEASE.md): como gerar e publicar uma versão.
 - [`docs/GB-DWG-EXPORT.md`](docs/GB-DWG-EXPORT.md): o plugin GB DWG Export (guia, arquitetura, como publicar).
+- [`docs/GB-FAMILIAS.md`](docs/GB-FAMILIAS.md): o plugin GB Famílias (guia, arquitetura, como publicar).
 - [`CHANGELOG.md`](CHANGELOG.md): histórico de versões.
 
 ### Edição legada em pyRevit

@@ -11,8 +11,6 @@ public sealed class App : IExternalApplication
     private const string TabName = "Gestão BIM";
     private const string PanelName = "Materiais";
 
-    internal const string AboutTooltip = "Mostra a versão instalada e verifica se há uma versão nova no GitHub.";
-
     public Result OnStartup(UIControlledApplication application)
     {
         try
@@ -49,6 +47,10 @@ public sealed class App : IExternalApplication
             // The tab already exists (another Gestão BIM plugin created it): the panel goes there.
         }
 
+        // O "Sobre" e UNICO para os tres plugins: o primeiro que inicia cria o painel "Geral"; todos se registram.
+        Gestaobim.Shared.AboutHub.Register(application, TabName, "GB Material Studio", UpdateNotifier.BuildAboutSection, Icon,
+            Assembly.GetExecutingAssembly().Location, typeof(AboutCommand).FullName!);
+
         var panel = application.GetRibbonPanels(TabName).FirstOrDefault(p => p.Name == PanelName)
                     ?? application.CreateRibbonPanel(TabName, PanelName);
 
@@ -73,9 +75,7 @@ public sealed class App : IExternalApplication
             "Veja onde cada material é usado, encontre duplicados, exclua os não usados (mesma segurança do Purge do Revit) e renomeie em lote."));
         panel.AddItem(Button("GBApplyToType", "Aplicar em\ntipo", typeof(ApplyToTypeCommand).FullName!, "aplicar-tipo",
             "Troque o material de camadas de tipos de parede, piso, cobertura e forro. Use a seleção atual ou escolha os tipos numa lista; o destino pode ser um material do projeto ou um favorito."));
-        panel.AddSeparator();
-        var about = (PushButton)panel.AddItem(Button(UpdateNotifier.ButtonName, "Sobre", typeof(AboutCommand).FullName!, "sobre", AboutTooltip));
-        UpdateNotifier.Start(application, about);
+        UpdateNotifier.Start(application);
     }
 
     internal static BitmapImage Icon(string name)

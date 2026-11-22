@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 *.bak
 *.lock
+!tools/gbfam/Cargo.lock
 
 # DLL antiga (IronPython), ainda travada pelo Revit em algumas maquinas ate reiniciar
 GBMaterialStudio.extension/lib/GestaoBimCursorHook.dll
@@ -16,5 +17,9 @@ obj/
 dist/
 build/cache/
 
-# projeto local do usuario (banco de familias), nao faz parte deste repositorio
+# dados do banco de familias (sqlite, logs, previews): locais, nao fazem parte deste repositorio (o codigo fica em tools/gbfam)
 banco_familias/
+
+# segredos e arquivos locais de ambiente
+.env*
+!.env.example

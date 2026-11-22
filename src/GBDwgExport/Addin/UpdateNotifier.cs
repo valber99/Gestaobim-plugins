@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
+using Gestaobim.Shared;
 using Gestaobim.DwgExport.Core;
 
 namespace Gestaobim.DwgExport.Addin;
@@ -13,16 +14,14 @@ namespace Gestaobim.DwgExport.Addin;
 /// </summary>
 public static class UpdateNotifier
 {
-    public const string ButtonName = "GBDwgAbout";
+    private const string DisplayName = "GB DWG Export";
 
     private static ReleaseInfo? _pending;
-    private static PushButton? _button;
 
     private static Version Current => typeof(UpdateNotifier).Assembly.GetName().Version ?? new Version(0, 0, 0);
 
-    public static void Start(UIControlledApplication application, PushButton button)
+    public static void Start(UIControlledApplication application)
     {
-        _button = button;
         if (Environment.GetEnvironmentVariable("GB_DWG_EXPORT_NO_UPDATE_CHECK") == "1") return;
         application.Idling += OnIdling;
         _ = Task.Run(CheckInBackground);
@@ -60,27 +59,11 @@ public static class UpdateNotifier
         var release = Interlocked.Exchange(ref _pending, null);
         if (release is null) return;
         if (sender is UIApplication app) app.Idling -= OnIdling;
-        MarkAvailable(release);
+        AboutHub.MarkUpdate(DisplayName, release.Version.ToString(3), App.Icon);
     }
 
-    private static void MarkAvailable(ReleaseInfo release)
-    {
-        if (_button is null) return;
-        _button.LargeImage = App.Icon("sobre-novo");
-        _button.Image = App.Icon("sobre-novo");
-        _button.ToolTip = $"Nova versão disponível: {release.Version.ToString(3)}. Clique para ver.";
-    }
-
-    private static void MarkUpToDate()
-    {
-        if (_button is null) return;
-        _button.LargeImage = App.Icon("sobre");
-        _button.Image = App.Icon("sobre");
-        _button.ToolTip = App.AboutTooltip;
-    }
-
-    /// <summary>Button click: check now, then show the result.</summary>
-    public static void ShowAbout()
+    /// <summary>Consulta o GitHub agora e devolve a secao deste plugin para a janela unica "Sobre" (ver AboutHub).</summary>
+    public static (string Name, string Body, string? NewVersion, string? Url) BuildAboutSection()
     {
         ReleaseInfo? release = null;
         string? failure = null;
@@ -96,38 +79,18 @@ public static class UpdateNotifier
             failure = "Não foi possível consultar o GitHub. Verifique a conexão com a internet.";
         }
 
-        var installed = UpdateRules.Normalize(Current).ToString(3);
-        var engine = Bridge.CadcraftBridge.Find() is not null ? "motor de mesclagem encontrado" : "motor de mesclagem NÃO encontrado (rode o instalador de novo)";
-        var dialog = new TaskDialog("GB DWG Export")
-        {
-            MainInstruction = "GB DWG Export",
-            FooterText = "Código-fonte e licença AGPL-3.0: github.com/valber99/Gestaobim-plugins",
-            CommonButtons = TaskDialogCommonButtons.Close,
-            DefaultButton = TaskDialogResult.Close,
-        };
+        var lines = new List<string> { $"Versão instalada: {UpdateRules.Normalize(Current).ToString(3)}" };
+        lines.Add(release is not null
+            ? $"Nova versão disponível: {release.Version.ToString(3)}. Para atualizar, baixe o instalador, feche o Revit e execute-o."
+            : failure ?? "Você está na versão mais recente.");
+        lines.AddRange(Details());
+        return (DisplayName, string.Join("\n", lines), release?.Version.ToString(3), release?.Url);
+    }
 
-        if (release is not null)
-        {
-            MarkAvailable(release);
-            dialog.MainContent = $"Versão instalada: {installed}\nNova versão disponível: {release.Version.ToString(3)}\n\n" +
-                                 $"Para atualizar, baixe o instalador, feche o Revit e execute-o.\n\n({engine})";
-            dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Baixar a nova versão");
-        }
-        else
-        {
-            if (failure is null) MarkUpToDate();
-            dialog.MainContent = $"Versão instalada: {installed}\n\n{failure ?? "Você está na versão mais recente."}\n\n({engine})";
-        }
-
-        if (dialog.Show() == TaskDialogResult.CommandLink1 && release is not null)
-        {
-            try
-            {
-                Process.Start(new ProcessStartInfo(release.Url) { UseShellExecute = true });
-            }
-            catch (Exception)
-            {
-            }
-        }
+    private static IEnumerable<string> Details()
+    {
+        yield return Bridge.CadcraftBridge.Find() is not null
+            ? "(motor de mesclagem encontrado)"
+            : "(motor de mesclagem NÃO encontrado: rode o instalador de novo)";
     }
 }

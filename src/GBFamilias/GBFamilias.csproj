@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- One source, one build per Revit year: dotnet build -c Release -p:RevitVersion=2027 -->
+    <RevitVersion Condition="'$(RevitVersion)' == ''">2027</RevitVersion>
+    <TargetFramework Condition="'$(RevitVersion)' == '2027'">net10.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(RevitVersion)' != '2027'">net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>GBFamilias</AssemblyName>
+    <RootNamespace>Gestaobim.Familias</RootNamespace>
+    <Version>0.2.0</Version>
+    <Company>Gestão BIM</Company>
+    <Product>GB Famílias</Product>
+    <Description>Biblioteca de famílias do Revit com busca por texto e por imagem, filtros, categorias, favoritos e coleções.</Description>
+    <Copyright>AGPL-3.0</Copyright>
+    <DefineConstants>$(DefineConstants);REVIT$(RevitVersion)</DefineConstants>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\$(Configuration)\$(RevitVersion)\</OutputPath>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- Diferente dos outros plugins: aqui o SQLite vai ao lado da DLL (Microsoft.Data.Sqlite e SQLitePCLRaw). -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Revit provides these at run time, so they are compile-time only. -->
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitVersion).*" ExcludeAssets="runtime" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitVersion).*" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SQLite: o provedor winsqlite3 usa o sqlite3 que ja vem no Windows, entao nao ha DLL nativa para distribuir. -->
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.*" />
+    <PackageReference Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The pure core is compiled into this assembly. -->
+    <Compile Include="..\GBFamilias.Core\**\*.cs" Exclude="..\GBFamilias.Core\obj\**;..\GBFamilias.Core\bin\**" LinkBase="Core" />
+    <Compile Include="..\GBShared\**\*.cs" LinkBase="Shared" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Icons\*.png" LogicalName="Icons.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

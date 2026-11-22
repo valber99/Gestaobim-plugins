@@ -104,5 +104,4 @@ CODIGO-FONTE E LICENCA
 
 $zip = Join-Path $root "dist\$name.zip"
 New-ZipWithChecksum -Stage $stage -Zip $zip
-New-SetupExe -Zip $zip -Exe (Join-Path $root "dist\GBDwgExport-Setup-$version.exe") `
-    -Title "GB DWG Export $version" -Slug 'gb-dwg-export'
+New-LargeSetupExe -Zip $zip -Exe (Join-Path $root "dist\GBDwgExport-Setup-$version.exe") -Slug 'gb-dwg-export'

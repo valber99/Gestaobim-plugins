@@ -24,7 +24,7 @@ não é preciso ter o Revit para compilar. O Core é compilado dentro da mesma D
 | `Addin/App.cs` | `IExternalApplication`: cria a aba "Gestão BIM", o painel "Materiais" e os seis botões |
 | `Addin/Commands.cs` | Um `IExternalCommand` por botão, todos via `CommandRunner` (captura erros em vez de derrubar o Revit) |
 | `Addin/Flows.cs` | Fluxos: editar material (modal e fixo), favoritos, organizar, aplicar em tipo |
-| `Addin/UpdateNotifier.cs` | Botão **Sobre** e aviso de atualização (bolinha vermelha) |
+| `Addin/UpdateNotifier.cs` | Consulta de versão nova deste plugin e a sua seção na janela única **Sobre** (`src/GBShared/AboutHub.cs`, compartilhado com os outros plugins) |
 | `Revit/MaterialServices.cs`, `AppearanceSchemas.cs` | Leitura e escrita de materiais, aparência, texturas e padrões |
 | `Revit/Hygiene.cs` | Uso real de cada material, assinatura, exclusão segura, renomeação em duas fases |
 | `Revit/MaterialLibrary.cs`, `Favorites.cs` | Biblioteca portátil (`.rvt` por versão) e favoritos sobre o banco |
@@ -120,11 +120,18 @@ atualização automática: trocar a DLL com o Revit aberto não é possível, en
 
 ### Instalador `.exe`
 
-Gerado pelo `build/package.ps1` com o IExpress (já vem no Windows, sem dependências). Embute o `.zip` e um
-`setup.cmd`, que recusa instalar com o Revit aberto, extrai o pacote e roda o `Install.ps1`. Detalhes que deram
-trabalho: o `AppLaunched` precisa apontar direto para `setup.cmd` (com `cmd /c` o IExpress não executa), e a
-checagem do Revit usa `Get-Process` (o `tasklist | find` não funcionou dentro do IExpress). O log fica em
-`%TEMP%\gb-material-studio-setup.log`.
+Gerado pelos scripts de `build/` (`New-LargeSetupExe` em `common.ps1`), igual para os três plugins. É o
+`build/SetupStub.cs`, compilado pelo `csc` do .NET Framework que já vem no Windows (sem dependências), com o `.zip`
+colado no fim e um rodapé com o nome do log, o SHA-256 e o tamanho do pacote. Ao rodar, ele:
+1. recusa instalar com o Revit aberto;
+2. confere o SHA-256 (um download corrompido não instala);
+3. extrai para `%TEMP%` e roda o `Install.ps1`.
+
+Não pede administrador: instala no perfil do usuário. `/quiet` não pausa no fim (usado nos testes automáticos).
+O log fica em `%TEMP%\<plugin>-setup.log`, por exemplo `gb-material-studio-setup.log`.
+
+Até a 0.3.1 o instalador era do IExpress, que travava com o pacote de ~0,7 GB do GB Famílias e não roda sem um
+clique na confirmação do Windows.
 
 ## Testes
 

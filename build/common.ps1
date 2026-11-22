@@ -12,83 +12,47 @@ function New-ZipWithChecksum {
 
 <#
 .SYNOPSIS
-  Instalador .exe autoextraivel (IExpress, ja vem no Windows): recusa instalar com o Revit aberto,
-  extrai o .zip e roda o Install.ps1. Registra o que fez em %TEMP%\<Slug>-setup.log.
+  Instalador .exe para pacotes grandes (o IExpress trava com ~0,7 GB): compila build/SetupStub.cs com o csc do .NET
+  Framework do Windows e cola o .zip no fim, com o SHA-256 e o tamanho num rodape. O .exe confere o SHA-256, recusa
+  instalar com o Revit aberto, extrai e roda o Install.ps1 (com /quiet nao pausa no fim).
 #>
-function New-SetupExe {
-    param(
-        [string]$Zip,       # pacote .zip com o Install.ps1 na raiz
-        [string]$Exe,       # caminho do .exe a gerar
-        [string]$Title,     # nome mostrado ao usuario, por exemplo "GB DWG Export 0.1.0"
-        [string]$Slug       # nome curto sem espacos, por exemplo "gb-dwg-export"
-    )
-    $iex = Join-Path (Split-Path $Exe) "iexpress-$Slug"
-    if (Test-Path $iex) { Remove-Item $iex -Recurse -Force }
-    New-Item -ItemType Directory -Force $iex | Out-Null
-    Copy-Item $Zip (Join-Path $iex 'payload.zip')
-
-    $setup = @"
-@echo off
-chcp 65001 >nul
-title $Title - Instalador
-echo %date% %time% instalador iniciado>> "%TEMP%\$Slug-setup.log"
-powershell -NoProfile -Command "if (Get-Process -Name Revit -ErrorAction SilentlyContinue) { exit 1 } else { exit 0 }"
-if errorlevel 1 (
-  echo %date% %time% revit aberto, instalacao recusada>> "%TEMP%\$Slug-setup.log"
-  echo O Revit esta aberto. Feche o Revit e execute este instalador de novo.
-  echo.
-  pause
-  exit /b 1
-)
-set "T=%TEMP%\$Slug-setup"
-if exist "%T%" rmdir /s /q "%T%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%~dp0payload.zip' -DestinationPath '%T%' -Force; & '%T%\Install.ps1'"
-echo.
-pause
-"@
-    [IO.File]::WriteAllText((Join-Path $iex 'setup.cmd'), $setup.Replace("`r`n", "`n").Replace("`n", "`r`n"), (New-Object System.Text.UTF8Encoding($false)))
-
+function New-LargeSetupExe {
+    param([string]$Zip, [string]$Exe, [string]$Slug)   # Slug: nome do log, %TEMP%\<Slug>-setup.log
+    if ($Slug -notmatch '^[a-z0-9-]{1,32}$') { throw "Slug invalido: $Slug" }
+    $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+    if (-not (Test-Path $csc)) { throw "csc.exe do .NET Framework nao encontrado: $csc" }
+    $stub = Join-Path (Split-Path $Exe) 'setup-stub.exe'
+    & $csc /nologo /optimize+ /target:exe "/out:$stub" /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll (Join-Path $PSScriptRoot 'SetupStub.cs')
+    if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar o instalador (SetupStub.cs).' }
     if (Test-Path $Exe) { Remove-Item $Exe -Force }
-    $sed = @"
-[Version]
-Class=IEXPRESS
-SEDVersion=3
-[Options]
-PackagePurpose=InstallApp
-ShowInstallProgramWindow=0
-HideExtractAnimation=1
-UseLongFileName=1
-InsideCompressed=0
-CAB_FixedSize=0
-CAB_ResvCodeSigning=0
-RebootMode=N
-InstallPrompt=
-DisplayLicense=
-FinishMessage=
-TargetName=$Exe
-FriendlyName=$Title
-AppLaunched=setup.cmd
-PostInstallCmd=<None>
-AdminQuietInstCmd=
-UserQuietInstCmd=
-SourceFiles=SourceFiles
-[Strings]
-FILE0="setup.cmd"
-FILE1="payload.zip"
-[SourceFiles]
-SourceFiles0=$iex\
-[SourceFiles0]
-%FILE0%=
-%FILE1%=
-"@
-    $sedFile = Join-Path $iex 'setup.sed'
-    [IO.File]::WriteAllText($sedFile, $sed, [Text.Encoding]::ASCII)
-    & "$env:WINDIR\System32\iexpress.exe" /N /Q $sedFile | Out-Null
-    $deadline = (Get-Date).AddSeconds(120)
-    while (-not (Test-Path $Exe) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
-    if (-not (Test-Path $Exe)) { throw 'IExpress nao gerou o instalador .exe.' }
+    $zipHash = [byte[]]::new(32)
+    $sha = [Security.Cryptography.SHA256]::Create()
+    $in = [IO.File]::OpenRead($Zip)
+    try { $zipHash = $sha.ComputeHash($in); $zipLength = $in.Length } finally { $in.Dispose(); $sha.Dispose() }
+    $out = [IO.File]::Create($Exe)
+    try {
+        $s = [IO.File]::OpenRead($stub); try { $s.CopyTo($out) } finally { $s.Dispose() }
+        $z = [IO.File]::OpenRead($Zip); try { $z.CopyTo($out, 1MB) } finally { $z.Dispose() }
+        $slugBytes = [byte[]]::new(32); $ascii = [Text.Encoding]::ASCII.GetBytes($Slug)
+        [Array]::Copy($ascii, $slugBytes, $ascii.Length); $out.Write($slugBytes, 0, 32)
+        $out.Write($zipHash, 0, 32)
+        $len = [BitConverter]::GetBytes([long]$zipLength); $out.Write($len, 0, 8)
+        $magic = [Text.Encoding]::ASCII.GetBytes('GBSETUP2'); $out.Write($magic, 0, 8)
+    } finally { $out.Dispose() }
+    Remove-Item $stub -Force
     $hash = (Get-FileHash $Exe -Algorithm SHA256).Hash.ToLower()
     [IO.File]::WriteAllText("$Exe.sha256", "$hash  $(Split-Path $Exe -Leaf)`n")
     Write-Host "Instalador: $Exe"
     Write-Host "SHA256 exe: $hash"
+}
+
+# Descompacta um .gz (o .NET traz o GZipStream; o Expand-Archive do Windows PowerShell nao le .gz).
+function Expand-GzipFile {
+    param([string]$Path, [string]$Destination)
+    $in = [IO.File]::OpenRead($Path)
+    try {
+        $gz = New-Object IO.Compression.GZipStream($in, [IO.Compression.CompressionMode]::Decompress)
+        $out = [IO.File]::Create($Destination)
+        try { $gz.CopyTo($out) } finally { $out.Dispose(); $gz.Dispose() }
+    } finally { $in.Dispose() }
 }

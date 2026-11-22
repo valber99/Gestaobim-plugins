@@ -20,7 +20,7 @@ O script compila para o Revit 2025, 2026 e 2027 e gera em `dist/`:
 | Arquivo | Para quê |
 |---|---|
 | `GBMaterialStudio-<versão>.zip` e `.sha256` | Pacote com `Instalar.bat`, `Desinstalar.bat` e as três compilações |
-| `GBMaterialStudio-Setup-<versão>.exe` e `.sha256` | Instalador autoextraível (IExpress): extrai o `.zip` e roda o `Install.ps1` |
+| `GBMaterialStudio-Setup-<versão>.exe` e `.sha256` | Instalador (`build/SetupStub.cs`): confere o SHA-256, extrai o `.zip` e roda o `Install.ps1` |
 
 O `.exe` recusa instalar com o Revit aberto e registra o que fez em `%TEMP%\gb-material-studio-setup.log`.
 
@@ -50,6 +50,36 @@ abertas), e lembre do aviso "Complemento não certificado" e do aviso do Windows
 `GH_TOKEN="$(gh auth token --user valber99)"` em cada comando e faça o push com
 `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push`.
 
+## GB Famílias
+
+Tag `familias-v<versão>` (a versão vem de `src/GBFamilias/GBFamilias.csproj`). O pacote é gerado na máquina de quem
+publica porque leva o `gbfam.exe` e os modelos de IA, que não estão no repositório. O **catálogo** (banco com as
+famílias) vai **dentro do instalador**; o servidor só entrega os `.rfa`:
+
+```powershell
+cargo build --release --manifest-path tools/gbfam/Cargo.toml     # o gbfam.exe
+./build/package-familias.ps1                 # dist/GBFamilias-<versão>.zip e GBFamilias-Setup-<versão>.exe (~0,7 GB cada)
+./build/package-catalog.ps1                  # dist/GBFamilias-Catalogo-<v>.zip (só o catálogo, alguns MB)
+```
+
+Os `.exe` dos três plugins são o instalador próprio `build/SetupStub.cs` (o IExpress travava com o tamanho do GB
+Famílias), compilado pelo `csc` do .NET Framework que vem no Windows, com o `.zip` colado no fim. Ele confere o SHA-256
+do pacote, recusa instalar com o Revit aberto e roda o `Install.ps1` (`/quiet` não pausa no fim).
+
+Para testar a release instalada (e não uma compilação nova), feche o Revit, rode os `.exe` e depois
+`./build/revit-selftest.ps1 -Year <ano> -SkipInstall`.
+
+**Releases no GitHub:** o Material Studio lê a release marcada como *Latest*. Publique as do DWG Export e do GB Famílias
+com `--latest=false` e a do Material Studio por último.
+
+O pacote completo da biblioteca (`package-library.ps1`) **não é mais publicado**. Antes de publicar uma versão:
+rode `dotnet test tests/GBFamilias.Core.Tests` e `cargo test --release` em `tools/gbfam`, confira o status do
+servidor (saúde do serviço de arquivos) e teste a janela num Revit real (**inserir uma família que ainda não foi baixada**).
+A versão do plugin precisa ser igual ou maior que o `min_plugin` do catálogo publicado.
+
+Detalhes, parâmetros e limites em [`GB-FAMILIAS.md`](GB-FAMILIAS.md#publicar). Confira os direitos de redistribuição
+das famílias e as licenças dos modelos (o `LEIA-ME.txt` do pacote lista as fontes).
+
 ## 5. CI
 
 `.github/workflows/tests.yml` roda a cada push:
@@ -57,9 +87,11 @@ abertas), e lembre do aviso "Complemento não certificado" e do aviso do Windows
 - **core**: testes xUnit no Windows e no Linux.
 - **addin**: compila as três versões e empacota (artefato `GBMaterialStudio`).
 - **pyrevit-edition**: pytest da edição legada em pyRevit.
+- **gbfam**: `cargo test` do motor em Rust (`tools/gbfam`).
 
 ## Limitações conhecidas
 
 - O add-in e o instalador não são assinados (o Revit e o Windows avisam). Assinar exige um certificado de
   assinatura de código.
-- Revit 2025 e 2026 compilam, mas só o 2027 foi aberto em execução durante o desenvolvimento.
+- O teste automático dentro do Revit (`build/revit-selftest.ps1`) cobre o GB Famílias e o botão Sobre dos três plugins,
+  nos Revit 2025, 2026 e 2027; os comandos do Material Studio e do DWG Export continuam sendo testados à mão.

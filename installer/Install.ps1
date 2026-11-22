@@ -22,10 +22,14 @@ function Test-RevitInstalled([int]$year) {
 }
 
 $manifests = @(Get-ChildItem $here -Filter '*.addin' -File)
-if (-not $manifests) { throw 'Nenhum arquivo .addin encontrado ao lado do instalador.' }
+$catalogDir = Join-Path $here 'catalog'
+# Um pacote so de catalogo (sem .addin) e valido: atualiza o banco do GB Familias sem reinstalar o plugin.
+if (-not $manifests -and -not (Test-Path $catalogDir)) { throw 'Nenhum arquivo .addin encontrado ao lado do instalador.' }
 
-if (-not $Versions) { $Versions = $supported | Where-Object { Test-RevitInstalled $_ } }
-if (-not $Versions) { throw 'Nenhum Revit 2025, 2026 ou 2027 encontrado. Use -Versions 2027 para forcar.' }
+if ($manifests) {
+    if (-not $Versions) { $Versions = $supported | Where-Object { Test-RevitInstalled $_ } }
+    if (-not $Versions) { throw 'Nenhum Revit 2025, 2026 ou 2027 encontrado. Use -Versions 2027 para forcar.' }
+}
 
 foreach ($manifest in $manifests) {
     # A pasta do plugin e a do <Assembly>, por exemplo "GBDwgExport\GBDwgExport.dll" -> "GBDwgExport".
@@ -41,6 +45,32 @@ foreach ($manifest in $manifests) {
         Copy-Item $manifest.FullName (Join-Path $addins "$year\$($manifest.Name)") -Force
         Get-ChildItem $target -Recurse -File | Unblock-File
         Write-Host "$product - Revit $year : instalado em $target"
+    }
+}
+
+# Catalogo do GB Familias (banco de dados com previews e dados de busca): fica no computador, vem junto do instalador.
+# So substitui o que ja esta instalado se o do pacote for mais novo (o numero da versao esta em catalog.version).
+if (Test-Path $catalogDir) {
+    $catalogTarget = Join-Path $env:LOCALAPPDATA 'GestaoBIM\Familias'
+    New-Item -ItemType Directory -Force $catalogTarget | Out-Null
+    $packedVersion = [int](Get-Content (Join-Path $catalogDir 'catalog.version') -Raw).Trim()
+    $installedFile = Join-Path $catalogTarget 'catalog.version'
+    $installedVersion = 0
+    if ((Test-Path $installedFile) -and (Test-Path (Join-Path $catalogTarget 'catalog.sqlite'))) {
+        [void][int]::TryParse((Get-Content $installedFile -Raw).Trim(), [ref]$installedVersion)
+    }
+    if ($installedVersion -ge $packedVersion) {
+        Write-Host "Catalogo: a versao $installedVersion ja instalada e igual ou mais nova que a do pacote ($packedVersion). Mantida."
+    } else {
+        try {
+            $db = Join-Path $catalogTarget 'catalog.sqlite'
+            foreach ($suffix in '-wal', '-shm', '-journal') { Remove-Item ($db + $suffix) -Force -ErrorAction SilentlyContinue }
+            Copy-Item (Join-Path $catalogDir 'catalog.sqlite') $db -Force
+            Copy-Item (Join-Path $catalogDir 'catalog.version') $installedFile -Force
+            Write-Host "Catalogo versao $packedVersion instalado em $catalogTarget (antes: $installedVersion)."
+        } catch {
+            Write-Warning "Nao consegui instalar o catalogo (o Revit esta aberto?). Feche o Revit e rode de novo. $($_.Exception.Message)"
+        }
     }
 }
 

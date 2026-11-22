@@ -10,8 +10,6 @@ public sealed class App : IExternalApplication
     private const string TabName = "Gestão BIM";
     private const string PanelName = "Exportar DWG";
 
-    internal const string AboutTooltip = "Mostra a versão instalada do GB DWG Export e verifica se há uma versão nova no GitHub.";
-
     public Result OnStartup(UIControlledApplication application)
     {
         try
@@ -39,6 +37,10 @@ public sealed class App : IExternalApplication
             // The tab already exists (GB Material Studio created it): the panel goes there.
         }
 
+        // O "Sobre" e UNICO para os tres plugins: o primeiro que inicia cria o painel "Geral"; todos se registram.
+        Gestaobim.Shared.AboutHub.Register(application, TabName, "GB DWG Export", UpdateNotifier.BuildAboutSection, Icon,
+            Assembly.GetExecutingAssembly().Location, typeof(AboutCommand).FullName!);
+
         var panel = application.GetRibbonPanels(TabName).FirstOrDefault(p => p.Name == PanelName)
                     ?? application.CreateRibbonPanel(TabName, PanelName);
         var assembly = Assembly.GetExecutingAssembly().Location;
@@ -60,9 +62,7 @@ public sealed class App : IExternalApplication
                 "Salva as configurações do GB DWG Export num arquivo .zip para levar a outra máquina."),
             Button("GBDwgSettingsIn", "Importar configurações", typeof(ImportSettingsCommand).FullName!, "config-importar",
                 "Lê um .zip de configurações do GB DWG Export."));
-        panel.AddSeparator();
-        var about = (PushButton)panel.AddItem(Button(UpdateNotifier.ButtonName, "Sobre", typeof(AboutCommand).FullName!, "sobre", AboutTooltip));
-        UpdateNotifier.Start(application, about);
+        UpdateNotifier.Start(application);
     }
 
     internal static BitmapImage Icon(string name)

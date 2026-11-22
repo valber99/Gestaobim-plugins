@@ -12,7 +12,7 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>GBMaterialStudio</AssemblyName>
     <RootNamespace>Gestaobim.MaterialStudio</RootNamespace>
-    <Version>0.3.1</Version>
+    <Version>0.3.2</Version>
     <Company>Gestão BIM</Company>
     <Product>GB Material Studio</Product>
     <Description>Estúdio de materiais para o Revit: editor, favoritos com biblioteca portátil, organização e material por camada.</Description>
@@ -35,6 +35,7 @@
   <ItemGroup>
     <!-- The pure core is compiled into this assembly: the add-in is a single DLL, with nothing to resolve in Revit. -->
     <Compile Include="..\GBMaterialStudio.Core\**\*.cs" Exclude="..\GBMaterialStudio.Core\obj\**;..\GBMaterialStudio.Core\bin\**" LinkBase="Core" />
+    <Compile Include="..\GBShared\**\*.cs" LinkBase="Shared" />
   </ItemGroup>
 
   <ItemGroup>

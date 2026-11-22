@@ -24,8 +24,8 @@ favoritos e configurações são copiados para a pasta nova na primeira abertura
 
 ## Onde fica
 
-Aba **Gestão BIM**, painel **Materiais**: Editar material, Editor fixo, Favoritos, Organizar materiais,
-Aplicar em tipo e Sobre.
+Aba **Gestão BIM**, painel **Materiais**: Editar material, Editor fixo, Favoritos, Organizar materiais e
+Aplicar em tipo. O botão **Sobre** é um só para todos os plugins Gestão BIM e fica no painel **Geral**.
 
 ## Editar material
 
@@ -88,12 +88,13 @@ Troca o material das camadas de tipos de parede, piso, cobertura e forro.
 
 ## Sobre e atualizações
 
-**Sobre** mostra a versão instalada e consulta o GitHub na hora. Se houver versão nova, oferece
-**Baixar a nova versão** (abre a página da release). O add-in não se atualiza sozinho: baixe e rode o
-instalador com o Revit fechado.
+**Sobre** (painel **Geral**) é um botão **único**, compartilhado por todos os plugins Gestão BIM instalados (Material
+Studio, DWG Export e Famílias). Ele mostra, numa janela só, a versão instalada de cada um, o diagnóstico de cada um e
+consulta o GitHub na hora. Se algum tiver versão nova, oferece **Baixar** (abre a página da release). Os add-ins não se
+atualizam sozinhos: baixe e rode o instalador com o Revit fechado.
 
 Ao abrir o Revit, o add-in consulta o GitHub em segundo plano (no máximo uma vez por dia). Se houver versão
-nova, o botão **Sobre** ganha uma **bolinha vermelha**. Sem internet, nada acontece.
+nova de qualquer plugin, o botão **Sobre** ganha uma **bolinha vermelha**. Sem internet, nada acontece.
 
 Para desligar a consulta automática, defina a variável de ambiente `GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`.
 

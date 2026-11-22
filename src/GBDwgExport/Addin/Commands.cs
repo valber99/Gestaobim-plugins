@@ -77,5 +77,5 @@ public sealed class ImportSettingsCommand : IExternalCommand
 public sealed class AboutCommand : IExternalCommand
 {
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements) =>
-        CommandRunner.Run(commandData, ref message, _ => UpdateNotifier.ShowAbout());
+        CommandRunner.Run(commandData, ref message, _ => Gestaobim.Shared.AboutHub.ShowAll(App.Icon));
 }

@@ -28,7 +28,7 @@ Aba **Gestão BIM**, painel **Exportar DWG**:
 | **Layout único** | Um só desenho com um único layout que mostra todas as folhas. |
 | **Exportar vistas** | Plantas, cortes, elevações, 3D e outras vistas (não só folhas), um arquivo por vista, pelo motor do Revit. |
 | **Exportar / Importar configurações** | Salva as configurações num `.zip` e lê um `.zip` de outra máquina. |
-| **Sobre** | Mostra a versão e consulta o GitHub; uma bolinha vermelha avisa que há versão nova. |
+| **Sobre** (painel **Geral**) | Botão único de todos os plugins Gestão BIM: mostra a versão de cada um e consulta o GitHub; uma bolinha vermelha avisa que há versão nova. |
 
 ### A janela de exportação
 

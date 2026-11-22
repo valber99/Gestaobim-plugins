@@ -63,5 +63,4 @@ CODIGO-FONTE E LICENCA
 
 $zip = Join-Path $root "dist\$name.zip"
 New-ZipWithChecksum -Stage $stage -Zip $zip
-New-SetupExe -Zip $zip -Exe (Join-Path $root "dist\GBMaterialStudio-Setup-$version.exe") `
-    -Title "GB Material Studio $version" -Slug 'gb-material-studio'
+New-LargeSetupExe -Zip $zip -Exe (Join-Path $root "dist\GBMaterialStudio-Setup-$version.exe") -Slug 'gb-material-studio'

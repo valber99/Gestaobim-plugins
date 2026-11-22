@@ -30,4 +30,19 @@ if (Test-Path (Join-Path $PSScriptRoot 'GBDwgExport.addin')) {
         catch { Write-Warning 'Nao consegui remover o cadcraft-cli (em uso?).' }
     }
 }
+# O motor de busca por IA (gbfam.exe e os modelos) so e usado pelo GB Familias.
+if (Test-Path (Join-Path $PSScriptRoot 'GBFamilias.addin')) {
+    $gbfam = Join-Path $env:APPDATA 'GestaoBIM\Tools\gbfam'
+    if (Test-Path $gbfam) {
+        try { Remove-Item $gbfam -Recurse -Force; Write-Host 'Motor de busca por IA (gbfam) removido.' }
+        catch { Write-Warning 'Nao consegui remover o gbfam (em uso? feche o Revit).' }
+    }
+    # O catalogo (banco com previews e dados de busca) vem no instalador e e recriado por ele.
+    $catalogFolder = Join-Path $env:LOCALAPPDATA 'GestaoBIM\Familias'
+    foreach ($f in 'catalog.sqlite', 'catalog.sqlite.anterior', 'catalog.version') {
+        $file = Join-Path $catalogFolder $f
+        if (Test-Path $file) { try { Remove-Item $file -Force } catch { Write-Warning "Nao consegui remover $f (em uso? feche o Revit)." } }
+    }
+    Write-Host 'Catalogo removido. As familias baixadas (na pasta que voce escolheu) e a biblioteca do modo local NAO foram apagadas.'
+}
 Write-Host 'Seus dados continuam em %APPDATA%\GestaoBIM.'

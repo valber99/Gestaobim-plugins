@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>GB Famílias</Name>
+    <Assembly>GBFamilias\GBFamilias.dll</Assembly>
+    <AddInId>B3D2A7C1-5E4F-4A68-9C0D-2F8E1A6B7D34</AddInId>
+    <FullClassName>Gestaobim.Familias.Addin.App</FullClassName>
+    <VendorId>GBIM</VendorId>
+    <VendorDescription>Gestão BIM - github.com/valber99/Gestaobim-plugins</VendorDescription>
+  </AddIn>
+</RevitAddIns>
