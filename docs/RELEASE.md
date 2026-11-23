@@ -1,12 +1,12 @@
 # Como publicar uma versão
 
-Os três plugins (GB Material Studio, GB DWG Export e GB Famílias) saem juntos, num **instalador único** e numa
-**release só** no GitHub, com **uma versão para os três** e tag `v<versão>`.
+Os cinco plugins (GB Material Studio, GB DWG Export, GB Famílias, GB Cotas e GB Render) saem juntos, num
+**instalador único** e numa **release só** no GitHub, com **uma versão para os cinco** e tag `v<versão>`.
 
 ## 1. Preparar
 
-1. Altere `<Version>` nos três `.csproj` (`src/GBMaterialStudio`, `src/GBDwgExport`, `src/GBFamilias`) para o mesmo
-   número (por exemplo, `0.4.1`). O script de pacote recusa versões diferentes. Esse número é o que o botão **Sobre**
+1. Altere `<Version>` nos cinco `.csproj` (`src/GBMaterialStudio`, `src/GBDwgExport`, `src/GBFamilias`, `src/GBCotas`,
+   `src/GBRender`) para o mesmo número (por exemplo, `0.5.0`). O script de pacote recusa versões diferentes. Esse número é o que o botão **Sobre**
    compara com a última release `v*` do GitHub.
 2. Atualize o `CHANGELOG.md` com uma seção para a versão.
 3. Rode os testes:
@@ -14,6 +14,9 @@ Os três plugins (GB Material Studio, GB DWG Export e GB Famílias) saem juntos,
    dotnet test tests/GBMaterialStudio.Core.Tests
    dotnet test tests/GBDwgExport.Core.Tests
    dotnet test tests/GBFamilias.Core.Tests
+   dotnet test tests/GBAi.Shared.Tests      # inclui o gateway real se build/cache/cliproxy-x/cli-proxy-api.exe existir
+   dotnet test tests/GBCotas.Core.Tests
+   dotnet test tests/GBRender.Core.Tests
    cargo test --release --manifest-path tools/gbfam/Cargo.toml
    ```
 
@@ -27,11 +30,14 @@ cargo build --release --manifest-path tools/gbfam/Cargo.toml     # o gbfam.exe
 ./build/package-gestaobim.ps1
 ```
 
-O script compila os três plugins para o Revit 2025, 2026 e 2027, junta tudo e gera em `dist/`:
+O script compila os cinco plugins para o Revit 2025, 2026 e 2027, junta tudo e gera em `dist/`. O
+`package-ia.ps1` (chamado por ele) baixa o CLIProxyAPI da versão fixa em `ProxyPin` (`src/GBAi.Shared/GatewayHost.cs`),
+confere o SHA-256 do zip e do executável e recusa se o pino do script e o do código divergirem. Para trocar a versão do
+gateway, mude os três valores nos dois lugares e rode `tests/GBAi.Shared.Tests` com o binário novo.
 
 | Arquivo | Para quê |
 |---|---|
-| `GestaoBIM-Setup-<versão>.exe` e `.sha256` | O instalador (~0,7 GB): os três plugins, o catálogo, a busca por IA (gbfam + modelos) e o cadcraft-cli. Só os `.rfa` ficam de fora. |
+| `GestaoBIM-Setup-<versão>.exe` e `.sha256` | O instalador (~0,8 GB): os cinco plugins, o catálogo, a busca por IA (gbfam + modelos), o cadcraft-cli e o CLIProxyAPI. Só os `.rfa` ficam de fora. |
 | `GestaoBIM-<versão>.zip` e `.sha256` | O mesmo conteúdo, com `Instalar.bat` e `Desinstalar.bat` |
 
 O `.exe` é o instalador próprio `build/SetupStub.cs` (o IExpress travava com esse tamanho), compilado pelo `csc` do .NET
@@ -59,7 +65,19 @@ O DWG Export tem o próprio autoteste, que só exige o Revit daquele ano fechado
 ./build/revit-selftest-dwg.ps1 -Year 2025 -Models C:\caminho\projeto1.rvt, C:\caminho\projeto2.rvt -WorkDir F:\teste
 ```
 
-Ele exporta folhas em cada modo de mesclagem (inclusive com a configuração de exportação do projeto) e vistas no model
+O GB Cotas e o GB Render têm um autoteste parecido (também só exige o Revit daquele ano fechado):
+
+```powershell
+./build/revit-selftest-ia.ps1 -Plugin Cotas -Year 2025 -Models C:\caminho\projeto1.rvt, C:\caminho\projeto2.rvt
+./build/revit-selftest-ia.ps1 -Plugin Render -Year 2025 -Models C:\caminho\projeto1.rvt, C:\caminho\projeto2.rvt
+```
+
+O de Cotas cota as duas plantas com mais paredes de cada projeto pelas regras (sem IA) e confere 0 colisões, 100% das
+cadeias como cota nativa e os valores medidos pelo Revit iguais aos do plano. O de Render extrai a vista 3D, monta as
+quatro camadas e o manifesto e compara o enquadramento com a imagem que o próprio Revit exporta da vista. Nenhum dos
+dois chama a IA. Detalhes em [PLANO-GB-IA.md](PLANO-GB-IA.md).
+
+O do DWG Export exporta folhas em cada modo de mesclagem (inclusive com a configuração de exportação do projeto) e vistas no model
 space, em cópias dos projetos que nunca são salvas, confere layouts, viewports e carimbo, e grava um PNG de cada layout
 em `<WorkDir>\saida` para conferir a olho. Use projetos com folhas de verdade (carimbo, várias vistas, legenda). As
 cópias e os temporários do Revit ficam em `-WorkDir` (padrão `%TEMP%\gbdwg-selftest-<ano>`): com projetos grandes,

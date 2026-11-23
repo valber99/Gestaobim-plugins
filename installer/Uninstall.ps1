@@ -45,4 +45,15 @@ if (Test-Path (Join-Path $PSScriptRoot 'GBFamilias.addin')) {
     }
     Write-Host 'Catalogo removido. As familias baixadas (na pasta que voce escolheu) e a biblioteca do modo local NAO foram apagadas.'
 }
+# O gateway de IA (CLIProxyAPI) so e usado pelo GB Cotas e pelo GB Render. As contas conectadas (auth) ficam: sao do usuario.
+if ((Test-Path (Join-Path $PSScriptRoot 'GBCotas.addin')) -or (Test-Path (Join-Path $PSScriptRoot 'GBRender.addin'))) {
+    $proxy = Join-Path $env:APPDATA 'GestaoBIM\Tools\cliproxyapi'
+    if (Test-Path $proxy) {
+        try { Remove-Item $proxy -Recurse -Force; Write-Host 'Gateway de IA (CLIProxyAPI) removido.' }
+        catch { Write-Warning 'Nao consegui remover o gateway de IA (em uso? feche o Revit).' }
+    }
+    # Configs de sessoes antigas do gateway (tokens que ja nao valem) nao precisam ficar.
+    $run = Join-Path $env:LOCALAPPDATA 'GestaoBIM\gbai\run'
+    if (Test-Path $run) { try { Remove-Item $run -Recurse -Force } catch { } }
+}
 Write-Host 'Seus dados continuam em %APPDATA%\GestaoBIM.'

@@ -1,8 +1,41 @@
 # Changelog
 
-Desde a **0.4.0** os três plugins saem num instalador único, com uma versão só e a tag `v<versão>`.
+Desde a **0.4.0** os plugins saem num instalador único (cinco desde a 0.5.0), com uma versão só e a tag `v<versão>`.
 Antes disso, cada um tinha a sua: **GB DWG Export** com tag `dwg-v<versão>` (prefixo "DWG" abaixo), **GB Famílias**
 com `familias-v<versão>` (prefixo "Famílias") e GB Material Studio com `v<versão>`.
+
+## 0.5.0 — GB Cotas e GB Render (IA) no instalador único
+
+### Novo
+- **GB Cotas** (painel Cotas): cota a planta aberta com **cotas nativas do Revit**. Pega faces
+  de paredes, aberturas e eixos e monta as cadeias interna, intermediária e externa de cada lado. Afasta as linhas
+  para que não se sobreponham entre si, às paredes, tags e cotas existentes. Funciona **só por regras, sem IA**. Com IA,
+  o modelo sugere quais cadeias criar a partir do pedido ("cote as fachadas e os banheiros por dentro") e o plugin
+  confere cada referência antes de cotar. O que não passa é recusado com o motivo.
+  - Antes de gravar, mostra a lista de cadeias para marcar e desmarcar. Grava numa transação só (um Ctrl+Z desfaz
+    tudo), relê cada cota e desfaz a cadeia se o Revit medir algo diferente do plano. Salva um `autodim_audit.json`.
+  - Perfil de regras editável (afastamentos em mm de papel, lados, faixa da fachada) em `%APPDATA%\GestaoBIM\Cotas`.
+  - Plantas giradas: as cotas seguem a direção dominante das paredes.
+  - Cortes e elevações ainda não são cotados: a vista é recusada com o motivo.
+- **GB Render** (painel Render): render da vista 3D aberta com um modelo de imagem. O plugin rasteriza a geometria e
+  gera quatro camadas alinhadas pixel a pixel: clay, cores por elemento, profundidade e fundo. Junta a elas um
+  manifesto com a categoria, a família, o material e a caixa na tela de cada objeto. **Edição pontual**: marque objetos
+  e peça a troca só deles. O plugin confere se a imagem mudou fora da máscara.
+  Perspectivas precisam estar com **Recortar vista** ligado (sem recorte, o Revit usa um enquadramento que a API não
+  informa).
+- **Configurar IA** (painel IA): conecta uma **chave de API** (Gemini, Claude ou OpenAI, guardada com DPAPI) ou uma
+  **assinatura** (Claude Code, ChatGPT Codex, Antigravity), escolhe o modelo de cada tarefa e testa a conexão. Entrar
+  com assinatura mostra antes o aviso sobre os termos de uso do provedor.
+- Gateway local: o **CLIProxyAPI 8.1.1** original (MIT), conferido por SHA-256. Escuta só em `127.0.0.1`, usa uma senha
+  nova por sessão e um limite de 64 MB por pedido. O painel de gerenciamento fica desligado e a pasta de contas só pode
+  ser lida pelo usuário. Ele fecha junto com o Revit.
+
+### Alterado
+- **GB Famílias**: catálogo atualizado para a versão **4** com **41.762 famílias únicas** (40.328 com preview embutido),
+  100% enriquecidas com descrição, categoria e tags por IA e indexadas para busca semântica por texto e imagem.
+- O instalador único leva os **cinco** plugins, com uma versão só (0.5.0), e um `THIRD-PARTY.txt` com as licenças de
+  terceiros.
+- O desinstalador remove também o gateway de IA. As contas conectadas ficam.
 
 ## 0.4.1 — GB DWG Export: folhas completas no DWG mesclado
 

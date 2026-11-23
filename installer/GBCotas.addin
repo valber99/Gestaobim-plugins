@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>GB Cotas</Name>
+    <Assembly>GBCotas\GBCotas.dll</Assembly>
+    <AddInId>5E8C1B27-9A43-4D6F-B2E1-73A0C4D95F18</AddInId>
+    <FullClassName>Gestaobim.Cotas.Addin.App</FullClassName>
+    <VendorId>GBIM</VendorId>
+    <VendorDescription>Gestão BIM - github.com/valber99/Gestaobim-plugins</VendorDescription>
+  </AddIn>
+</RevitAddIns>

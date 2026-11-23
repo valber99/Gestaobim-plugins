@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Gestaobim.Ai</RootNamespace>
+    <AssemblyName>GBAi.Shared</AssemblyName>
+    <Version>0.1.0</Version>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+</Project>

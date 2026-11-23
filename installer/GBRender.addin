@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>GB Render</Name>
+    <Assembly>GBRender\GBRender.dll</Assembly>
+    <AddInId>C4A92E61-0D37-48B5-9F6C-1E85B7A3D204</AddInId>
+    <FullClassName>Gestaobim.Render.Addin.App</FullClassName>
+    <VendorId>GBIM</VendorId>
+    <VendorDescription>Gestão BIM - github.com/valber99/Gestaobim-plugins</VendorDescription>
+  </AddIn>
+</RevitAddIns>

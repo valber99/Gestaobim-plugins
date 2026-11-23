@@ -12,7 +12,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        project: [GBMaterialStudio.Core.Tests, GBDwgExport.Core.Tests, GBFamilias.Core.Tests]
+        project: [GBMaterialStudio.Core.Tests, GBDwgExport.Core.Tests, GBFamilias.Core.Tests, GBCotas.Core.Tests, GBRender.Core.Tests]
+        include:
+          # O gateway de IA usa a DPAPI e as ACLs do Windows: os testes dele so rodam no Windows.
+          - os: windows-latest
+            project: GBAi.Shared.Tests
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +39,9 @@ jobs:
       - name: GB DWG Export
         shell: pwsh
         run: ./build/package-dwg.ps1
+      - name: GB Cotas e GB Render (com o CLIProxyAPI conferido por SHA-256)
+        shell: pwsh
+        run: ./build/package-ia.ps1
       # O GB Famílias leva o gbfam.exe e ~1 GB de modelos de IA, que não estão no repositório:
       # o pacote é gerado na máquina de quem publica (build/package-familias.ps1). Aqui só confere que compila.
       - name: GB Famílias (compilação)
