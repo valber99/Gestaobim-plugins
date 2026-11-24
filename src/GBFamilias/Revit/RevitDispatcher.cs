@@ -22,11 +22,11 @@ public sealed class RevitDispatcher : IExternalEventHandler
         _event = ExternalEvent.Create(_handler);
     }
 
-    public static void Post(Action<UIApplication> work)
+    public static bool Post(Action<UIApplication> work)
     {
         if (_handler is null || _event is null) throw new InvalidOperationException("O despachante do Revit nao foi iniciado.");
         _handler._queue.Enqueue(work);
-        _event.Raise();
+        return _event.Raise() == ExternalEventRequest.Accepted;
     }
 
     public void Execute(UIApplication app)

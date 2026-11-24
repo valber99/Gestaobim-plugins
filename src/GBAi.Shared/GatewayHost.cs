@@ -68,7 +68,7 @@ public static class GatewayHost
     public static GatewayEndpoint EnsureStarted(IEnumerable<ProviderKey>? keys, CancellationToken cancel)
     {
         using var mutex = new Mutex(false, MutexName);
-        Acquire(mutex);
+        Acquire(mutex, cancel);
         try
         {
             if (Current() is { } running && Ping(running)) return running;
@@ -83,7 +83,7 @@ public static class GatewayHost
     public static void Stop()
     {
         using var mutex = new Mutex(false, MutexName);
-        Acquire(mutex);
+        var acquired = TryAcquire(mutex, TimeSpan.FromSeconds(2));
         try
         {
             if (AppDomain.CurrentDomain.GetData(ShareKey) is string[] { Length: 4 } data && int.TryParse(data[3], out var pid))
@@ -95,7 +95,7 @@ public static class GatewayHost
         }
         finally
         {
-            mutex.ReleaseMutex();
+            if (acquired) mutex.ReleaseMutex();
         }
     }
 
@@ -209,10 +209,19 @@ public static class GatewayHost
     }
 
     /// <summary>Um Revit que caiu segurando o mutex o deixa abandonado: a posse passa para este processo, e o trabalho segue.</summary>
-    private static void Acquire(Mutex mutex)
+    private static void Acquire(Mutex mutex, CancellationToken cancel)
     {
-        try { mutex.WaitOne(); }
-        catch (AbandonedMutexException) { }
+        while (true)
+        {
+            cancel.ThrowIfCancellationRequested();
+            if (TryAcquire(mutex, TimeSpan.FromMilliseconds(200))) return;
+        }
+    }
+
+    private static bool TryAcquire(Mutex mutex, TimeSpan timeout)
+    {
+        try { return mutex.WaitOne(timeout); }
+        catch (AbandonedMutexException) { return true; }
     }
 
     private static bool Ping(GatewayEndpoint endpoint)
@@ -236,7 +245,7 @@ public static class GatewayHost
         try
         {
             using var p = Process.GetProcessById(pid);
-            return !p.HasExited;
+            return !p.HasExited && p.ProcessName.Contains("cli-proxy-api", StringComparison.OrdinalIgnoreCase);
         }
         catch (Exception)
         {
@@ -249,7 +258,7 @@ public static class GatewayHost
         try
         {
             using var p = Process.GetProcessById(pid);
-            if (!p.HasExited)
+            if (!p.HasExited && p.ProcessName.Contains("cli-proxy-api", StringComparison.OrdinalIgnoreCase))
             {
                 p.Kill(entireProcessTree: true);
                 p.WaitForExit(3000);

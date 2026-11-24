@@ -77,7 +77,6 @@ public sealed class LibraryService : IDisposable
             throw new CatalogMissingException(settings.CatalogSync
                 ? "O catalogo da biblioteca ainda nao foi baixado do servidor."
                 : $"O catalogo da biblioteca nao esta instalado neste computador ({settings.EffectiveDb}).\n\nRode de novo o instalador Gestao BIM: o catalogo vai junto com ele.");
-        session.Downloaded.Refresh(settings.EffectiveRoot);
         var db = LibraryDb.Open(settings.EffectiveDb);
         try
         {
@@ -156,6 +155,9 @@ public sealed class LibraryService : IDisposable
         return _starting ??= StartSemantic();
     }
 
+    private readonly object _disposeLock = new();
+    private bool _disposed;
+
     private async Task StartSemantic()
     {
         SemanticState = SemanticState.Starting;
@@ -168,9 +170,18 @@ public sealed class LibraryService : IDisposable
         }
         try
         {
-            Semantic = await SemanticClient.StartAsync(exe, Settings.EffectiveDb, TimeSpan.FromSeconds(120)).ConfigureAwait(false);
-            SemanticState = SemanticState.Ready;
-            SemanticDetail = "Busca por IA pronta.";
+            var client = await SemanticClient.StartAsync(exe, Settings.EffectiveDb, TimeSpan.FromSeconds(120)).ConfigureAwait(false);
+            lock (_disposeLock)
+            {
+                if (_disposed)
+                {
+                    client.Dispose();
+                    return;
+                }
+                Semantic = client;
+                SemanticState = SemanticState.Ready;
+                SemanticDetail = "Busca por IA pronta.";
+            }
         }
         catch (Exception error)
         {
@@ -181,8 +192,15 @@ public sealed class LibraryService : IDisposable
 
     public void Dispose()
     {
-        Semantic?.Dispose();
-        Semantic = null;
+        SemanticClient? semantic;
+        lock (_disposeLock)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            semantic = Semantic;
+            Semantic = null;
+        }
+        semantic?.Dispose();
         Db.Dispose();
     }
 }

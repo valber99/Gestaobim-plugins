@@ -259,10 +259,24 @@ public sealed class CatalogSync(ServerApi api, string publicKeyBase64, Version p
 
     private async Task<PreparedCatalog> DownloadSnapshotAsync(CatalogManifest manifest, string tempDir, CancellationToken cancel)
     {
-        var raw = Gunzip(await DownloadChecked(manifest.Snapshot, cancel).ConfigureAwait(false));
+        var gzBytes = await DownloadChecked(manifest.Snapshot, cancel).ConfigureAwait(false);
+        var tmp = Path.Combine(tempDir, $"catalog.sqlite.{Guid.NewGuid():N}.tmp");
         var path = Path.Combine(tempDir, "catalog.sqlite.next");
-        await File.WriteAllBytesAsync(path, raw, cancel).ConfigureAwait(false);
-        Validate(path, manifest);
+        try
+        {
+            using (var input = new GZipStream(new MemoryStream(gzBytes), CompressionMode.Decompress))
+            using (var output = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, useAsync: true))
+            {
+                await input.CopyToAsync(output, cancel).ConfigureAwait(false);
+            }
+            Validate(tmp, manifest);
+            File.Move(tmp, path, overwrite: true);
+        }
+        catch
+        {
+            TryDelete(tmp);
+            throw;
+        }
         return new PreparedCatalog(path, manifest.Version, SyncKind.Snapshot, manifest.Families);
     }
 

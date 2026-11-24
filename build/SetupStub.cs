@@ -30,6 +30,7 @@ static class SetupStub
     const int TrailerSize = 32 + 32 + 8 + 8;
     static readonly int[] SupportedYears = new int[] { 2025, 2026, 2027 };
 
+    static readonly object LogLock = new object();
     static string slug = "gb-setup";
     static string logFile;
 
@@ -129,11 +130,12 @@ static class SetupStub
             return 2;
         }
 
-        string temp = Path.Combine(Path.GetTempPath(), slug + "-setup");
-        if (Directory.Exists(temp)) Directory.Delete(temp, true);
+        string temp = Path.Combine(Path.GetTempPath(), slug + "-setup-" + Guid.NewGuid().ToString("N").Substring(0, 8));
         Directory.CreateDirectory(temp);
         string zip = Path.Combine(temp, "payload.zip");
 
+        try
+        {
         report(2, "Conferindo integridade do pacote (SHA-256)...");
         using (var input = new FileStream(exe, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20))
         {
@@ -241,7 +243,8 @@ static class SetupStub
             }
         }
 
-        var psi = new ProcessStartInfo("powershell.exe", psArgs.ToString());
+        string psExe = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe");
+        var psi = new ProcessStartInfo(psExe, psArgs.ToString());
         psi.UseShellExecute = false;
         psi.CreateNoWindow = true;
         psi.RedirectStandardOutput = true;
@@ -274,9 +277,13 @@ static class SetupStub
         }
 
         detail("Install.ps1 terminou com codigo " + exitCode);
-        try { Directory.Delete(temp, true); } catch { }
         if (exitCode == 0) report(100, "Instalacao concluida com sucesso!");
         return exitCode;
+        }
+        finally
+        {
+            try { if (Directory.Exists(temp)) Directory.Delete(temp, true); } catch { }
+        }
     }
 
     static string ReadSlug(string exe)
@@ -285,9 +292,11 @@ static class SetupStub
         {
             using (var input = new FileStream(exe, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
+                if (input.Length < TrailerSize) return "gb-setup";
                 var trailer = new byte[TrailerSize];
                 input.Seek(-TrailerSize, SeekOrigin.End);
                 ReadExactly(input, trailer, TrailerSize);
+                if (Encoding.ASCII.GetString(trailer, 72, 8) != Magic) return "gb-setup";
                 var sb = new StringBuilder();
                 for (int i = 0; i < 32 && trailer[i] != 0; i++)
                 {
@@ -314,11 +323,14 @@ static class SetupStub
 
     internal static void Log(string text)
     {
-        try
+        lock (LogLock)
         {
-            File.AppendAllText(logFile, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + text + Environment.NewLine, Encoding.UTF8);
+            try
+            {
+                File.AppendAllText(logFile, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + text + Environment.NewLine, Encoding.UTF8);
+            }
+            catch { }
         }
-        catch { }
     }
 }
 
@@ -517,7 +529,8 @@ sealed class SetupForm : Form
         {
             try
             {
-                if (File.Exists(logPath)) Process.Start("notepad.exe", "\"" + logPath + "\"");
+                string notepad = Path.Combine(Environment.SystemDirectory, "notepad.exe");
+                if (File.Exists(logPath)) Process.Start(notepad, "\"" + logPath + "\"");
             }
             catch { }
         };
@@ -606,6 +619,8 @@ sealed class SetupForm : Form
 
         warningPanel.Visible = false;
         isInstalling = true;
+        statusLabel.ForeColor = Color.FromArgb(51, 65, 85);
+        statusLabel.Font = new Font("Segoe UI", 9.5f);
         btnInstall.Enabled = false;
         btnCancel.Enabled = false;
         foreach (var cb in yearChecks.Values) cb.Enabled = false;

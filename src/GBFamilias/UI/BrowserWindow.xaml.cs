@@ -36,6 +36,7 @@ public partial class BrowserWindow : Window
     private CardItem? _selected;
     private bool _ready;
     private bool _suppress;
+    private bool _closed;
 
     private sealed class FacetPanel
     {
@@ -132,8 +133,10 @@ public partial class BrowserWindow : Window
         Activated += (_, _) => RefreshDownloadedMarks();
         Closed += (_, _) =>
         {
+            _closed = true;
             _debounce.Stop();
             _semanticCts?.Cancel();
+            _downloadCts?.Cancel();
             Instance = null;
         };
     }
@@ -204,7 +207,7 @@ public partial class BrowserWindow : Window
             var cts = _semanticCts = new CancellationTokenSource();
             var noText = _spec.Clone();
             noText.Text = "";
-            var allowed = _lib.Index.Query(noText).Select(r => r.Id).ToList();
+            var allowed = noText.IsEmpty ? null : _lib.Index.Query(noText).Select(r => r.Id).ToList();
             var ids = await client.SearchAsync(_spec.Text, _imageQuery, allowed, 150, cts.Token);
             if (version != _version) return;
             ShowResults(_lib.Index.Query(_spec, sort, ids));
@@ -700,9 +703,10 @@ public partial class BrowserWindow : Window
         SetBusy(false);
         RefreshDownloadedMarks(force: true);
 
+        if (_closed) return;
         StatusText.Text = $"Carregando {record.Title}…";
         Hide(); // o posicionamento precisa do foco do Revit; a janela volta quando terminar
-        RevitDispatcher.Post(app =>
+        var posted = RevitDispatcher.Post(app =>
         {
             InsertResult result;
             try
@@ -719,16 +723,24 @@ public partial class BrowserWindow : Window
             }
             finally
             {
-                Dispatcher.BeginInvoke(() =>
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () =>
                 {
+                    if (_closed) return;
                     Show();
                     Activate();
                     StatusText.Text = result.Message.Replace('\n', ' ');
                     RebuildCollections();
-                    if (result.Outcome == InsertOutcome.Failed) Dialogs.Alert(result.Message);
+                    if (result.Outcome == InsertOutcome.Failed)
+                        System.Windows.MessageBox.Show(this, result.Message, Dialogs.Title, MessageBoxButton.OK, MessageBoxImage.Information);
                 });
             }
         });
+        if (!posted)
+        {
+            Show();
+            Activate();
+            StatusText.Text = "O Revit está ocupado no momento. Feche caixas de diálogo abertas e tente de novo.";
+        }
     }
 
     /// <summary>Garante o arquivo (baixa se preciso), mostrando o andamento; se a sessao expirou, entra e tenta de novo.</summary>
@@ -828,6 +840,7 @@ public partial class BrowserWindow : Window
                     if (Dialogs.Alert($"{result.Message}\n\nAplicar agora? A janela da biblioteca será reaberta.", "GB Famílias", ask: true))
                     {
                         Close();
+                        LibraryService.Close();
                         ShowOrActivate();
                     }
                     break;

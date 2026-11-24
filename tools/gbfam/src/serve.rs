@@ -45,12 +45,13 @@ pub fn run(conn: &Connection, port: u16, token: String, exit_on_stdin_eof: bool)
         });
     }
     let mut models = Models::load()?;
+    let index = search::VectorIndex::load(conn)?;
     let server = Server::http(("127.0.0.1", port)).map_err(|e| anyhow!("nao abriu a porta: {e}"))?;
     let bound = server.server_addr().to_ip().map(|a| a.port()).unwrap_or(port);
     println!("LISTENING {bound}");
     std::io::stdout().flush().ok();
 
-    let embeddings: i64 = conn.query_row("SELECT count(*) FROM embeddings", [], |r| r.get(0))?;
+    let embeddings = index.count;
 
     for mut req in server.incoming_requests() {
         if !authorized(&req, &token) {
@@ -72,7 +73,7 @@ pub fn run(conn: &Connection, port: u16, token: String, exit_on_stdin_eof: bool)
                     let _ = req.respond(json_response(400, json!({ "error": "corpo ilegivel" })));
                     continue;
                 }
-                let reply = match handle_search(conn, &mut models, &body) {
+                let reply = match handle_search(&index, &mut models, &body) {
                     Ok(v) => json_response(200, v),
                     Err(e) => json_response(400, json!({ "error": format!("{e:#}") })),
                 };
@@ -86,7 +87,7 @@ pub fn run(conn: &Connection, port: u16, token: String, exit_on_stdin_eof: bool)
     Ok(())
 }
 
-fn handle_search(conn: &Connection, models: &mut Models, body: &str) -> Result<Value> {
+fn handle_search(index: &search::VectorIndex, models: &mut Models, body: &str) -> Result<Value> {
     let v: Value = serde_json::from_str(body)?;
     let q = v.get("q").and_then(|x| x.as_str());
     let image = match v.get("image_b64").and_then(|x| x.as_str()) {
@@ -98,6 +99,6 @@ fn handle_search(conn: &Connection, models: &mut Models, body: &str) -> Result<V
         .get("ids")
         .and_then(|x| x.as_array())
         .map(|a| a.iter().filter_map(|i| i.as_i64()).collect());
-    let ranked = search::rank(conn, models, q, image.as_deref(), allowed.as_ref(), top)?;
+    let ranked = search::rank(index, models, q, image.as_deref(), allowed.as_ref(), top)?;
     Ok(json!({ "hits": ranked.iter().map(|(id, s)| json!({ "id": id, "score": s })).collect::<Vec<_>>() }))
 }

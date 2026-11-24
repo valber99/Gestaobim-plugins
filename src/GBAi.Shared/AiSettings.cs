@@ -50,9 +50,12 @@ public sealed class AiSettings
             if (File.Exists(SettingsFile))
                 settings = JsonSerializer.Deserialize<AiSettings>(File.ReadAllText(SettingsFile, Encoding.UTF8), Json) ?? new AiSettings();
         }
-        catch (Exception)
+        catch (JsonException)
         {
             QuarantineCorrupt(SettingsFile);
+        }
+        catch (IOException)
+        {
         }
         try
         {
@@ -63,9 +66,12 @@ public sealed class AiSettings
                     settings.Keys[pair.Key] = pair.Value;
             }
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is System.Security.Cryptography.CryptographicException or JsonException)
         {
             QuarantineCorrupt(KeysFile);   // outro usuario do Windows ou arquivo danificado: guarda ao lado, nunca sobrescreve
+        }
+        catch (IOException)
+        {
         }
         return settings;
     }
@@ -80,7 +86,7 @@ public sealed class AiSettings
 
     private static void WriteAtomic(string path, byte[] content)
     {
-        var temp = path + "." + Environment.ProcessId + ".tmp";
+        var temp = $"{path}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
         File.WriteAllBytes(temp, content);
         File.Move(temp, path, overwrite: true);
     }

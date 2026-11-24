@@ -8,7 +8,7 @@
   Nao mover a edicao antiga em pyRevit do GB Material Studio (ela duplicaria a aba Gestao BIM).
 #>
 param(
-    [int[]]$Versions,
+    [string[]]$Versions,
     [switch]$KeepPyRevitEdition
 )
 $ErrorActionPreference = 'Stop'
@@ -16,6 +16,9 @@ $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
 $addins = Join-Path $env:APPDATA 'Autodesk\Revit\Addins'
 $supported = 2025, 2026, 2027
+if ($Versions) {
+    $Versions = @($Versions | ForEach-Object { $_ -split ',' } | Where-Object { $_ -and $_.Trim() } | ForEach-Object { [int]$_.Trim() })
+}
 
 function Test-RevitInstalled([int]$year) {
     return (Test-Path "HKLM:\SOFTWARE\Autodesk\Revit\Autodesk Revit $year") -or (Test-Path (Join-Path $addins $year))
@@ -57,19 +60,23 @@ if (Test-Path $catalogDir) {
     $installedFile = Join-Path $catalogTarget 'catalog.version'
     $installedVersion = 0
     if ((Test-Path $installedFile) -and (Test-Path (Join-Path $catalogTarget 'catalog.sqlite'))) {
-        [void][int]::TryParse((Get-Content $installedFile -Raw).Trim(), [ref]$installedVersion)
+        $rawVer = Get-Content $installedFile -Raw -ErrorAction SilentlyContinue
+        if ($rawVer) { [void][int]::TryParse($rawVer.Trim(), [ref]$installedVersion) }
     }
     if ($installedVersion -ge $packedVersion) {
         Write-Host "Catalogo: a versao $installedVersion ja instalada e igual ou mais nova que a do pacote ($packedVersion). Mantida."
     } else {
+        $db = Join-Path $catalogTarget 'catalog.sqlite'
+        $dbTmp = Join-Path $catalogTarget 'catalog.sqlite.tmp'
         try {
-            $db = Join-Path $catalogTarget 'catalog.sqlite'
             foreach ($suffix in '-wal', '-shm', '-journal') { Remove-Item ($db + $suffix) -Force -ErrorAction SilentlyContinue }
-            Copy-Item (Join-Path $catalogDir 'catalog.sqlite') $db -Force
+            Copy-Item (Join-Path $catalogDir 'catalog.sqlite') $dbTmp -Force
+            Move-Item $dbTmp $db -Force
             Copy-Item (Join-Path $catalogDir 'catalog.version') $installedFile -Force
             Write-Host "Catalogo versao $packedVersion instalado em $catalogTarget (antes: $installedVersion)."
         } catch {
-            Write-Warning "Nao consegui instalar o catalogo (o Revit esta aberto?). Feche o Revit e rode de novo. $($_.Exception.Message)"
+            Remove-Item $dbTmp -Force -ErrorAction SilentlyContinue
+            throw "Nao consegui instalar o catalogo (o Revit ou o gbfam esta aberto?). Feche o Revit e rode de novo. $($_.Exception.Message)"
         }
     }
 }

@@ -39,6 +39,8 @@ public sealed class FamilyRecord
     internal string FoldedCategory = "";
     internal string FoldedSub = "";
     internal string FoldedFolder = "";
+    internal string FoldedFolderCategory = "";
+    internal string FoldedRevitCategory = "";
     internal string FoldedStyle = "";
     internal string[] FoldedTags = [];
     internal string[] FoldedMaterials = [];
@@ -52,6 +54,8 @@ public sealed class FamilyRecord
         FoldedCategory = TextNorm.Fold(Category);
         FoldedSub = TextNorm.Fold(Subcategory);
         FoldedFolder = TextNorm.Fold((FolderCategory ?? "") + " " + (FolderHint ?? ""));
+        FoldedFolderCategory = TextNorm.Fold(FolderCategory);
+        FoldedRevitCategory = TextNorm.Fold(RevitCategory);
         FoldedStyle = TextNorm.Fold(Style);
         FoldedTags = Tags.Select(TextNorm.Fold).Where(t => t.Length > 0).ToArray();
         FoldedMaterials = Materials.Select(TextNorm.Fold).Where(t => t.Length > 0).ToArray();

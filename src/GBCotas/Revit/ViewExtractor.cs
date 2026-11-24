@@ -102,9 +102,17 @@ public static class ViewExtractor
             if (grid.Curve is not Line line) continue;
             var along = line.Direction;
             if (IsAlong(along, up))
-                raw.Add(new Raw(Dir.X, RefKind.Axis, Along(line.GetEndPoint(0), right), Along(line.GetEndPoint(0), up), Along(line.GetEndPoint(1), up), $"Eixo {grid.Name}", grid.Id.Value, new Reference(grid)));
+            {
+                var p0 = Along(line.GetEndPoint(0), up);
+                var p1 = Along(line.GetEndPoint(1), up);
+                raw.Add(new Raw(Dir.X, RefKind.Axis, Along(line.GetEndPoint(0), right), Math.Min(p0, p1), Math.Max(p0, p1), $"Eixo {grid.Name}", grid.Id.Value, new Reference(grid)));
+            }
             else if (IsAlong(along, right))
-                raw.Add(new Raw(Dir.Y, RefKind.Axis, Along(line.GetEndPoint(0), up), Along(line.GetEndPoint(0), right), Along(line.GetEndPoint(1), right), $"Eixo {grid.Name}", grid.Id.Value, new Reference(grid)));
+            {
+                var p0 = Along(line.GetEndPoint(0), right);
+                var p1 = Along(line.GetEndPoint(1), right);
+                raw.Add(new Raw(Dir.Y, RefKind.Axis, Along(line.GetEndPoint(0), up), Math.Min(p0, p1), Math.Max(p0, p1), $"Eixo {grid.Name}", grid.Id.Value, new Reference(grid)));
+            }
         }
 
         // ---- portas e janelas: a posicao de cada plano sai de cotas descartaveis (a API nao da a geometria do plano de referencia)
@@ -228,6 +236,7 @@ public static class ViewExtractor
             try
             {
                 var dimension = doc.Create.NewDimension(view, line, refs);
+                if (dimension is null || !dimension.IsValidObject) continue;
                 var value = dimension.Value ?? 0;
                 // A origem de uma cota de dois pontos fica no meio dos dois: o plano candidato esta no simetrico do central.
                 var pos = 2 * (dimension.Origin - origin).DotProduct(axis) - centerPos;

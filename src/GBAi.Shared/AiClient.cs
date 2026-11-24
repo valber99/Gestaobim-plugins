@@ -119,7 +119,14 @@ public sealed class AiClient : IAiGateway, IDisposable
                 var inline = part?["inlineData"] ?? part?["inline_data"];
                 if (bytes is null && inline?["data"] is JsonNode data)
                 {
-                    bytes = Convert.FromBase64String(data.GetValue<string>());
+                    try
+                    {
+                        bytes = Convert.FromBase64String(data.GetValue<string>());
+                    }
+                    catch (Exception ex) when (ex is FormatException or InvalidOperationException)
+                    {
+                        throw new AiException("O modelo devolveu uma imagem em base64 invalida.");
+                    }
                     mime = (inline["mimeType"] ?? inline["mime_type"])?.GetValue<string>() ?? mime;
                 }
             }
@@ -153,10 +160,26 @@ public sealed class AiClient : IAiGateway, IDisposable
         }
         using (response)
         {
-            var text = await response.Content.ReadAsStringAsync(cancel).ConfigureAwait(false);
+            string text;
+            try
+            {
+                text = await response.Content.ReadAsStringAsync(cancel).ConfigureAwait(false);
+            }
+            catch (TaskCanceledException) when (!cancel.IsCancellationRequested)
+            {
+                throw new AiException("O gateway de IA demorou demais para concluir a resposta.");
+            }
             if (!response.IsSuccessStatusCode)
                 throw new AiException($"O gateway respondeu {(int)response.StatusCode}: {Redactor.Shorten(Redactor.Scrub(ErrorMessage(text), _token), 400)}", (int)response.StatusCode);
-            return string.IsNullOrWhiteSpace(text) ? null : JsonNode.Parse(text);
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            try
+            {
+                return JsonNode.Parse(text);
+            }
+            catch (JsonException)
+            {
+                throw new AiException("O gateway de IA devolveu uma resposta JSON invalida.");
+            }
         }
     }
 

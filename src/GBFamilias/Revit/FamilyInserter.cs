@@ -105,11 +105,13 @@ public static class FamilyInserter
         {
             return new(InsertOutcome.Cancelled, $"A familia \"{family.Name}\" foi carregada. Posicionamento cancelado.");
         }
-        catch (Exception error) when (error is Autodesk.Revit.Exceptions.ArgumentException or InvalidOperationException)
+        catch (Exception error) when (error is Autodesk.Revit.Exceptions.ArgumentException
+                                          or Autodesk.Revit.Exceptions.InvalidOperationException
+                                          or InvalidOperationException)
         {
             return new(InsertOutcome.LoadedOnly,
-                $"A familia \"{family.Name}\" foi carregada, mas nao pode ser posicionada por este comando " +
-                $"(por exemplo perfis e anotacoes). Procure-a no Navegador de Projeto.");
+                $"A familia \"{family.Name}\" foi carregada, mas nao pode ser posicionada nesta vista " +
+                $"(por exemplo perfis, anotacoes ou acessorios MEP). Procure-a no Navegador de Projeto.");
         }
     }
 }

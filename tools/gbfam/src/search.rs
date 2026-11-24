@@ -1,35 +1,97 @@
 ﻿//! Busca hibrida: texto (e5->descricao + CLIP->imagem) ou imagem (CLIP), combinadas por RRF ponderada.
 //! Os vetores estao normalizados, entao o produto escalar e a similaridade de cosseno.
-//! Forca bruta em memoria: ~3,4 mil vetores de 512 floats (7 MB) respondem em milissegundos.
+//! Os vetores sao carregados uma vez em buffers contiguos em RAM (VectorIndex) para responder em milissegundos
+//! mesmo com dezenas de milhares de familias.
 
-use crate::db::blob_to_vec;
+use crate::db::{DIM_CLIP, DIM_E5};
 use crate::embed::Models;
 use anyhow::{bail, Result};
 use rusqlite::Connection;
 use std::collections::{HashMap, HashSet};
 
-/// Ids mais proximos de `query` na coluna `col`, ja restritos a `allowed` (quando houver).
-fn nearest(conn: &Connection, col: &str, query: &[f32], allowed: Option<&HashSet<i64>>, n: usize) -> Result<Vec<i64>> {
-    // `col` vem so de constantes internas abaixo, nunca de entrada do usuario.
-    let sql = format!("SELECT family_id, {col} FROM embeddings WHERE {col} IS NOT NULL");
-    let mut st = conn.prepare(&sql)?;
-    let mut scored: Vec<(i64, f32)> = st
-        .query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Vec<u8>>(1)?)))?
-        .filter_map(|r| r.ok())
-        .filter(|(id, _)| allowed.map_or(true, |a| a.contains(id)))
-        .map(|(id, blob)| {
-            let v = blob_to_vec(&blob);
-            (id, v.iter().zip(query).map(|(a, b)| a * b).sum::<f32>())
-        })
-        .collect();
-    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-    scored.truncate(n);
-    Ok(scored.into_iter().map(|(id, _)| id).collect())
+pub struct ColumnIndex {
+    dim: usize,
+    ids: Vec<i64>,
+    data: Vec<f32>,
+}
+
+impl ColumnIndex {
+    fn new(dim: usize) -> Self {
+        Self { dim, ids: Vec::new(), data: Vec::new() }
+    }
+
+    fn push_blob(&mut self, id: i64, blob: &[u8]) {
+        if blob.len() != self.dim * 4 {
+            return;
+        }
+        self.ids.push(id);
+        self.data.reserve(self.dim);
+        for c in blob.chunks_exact(4) {
+            self.data.push(f32::from_le_bytes([c[0], c[1], c[2], c[3]]));
+        }
+    }
+
+    fn nearest(&self, query: &[f32], allowed: Option<&HashSet<i64>>, n: usize) -> Vec<i64> {
+        if self.ids.is_empty() || query.len() != self.dim || n == 0 {
+            return Vec::new();
+        }
+        let mut scored: Vec<(i64, f32)> = Vec::with_capacity(self.ids.len());
+        for (&id, vec) in self.ids.iter().zip(self.data.chunks_exact(self.dim)) {
+            if let Some(a) = allowed {
+                if !a.contains(&id) {
+                    continue;
+                }
+            }
+            let s: f32 = vec.iter().zip(query).map(|(a, b)| a * b).sum();
+            if !s.is_nan() {
+                scored.push((id, s));
+            }
+        }
+        if scored.len() > n {
+            scored.select_nth_unstable_by(n, |a, b| b.1.total_cmp(&a.1));
+            scored.truncate(n);
+        }
+        scored.sort_unstable_by(|a, b| b.1.total_cmp(&a.1));
+        scored.into_iter().map(|(id, _)| id).collect()
+    }
+}
+
+pub struct VectorIndex {
+    pub count: i64,
+    img: ColumnIndex,
+    clip_txt: ColumnIndex,
+    desc_vec: ColumnIndex,
+}
+
+impl VectorIndex {
+    pub fn load(conn: &Connection) -> Result<Self> {
+        let mut img = ColumnIndex::new(DIM_CLIP);
+        let mut clip_txt = ColumnIndex::new(DIM_CLIP);
+        let mut desc_vec = ColumnIndex::new(DIM_E5);
+        let mut count = 0i64;
+
+        let mut st = conn.prepare("SELECT family_id, img, clip_txt, desc_vec FROM embeddings")?;
+        let mut rows = st.query([])?;
+        while let Some(r) = rows.next()? {
+            count += 1;
+            let id: i64 = r.get(0)?;
+            if let Some(b) = r.get::<_, Option<Vec<u8>>>(1)? {
+                img.push_blob(id, &b);
+            }
+            if let Some(b) = r.get::<_, Option<Vec<u8>>>(2)? {
+                clip_txt.push_blob(id, &b);
+            }
+            if let Some(b) = r.get::<_, Option<Vec<u8>>>(3)? {
+                desc_vec.push_blob(id, &b);
+            }
+        }
+        Ok(Self { count, img, clip_txt, desc_vec })
+    }
 }
 
 /// Ranking final: lista de (id, pontuacao RRF), do melhor para o pior.
 pub fn rank(
-    conn: &Connection,
+    index: &VectorIndex,
     models: &mut Models,
     query: Option<&str>,
     image: Option<&[u8]>,
@@ -45,15 +107,15 @@ pub fn rank(
     // de imagem e a fonte principal e o texto CLIP so desempata.
     let mut lists: Vec<(f64, Vec<i64>)> = Vec::new();
     if let Some(q) = query.filter(|q| !q.trim().is_empty()) {
-        lists.push((1.0, nearest(conn, "desc_vec", &models.e5("query: ", q)?, allowed, pool_n)?));
+        lists.push((1.0, index.desc_vec.nearest(&models.e5("query: ", q)?, allowed, pool_n)));
         let clip = models.clip_text(q)?;
-        lists.push((0.4, nearest(conn, "img", &clip, allowed, pool_n)?));
-        lists.push((0.4, nearest(conn, "clip_txt", &clip, allowed, pool_n)?));
+        lists.push((0.4, index.img.nearest(&clip, allowed, pool_n)));
+        lists.push((0.4, index.clip_txt.nearest(&clip, allowed, pool_n)));
     }
     if let Some(bytes) = image {
         let v = models.image(bytes)?;
-        lists.push((1.0, nearest(conn, "img", &v, allowed, pool_n)?));
-        lists.push((0.3, nearest(conn, "clip_txt", &v, allowed, pool_n)?));
+        lists.push((1.0, index.img.nearest(&v, allowed, pool_n)));
+        lists.push((0.3, index.clip_txt.nearest(&v, allowed, pool_n)));
     }
 
     // Reciprocal Rank Fusion ponderada
@@ -64,18 +126,19 @@ pub fn rank(
         }
     }
     let mut ranked: Vec<(i64, f64)> = score.into_iter().collect();
-    ranked.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    ranked.sort_unstable_by(|a, b| b.1.total_cmp(&a.1));
     ranked.truncate(top);
     Ok(ranked)
 }
 
 pub fn run(conn: &Connection, query: Option<String>, image: Option<String>, top: usize) -> Result<()> {
     let mut models = Models::load()?;
+    let index = VectorIndex::load(conn)?;
     let bytes = match &image {
         Some(path) => Some(std::fs::read(path)?),
         None => None,
     };
-    let ranked = rank(conn, &mut models, query.as_deref(), bytes.as_deref(), None, top)?;
+    let ranked = rank(&index, &mut models, query.as_deref(), bytes.as_deref(), None, top)?;
     let mut info = conn.prepare(
         "SELECT f.name, f.rel_path, en.categoria FROM families f
            LEFT JOIN enrichments en ON en.family_id = f.id WHERE f.id = ?1",

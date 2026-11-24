@@ -220,8 +220,14 @@ async fn main() -> Result<()> {
         }
         _ => {}
     }
-    let conn = db::open(&cli.db)?;
-    db::init(&conn)?; // idempotente: cria as tabelas se ainda nao existem
+    let readonly = matches!(cli.cmd, Cmd::Serve { .. } | Cmd::Search { .. } | Cmd::Stats);
+    let conn = if readonly {
+        db::open_readonly(&cli.db)?
+    } else {
+        let c = db::open(&cli.db)?;
+        db::init(&c)?; // idempotente: cria as tabelas se ainda nao existem
+        c
+    };
 
     match cli.cmd {
         Cmd::Init => println!("banco pronto em {}", cli.db.display()),

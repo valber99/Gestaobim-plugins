@@ -50,6 +50,7 @@ public static class AiRibbon
 public sealed class AiUpdateNotifier(string displayName, Version current, Func<string, BitmapImage> icon, Func<string[]> details)
 {
     private ReleaseInfo? _pending;
+    private int _done;
 
     public void Start(UIControlledApplication application)
     {
@@ -73,6 +74,10 @@ public sealed class AiUpdateNotifier(string displayName, Version current, Func<s
         {
             // Sem rede, limite de consultas ou GitHub fora: tenta de novo no proximo inicio ou pelo botao.
         }
+        finally
+        {
+            Interlocked.Exchange(ref _done, 1);
+        }
     }
 
     private async Task<ReleaseInfo?> FetchNewer()
@@ -87,9 +92,14 @@ public sealed class AiUpdateNotifier(string displayName, Version current, Func<s
     private void OnIdling(object? sender, IdlingEventArgs e)
     {
         var release = Interlocked.Exchange(ref _pending, null);
-        if (release is null) return;
-        if (sender is UIApplication app) app.Idling -= OnIdling;
-        AboutHub.MarkUpdate(displayName, release.Version.ToString(3), icon);
+        if (release is not null)
+        {
+            if (sender is UIApplication app) app.Idling -= OnIdling;
+            AboutHub.MarkUpdate(displayName, release.Version.ToString(3), icon);
+            return;
+        }
+        if (Volatile.Read(ref _done) == 1 && sender is UIApplication doneApp)
+            doneApp.Idling -= OnIdling;
     }
 
     public (string Name, string Body, string? NewVersion, string? Url) BuildAboutSection()

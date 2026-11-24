@@ -120,11 +120,14 @@ public sealed class LibraryDb : IDisposable
                 .Where(s => s.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
             : [];
 
+    private bool _disposed;
+
     /// <summary>O PNG do preview, ou null se a familia nao tem.</summary>
     public byte[]? GetPreview(long id)
     {
         lock (_lock)
         {
+            if (_disposed) return null;
             using var cmd = _connection.CreateCommand();
             cmd.CommandText = "SELECT png FROM previews WHERE family_id = $id";
             cmd.Parameters.AddWithValue("$id", id);
@@ -132,5 +135,13 @@ public sealed class LibraryDb : IDisposable
         }
     }
 
-    public void Dispose() => _connection.Dispose();
+    public void Dispose()
+    {
+        lock (_lock)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _connection.Dispose();
+        }
+    }
 }

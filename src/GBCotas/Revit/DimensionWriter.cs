@@ -53,7 +53,7 @@ public static class DimensionWriter
                 doc.Regenerate();
 
                 // O Revit aceita criar uma cota entre planos que nao sao paralelos e a deixa invalida (valor -1, apagada no fim): le de volta antes.
-                var deviation = dimension.IsValidObject ? Deviation(dimension, placed) : double.PositiveInfinity;
+                var deviation = dimension is { IsValidObject: true } ? Deviation(dimension, placed) : double.PositiveInfinity;
                 if (double.IsInfinity(deviation) || deviation > DeviationFailMm)
                 {
                     sub.RollBack();
@@ -104,15 +104,30 @@ public static class DimensionWriter
         var moved = 0;
         if (dimension.Segments.Size == 0)
         {
-            dimension.TextPosition += direction * rowFt;
-            return 1;
+            try
+            {
+                if (dimension.IsTextPositionAdjustable())
+                {
+                    dimension.TextPosition += direction * rowFt;
+                    return 1;
+                }
+            }
+            catch (Autodesk.Revit.Exceptions.InvalidOperationException) { }
+            return 0;
         }
         foreach (var index in placed.ShiftedSegments)
         {
             if (index < 0 || index >= dimension.Segments.Size) continue;
             var segment = dimension.Segments.get_Item(index);
-            segment.TextPosition += direction * rowFt;
-            moved++;
+            try
+            {
+                if (segment.IsTextPositionAdjustable())
+                {
+                    segment.TextPosition += direction * rowFt;
+                    moved++;
+                }
+            }
+            catch (Autodesk.Revit.Exceptions.InvalidOperationException) { }
         }
         return moved;
     }

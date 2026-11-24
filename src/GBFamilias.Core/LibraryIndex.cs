@@ -42,13 +42,13 @@ public sealed class LibraryIndex
     private static IEnumerable<string> Keys(FamilyRecord r, Facet facet) => facet switch
     {
         Facet.Category => r.CategoryKey.Length > 0 ? [r.CategoryKey] : [],
-        Facet.Folder => r.FolderCategory is { Length: > 0 } ? [TextNorm.Fold(r.FolderCategory)] : [],
+        Facet.Folder => r.FoldedFolderCategory.Length > 0 ? [r.FoldedFolderCategory] : [],
         Facet.Environment => r.FoldedEnvironments,
         Facet.Material => r.FoldedMaterials,
         Facet.Color => r.FoldedColors,
         Facet.Style => r.FoldedStyle.Length > 0 ? [r.FoldedStyle] : [],
         Facet.RevitVersion => r.RevitVersion is { Length: > 0 } ? [r.RevitVersion] : [],
-        Facet.RevitCategory => TextNorm.Fold(r.RevitCategory) is { Length: > 0 } k ? [k] : [],
+        Facet.RevitCategory => r.FoldedRevitCategory.Length > 0 ? [r.FoldedRevitCategory] : [],
         _ => [],
     };
 
@@ -97,8 +97,10 @@ public sealed class LibraryIndex
             if (s > 0) scored.Add((r, s));
         }
 
-        var textual = scored.OrderByDescending(x => x.Score).ThenBy(x => x.Record.FoldedName, StringComparer.Ordinal)
-            .Select(x => x.Record).ToList();
+        var textual = tokens.Length > 0
+            ? scored.OrderByDescending(x => x.Score).ThenBy(x => x.Record.FoldedName, StringComparer.Ordinal)
+                .Select(x => x.Record).ToList()
+            : scored.Select(x => x.Record).ToList();
 
         if (semantic is { Count: > 0 })
         {

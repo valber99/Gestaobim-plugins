@@ -264,8 +264,10 @@ public static class SceneExtractor
 
         public RenderNodeAction OnLinkBegin(LinkNode node)
         {
+            var linked = node.GetDocument();
+            if (linked is null) return RenderNodeAction.Skip;
             _transforms.Push(_transforms.Peek().Multiply(node.GetTransform()));
-            _documents.Push(node.GetDocument());
+            _documents.Push(linked);
             _offsets.Push(++_linkOrdinal * 10_000_000_000L);
             return RenderNodeAction.Proceed;
         }
