@@ -10,9 +10,15 @@ namespace Gestaobim.Familias.Revit;
 /// </summary>
 public sealed class RevitDispatcher : IExternalEventHandler
 {
+    private sealed class WorkItem(Action<UIApplication> action)
+    {
+        public Action<UIApplication> Action { get; } = action;
+        public volatile bool Cancelled;
+    }
+
     private static RevitDispatcher? _handler;
     private static ExternalEvent? _event;
-    private readonly ConcurrentQueue<Action<UIApplication>> _queue = new();
+    private readonly ConcurrentQueue<WorkItem> _queue = new();
 
     /// <summary>Precisa ser chamado dentro de um comando (contexto valido da API), antes do primeiro Post.</summary>
     public static void Ensure()
@@ -25,17 +31,22 @@ public sealed class RevitDispatcher : IExternalEventHandler
     public static bool Post(Action<UIApplication> work)
     {
         if (_handler is null || _event is null) throw new InvalidOperationException("O despachante do Revit nao foi iniciado.");
-        _handler._queue.Enqueue(work);
-        return _event.Raise() == ExternalEventRequest.Accepted;
+        var item = new WorkItem(work);
+        _handler._queue.Enqueue(item);
+        var result = _event.Raise();
+        if (result is ExternalEventRequest.Accepted or ExternalEventRequest.Pending) return true;
+        item.Cancelled = true;
+        return false;
     }
 
     public void Execute(UIApplication app)
     {
-        while (_queue.TryDequeue(out var work))
+        while (_queue.TryDequeue(out var item))
         {
+            if (item.Cancelled) continue;
             try
             {
-                work(app);
+                item.Action(app);
             }
             catch (Exception error)
             {

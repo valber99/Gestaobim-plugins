@@ -17,7 +17,7 @@ Você **não precisa ter o Revit instalado** para compilar os plugins ou rodar o
 
 ### Pré-requisitos
 - **Git**
-- **.NET 10 SDK** (compila os projetos `net8.0` / `net8.0-windows`)
+- **.NET 10 SDK** (compila `net8.0` / `net8.0-windows` para Revit 2025/2026 e `net10.0-windows` para Revit 2027)
 - **Rust (stable)** — opcional, apenas se você for modificar o motor de busca `tools/gbfam`
 - **Windows + Revit 2025/2026/2027** — necessário apenas para testar a interface dentro do Revit real
 
@@ -62,7 +62,7 @@ Você **não precisa ter o Revit instalado** para compilar os plugins ou rodar o
 - **Interface e idioma**: textos voltados ao usuário final devem estar em **português do Brasil**, claros e diretos.
 - **Ícones do Ribbon**: ícones dos botões devem estar em `64×64` pixels com **`192 DPI`** (`32×32 DIPs` no WPF/Revit) para permanecerem nítidos em telas HiDPI sem cortar no Ribbon.
 - **Segurança**: nunca inclua chaves de API, tokens, senhas ou caminhos pessoais da sua máquina nos commits.
-- **Não altere a versão dos `.csproj` nem o `CHANGELOG.md`** no PR, salvo quando solicitado — o versionamento e a geração do instalador único assinado (`GestaoBIM-Setup-<versão>.exe`) são feitos na publicação da release.
+- **Não altere a versão dos `.csproj` nem o `CHANGELOG.md`** no PR, salvo quando solicitado — o versionamento e a geração do instalador único (`GestaoBIM-Setup-<versão>.exe`) são feitos na publicação da release.
 
 ---
 

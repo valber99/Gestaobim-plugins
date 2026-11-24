@@ -94,12 +94,15 @@ public sealed class DownloadManager(ServerApi api, string machineName)
 
             Directory.CreateDirectory(Path.GetDirectoryName(final)!);
             var part = $"{final}.{_machine}.part";
-            for (var integrityAttempt = 0; ; integrityAttempt++)
+            if (!IsValidLocal(part, record.Sha))
             {
-                await DownloadWithRetriesAsync(record, part, progress, cancel).ConfigureAwait(false);
-                if (string.Equals(Sha256OfFile(part), record.Sha, StringComparison.OrdinalIgnoreCase)) break;
-                File.Delete(part);
-                if (integrityAttempt >= 1) throw new IntegrityException("O arquivo baixado nao confere com o catalogo (SHA-256 diferente), mesmo depois de baixar de novo.");
+                for (var integrityAttempt = 0; ; integrityAttempt++)
+                {
+                    await DownloadWithRetriesAsync(record, part, progress, cancel).ConfigureAwait(false);
+                    if (string.Equals(Sha256OfFile(part), record.Sha, StringComparison.OrdinalIgnoreCase)) break;
+                    File.Delete(part);
+                    if (integrityAttempt >= 1) throw new IntegrityException("O arquivo baixado nao confere com o catalogo (SHA-256 diferente), mesmo depois de baixar de novo.");
+                }
             }
 
             Publish(part, final, record.Sha);
@@ -173,7 +176,8 @@ public static class CacheEvictor
         var full = Path.GetFullPath(root);
         var prefix = full.EndsWith(Path.DirectorySeparatorChar) ? full : full + Path.DirectorySeparatorChar;
 
-        var files = new DirectoryInfo(root).EnumerateFiles("*.rfa", SearchOption.AllDirectories)
+        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, MatchCasing = MatchCasing.CaseInsensitive };
+        var files = new DirectoryInfo(root).EnumerateFiles("*.rfa", options)
             .Select(f => (File: f, Used: Latest(f.LastAccessTimeUtc, f.LastWriteTimeUtc)))
             .ToList();
         var total = files.Sum(f => f.File.Length);

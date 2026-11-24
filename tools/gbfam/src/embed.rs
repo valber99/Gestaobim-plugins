@@ -38,7 +38,7 @@ fn cache_dir() -> PathBuf {
 impl Models {
     pub fn load() -> Result<Self> {
         let dir = cache_dir();
-        println!("carregando modelos (primeira vez baixa ~400 MB para {})...", dir.display());
+        println!("carregando modelos (primeira vez baixa ~1 GB para {})...", dir.display());
         let clip_img = ImageEmbedding::try_new(
             ImageInitOptions::new(ImageEmbeddingModel::ClipVitB32).with_cache_dir(dir.clone()),
         )?;

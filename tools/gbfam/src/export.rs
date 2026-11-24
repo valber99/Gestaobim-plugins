@@ -54,8 +54,7 @@ pub fn run(conn: &Connection, root: &Path, out: &Path, dry_run: bool) -> Result<
         bail!("{} ja existe; escolha uma pasta de saida vazia", db_out.display());
     }
     // VACUUM INTO gera uma copia consistente e compacta, sem o arquivo -wal.
-    let literal = db_out.to_string_lossy().replace('\'', "''");
-    conn.execute_batch(&format!("VACUUM INTO '{literal}'"))
+    conn.execute("VACUUM INTO ?1", [db_out.to_string_lossy().as_ref()])
         .context("falha ao copiar o banco")?;
 
     for (i, (from, to)) in to_copy.iter().enumerate() {

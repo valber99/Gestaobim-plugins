@@ -350,7 +350,7 @@ public static class RenderWindow
                 var model = connection.ImageModel;
                 if (model.Length == 0) throw new AiException("Nenhum modelo de imagem disponível. Clique em \"Configurar IA…\" e conecte uma conta ou chave de API.");
                 AiUi.SetStatus(statusBox, statusText, statusBar, $"Gerando render com {model} ({RenderJob.SupportedAspectRatio((double)built.Width / built.Height)})… pode levar alguns minutos.", StatusKind.Info, busy: true);
-                var render = await RenderJob.GenerateAsync(connection.Client, model, built, SelectedQuality(), folder.Text.Trim(), cancel: windowCts.Token);
+                var render = await RenderJob.GenerateAsync(connection.Client, model, built, SelectedQuality(), folder.Text.Trim(), token: connection.ClientToken, cancel: windowCts.Token);
                 if (closed) return;
                 lastRender = render;
                 lastModel = model;
@@ -390,8 +390,14 @@ public static class RenderWindow
                 AiUi.SetStatus(statusBox, statusText, statusBar, $"Editando {description}…", StatusKind.Info, busy: true);
                 using var connection = await AiService.ConnectAsync(windowCts.Token);
                 if (closed) return;
+                RawImage? DecodeOnUi(byte[] bytes)
+                {
+                    if (closed) return null;
+                    try { return window.Dispatcher.Invoke(() => WpfDecoder.Decode(bytes)); }
+                    catch (Exception) { return null; }
+                }
                 var edited = await RenderJob.EditAsync(connection.Client, lastModel ?? connection.ImageModel, passes, lastRender.Bytes, ids, instruction.Text.Trim(), description,
-                    passesQuality ?? RenderQuality.TwoK, folder.Text.Trim(), WpfDecoder.Decode, cancel: windowCts.Token);
+                    passesQuality ?? RenderQuality.TwoK, folder.Text.Trim(), DecodeOnUi, token: connection.ClientToken, cancel: windowCts.Token, previousRenderMime: lastRender.Mime);
                 if (closed) return;
                 lastRender = edited.Render;
                 ShowPreviewBytes(edited.Render.Bytes, edited.Render.ImagePath);

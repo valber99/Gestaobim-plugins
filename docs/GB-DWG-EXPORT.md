@@ -9,14 +9,15 @@ Faz parte do Gestão BIM e usa o mesmo instalador e a mesma aba do GB Material S
 ### Instalar
 
 1. Baixe o instalador único `GestaoBIM-Setup-<versão>.exe` na página de
-   [Releases](https://github.com/valber99/Gestaobim-plugins/releases) (tag `v<versão>`; ele traz os três plugins Gestão BIM).
+   [Releases](https://github.com/valber99/Gestaobim-plugins/releases) (tag `v<versão>`; ele traz os cinco plugins Gestão BIM).
 2. Feche o Revit e dê dois cliques no `.exe`. Ele recusa instalar com o Revit aberto.
 3. O Windows pode avisar que o editor é desconhecido (o instalador não é assinado): "Mais informações" e
    "Executar assim mesmo".
 4. Abra o Revit. Na primeira vez ele pergunta se confia no add-in: escolha **"Sempre carregar"**.
 
 O pacote traz o `cadcraft-cli` (o motor de mesclagem, 67 MB) e o instala em `%APPDATA%\GestaoBIM\Tools\cadcraft`. Não é
-preciso instalar o CADCraft nem o AutoCAD. Também há um `.zip` com `Instalar.bat` e `Desinstalar.bat`.
+preciso instalar o CADCraft nem o AutoCAD. Também há um `.zip` com `Instalar.bat` e `Desinstalar.bat` (o instalador
+também copia `Desinstalar.bat` para `%APPDATA%\GestaoBIM\Desinstalar.bat`).
 
 ### Onde fica
 
@@ -24,11 +25,7 @@ Aba **Gestão BIM**, painel **Exportar DWG**:
 
 | Botão | O que faz |
 |---|---|
-| **Exportar folhas** | **Um só DWG**: cada folha vira um layout **igual à folha do Revit** (carimbo, tabelas, textos e viewports, no mesmo papel) e todas as vistas ficam lado a lado no model space. |
-| **Model space** | Um só desenho com todas as vistas das folhas lado a lado no model space, sem layouts. |
-| **Layout único** | Um só desenho com as folhas lado a lado num único layout, e as vistas lado a lado no model space. |
-| **Exportar vistas** | Plantas, cortes, elevações, 3D e outras vistas (não só folhas): por padrão **um só DWG com as vistas lado a lado no model space**, ou um arquivo por vista. |
-| **Exportar / Importar configurações** | Salva as configurações num `.zip` e lê um `.zip` de outra máquina. |
+| **Exportar DWG** | Abre a janela unificada de exportação de **folhas** ou **vistas** para DWG/DXF: um só DWG com um layout por folha (igual à folha do Revit), tudo no model space, layout único ou arquivos separados — além de **Exportar / Importar configurações** (`.zip`). |
 | **Sobre** (painel **Geral**) | Botão único de todos os plugins Gestão BIM: mostra a versão de cada um e consulta o GitHub; uma bolinha vermelha avisa que há versão nova. |
 
 ### A janela de exportação
@@ -37,10 +34,9 @@ Aba **Gestão BIM**, painel **Exportar DWG**:
   **Marcar todas** marca as que estão visíveis na busca.
 - **Resultado:** por padrão, **um só desenho com um layout por folha**. Cada layout é o espaço de papel que o Revit
   exporta para a folha (carimbo, tabelas, notas, legendas e as viewports), e o model space junta as vistas de todas
-  as folhas, lado a lado. As outras opções são tudo no model space (sem layouts), um só layout com todas as folhas
-  lado a lado, e "um arquivo por folha ou vista (sem juntar)", que é o que o Revit exporta sozinho. Os botões do
-  painel só escolhem o modo inicial; dá para trocar na janela. Para vistas existem "tudo no model space" (as vistas
-  marcadas lado a lado num só DWG) e um arquivo por vista.
+  as folhas, lado a lado. As outras opções na janela são tudo no model space (sem layouts), um só layout com todas as folhas
+  lado a lado, e "um arquivo por folha ou vista (sem juntar)", que é o que o Revit exporta sozinho. Para vistas existem
+  "tudo no model space" (as vistas marcadas lado a lado num só DWG) e um arquivo por vista.
 - **Papel dos layouts:** não é uma escolha. Cada layout usa **o papel da folha no Revit**, lido do **carimbo** da
   folha (por exemplo, A1, A0 ou A3), em paisagem ou retrato como a folha está. Medidas a até 3 mm de um papel A0 a A4
   (o Revit costuma informar 840 x 594 para um A1) viram o papel exato; um tamanho fora do padrão é mantido como
@@ -138,7 +134,7 @@ build/revit-selftest-dwg.ps1   autoteste dentro do Revit (ver "Testes")
   model space). Como o Windows limita a linha de comando a 32 767 caracteres, uma mesclagem longa é dividida em
   várias execuções, cada uma reabrindo o desenho que a anterior salvou.
 - **Sem telemetria.** Nada é enviado a lugar nenhum além da consulta de versão ao GitHub (uma vez por dia, em segundo
-  plano; `GB_DWG_EXPORT_NO_UPDATE_CHECK=1` desliga).
+  plano; `GB_NO_UPDATE_CHECK=1` ou `GB_DWG_EXPORT_NO_UPDATE_CHECK=1` desliga).
 - **Sem encerrar processos de terceiros.** Não há AutoCAD no fluxo.
 
 ### Diferenças em relação a outros exportadores
@@ -175,12 +171,12 @@ build/revit-selftest-dwg.ps1   autoteste dentro do Revit (ver "Testes")
 |---|---|
 | `GB_DWG_EXPORT_HOME` | Muda a pasta de configurações (padrão `%APPDATA%\GestaoBIM\DwgExport`) |
 | `GB_CADCRAFT_CLI` | Usa outro `cadcraft-cli.exe` |
-| `GB_DWG_EXPORT_NO_UPDATE_CHECK=1` | Desliga a consulta automática de versão |
+| `GB_NO_UPDATE_CHECK=1` / `GB_DWG_EXPORT_NO_UPDATE_CHECK=1` | Desliga a consulta automática de versão |
 | `GB_DWG_EXPORT_SELFTEST` | Pasta do relatório do autoteste; com ela, o plugin roda o autoteste ao abrir o Revit (só para testes) |
 | `GB_DWG_EXPORT_SELFTEST_MODELS` | Projetos `.rvt` do autoteste, separados por `;` |
 
 ## Publicar uma versão
 
-Desde a 0.4.0 o DWG Export sai no instalador único Gestão BIM, com a mesma versão dos outros dois plugins e a tag
+Desde a 0.4.0 o DWG Export sai no instalador único Gestão BIM, com a mesma versão dos outros plugins e a tag
 `v<versão>`: veja [RELEASE.md](RELEASE.md). `build/package-dwg.ps1` continua gerando um pacote só dele para
 desenvolvimento (embute o cadcraft-cli conferido por checksum). As releases antigas tinham a tag `dwg-v<versão>`.

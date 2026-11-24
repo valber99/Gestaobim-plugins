@@ -17,12 +17,15 @@ public static class UpdateNotifier
     private const string DisplayName = "GB Material Studio";
 
     private static ReleaseInfo? _pending;
+    private static int _done;
 
     private static Version Current => typeof(UpdateNotifier).Assembly.GetName().Version ?? new Version(0, 0, 0);
 
     public static void Start(UIControlledApplication application)
     {
-        if (Environment.GetEnvironmentVariable("GB_MATERIAL_STUDIO_NO_UPDATE_CHECK") == "1") return;
+        if (Environment.GetEnvironmentVariable("GB_NO_UPDATE_CHECK") == "1"
+            || Environment.GetEnvironmentVariable("GB_MATERIAL_STUDIO_NO_UPDATE_CHECK") == "1") return;
+        Volatile.Write(ref _done, 0);
         application.Idling += OnIdling;
         _ = Task.Run(CheckInBackground);
     }
@@ -42,6 +45,10 @@ public static class UpdateNotifier
         {
             // Offline, rate limited or GitHub down: try again on the next start or from the button.
         }
+        finally
+        {
+            Interlocked.Exchange(ref _done, 1);
+        }
     }
 
     private static async Task<ReleaseInfo?> FetchNewer()
@@ -57,9 +64,14 @@ public static class UpdateNotifier
     private static void OnIdling(object? sender, IdlingEventArgs e)
     {
         var release = Interlocked.Exchange(ref _pending, null);
-        if (release is null) return;
-        if (sender is UIApplication app) app.Idling -= OnIdling;
-        AboutHub.MarkUpdate(DisplayName, release.Version.ToString(3), App.Icon);
+        if (release is not null)
+        {
+            if (sender is UIApplication app) app.Idling -= OnIdling;
+            AboutHub.MarkUpdate(DisplayName, release.Version.ToString(3), App.Icon);
+            return;
+        }
+        if (Volatile.Read(ref _done) == 1 && sender is UIApplication doneApp)
+            doneApp.Idling -= OnIdling;
     }
 
     /// <summary>Consulta o GitHub agora e devolve a secao deste plugin para a janela unica "Sobre" (ver AboutHub).</summary>

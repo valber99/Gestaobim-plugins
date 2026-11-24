@@ -102,6 +102,13 @@ public sealed class AiSettings
         }
     }
 
+    /// <summary>True quando o nome do modelo indica geracao de imagem.</summary>
+    public static bool IsImageModelName(string model) =>
+        model.Contains("image", StringComparison.OrdinalIgnoreCase)
+        || model.Contains("imagen", StringComparison.OrdinalIgnoreCase)
+        || model.Contains("dall-e", StringComparison.OrdinalIgnoreCase)
+        || model.Contains("banana", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Escolhe o primeiro modelo adequado quando o usuario nao fixou um.</summary>
     public static string PickModel(IReadOnlyList<string> models, bool image)
     {
@@ -111,16 +118,16 @@ public sealed class AiSettings
                                               && m.Contains("pro", StringComparison.OrdinalIgnoreCase))
                    ?? models.FirstOrDefault(m => m.Contains("gemini", StringComparison.OrdinalIgnoreCase)
                                                  && m.Contains("image", StringComparison.OrdinalIgnoreCase))
-                   ?? models.FirstOrDefault(m => m.Contains("image", StringComparison.OrdinalIgnoreCase)
+                   ?? models.FirstOrDefault(m => IsImageModelName(m)
                                                  && m.Contains("pro", StringComparison.OrdinalIgnoreCase))
-                   ?? models.FirstOrDefault(m => m.Contains("image", StringComparison.OrdinalIgnoreCase))
+                   ?? models.FirstOrDefault(IsImageModelName)
                    ?? "";
         foreach (var family in new[] { "claude", "gpt", "gemini" })
         {
             var hit = models.FirstOrDefault(m => m.Contains(family, StringComparison.OrdinalIgnoreCase)
-                                                 && !m.Contains("image", StringComparison.OrdinalIgnoreCase));
+                                                 && !IsImageModelName(m));
             if (hit is not null) return hit;
         }
-        return models.FirstOrDefault(m => !m.Contains("image", StringComparison.OrdinalIgnoreCase)) ?? "";
+        return models.FirstOrDefault(m => !IsImageModelName(m)) ?? "";
     }
 }

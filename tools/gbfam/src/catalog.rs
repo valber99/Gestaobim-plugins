@@ -234,16 +234,15 @@ pub fn sanitize(b: &mut Bundle) {
     let norm = |s: &str| s.replace('/', "\\");
     let path = norm(&f.path);
     let rel = norm(&f.rel_path);
-    let root = path
-        .to_lowercase()
-        .ends_with(&rel.to_lowercase())
-        .then(|| path[..path.len() - rel.len()].to_string())
-        .unwrap_or_default();
+    let root = strip_suffix_ci(&path, &rel).unwrap_or("").to_string();
     let relative = |p: &str| -> String {
         let p = norm(p);
-        if !root.is_empty() && p.to_lowercase().starts_with(&root.to_lowercase()) {
-            p[root.len()..].to_string()
-        } else if p.contains(':') || p.starts_with('\\') {
+        if !root.is_empty() {
+            if let Some(rest) = strip_prefix_ci(&p, &root) {
+                return rest.to_string();
+            }
+        }
+        if p.contains(':') || p.starts_with('\\') {
             p.rsplit('\\').next().unwrap_or("").to_string()
         } else {
             p
@@ -255,6 +254,36 @@ pub fn sanitize(b: &mut Bundle) {
         f.duplicates = "[]".into();
     }
     f.path = f.rel_path.clone();
+}
+
+fn strip_prefix_ci<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
+    let mut si = s.char_indices();
+    for pc in prefix.chars() {
+        let (_, sc) = si.next()?;
+        if !sc.to_lowercase().eq(pc.to_lowercase()) {
+            return None;
+        }
+    }
+    match si.next() {
+        Some((idx, _)) => Some(&s[idx..]),
+        None => Some(""),
+    }
+}
+
+fn strip_suffix_ci<'a>(s: &'a str, suffix: &str) -> Option<&'a str> {
+    let s_chars: Vec<(usize, char)> = s.char_indices().collect();
+    let suf_chars: Vec<char> = suffix.chars().collect();
+    if suf_chars.len() > s_chars.len() {
+        return None;
+    }
+    let start_pos = s_chars.len() - suf_chars.len();
+    for (&(_, sc), &pc) in s_chars[start_pos..].iter().zip(suf_chars.iter()) {
+        if !sc.to_lowercase().eq(pc.to_lowercase()) {
+            return None;
+        }
+    }
+    let byte_end = s_chars.get(start_pos).map(|&(i, _)| i).unwrap_or(s.len());
+    Some(&s[..byte_end])
 }
 
 /// Impressao digital do conteudo de uma familia: muda quando qualquer dado dela muda.
@@ -410,8 +439,8 @@ pub fn export(conn: &Connection, out: &Path, key_file: &Path, version: Option<u3
     // ---- snapshot: copia compacta do banco + metadados da versao
     let tmp = out.join(format!(".tmp-catalog-{next}.sqlite"));
     let _ = std::fs::remove_file(&tmp);
-    let lit = tmp.to_string_lossy().replace('\'', "''");
-    conn.execute_batch(&format!("VACUUM INTO '{lit}'")).context("falha ao copiar o banco")?;
+    conn.execute("VACUUM INTO ?1", [tmp.to_string_lossy().as_ref()])
+        .context("falha ao copiar o banco")?;
     {
         let c2 = Connection::open(&tmp)?;
         {

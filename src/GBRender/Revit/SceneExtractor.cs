@@ -206,18 +206,24 @@ public static class SceneExtractor
         public List<string> Warnings { get; } = [];
         public Dictionary<long, XYZ[]> Corners { get; } = [];
 
+        private sealed class ElementFrame(ElementId id, bool skip)
+        {
+            public ElementId Id { get; } = id;
+            public int Index { get; set; } = -1;
+            public bool Skip { get; } = skip;
+            public string? Material { get; set; }
+        }
+
         private readonly Stack<Transform> _transforms = new([Transform.Identity]);
         private readonly Stack<Document> _documents = new([host]);
         private int _linkOrdinal;
         private readonly Stack<long> _offsets = new([0]);
+        private readonly Stack<ElementFrame> _elements = new();
         private Document Doc => _documents.Peek();
-        private ElementId? _elementId;
-        private int _elementIndex = -1;
-        private bool _skipElement;
+        private ElementFrame? CurrentElement => _elements.Count > 0 ? _elements.Peek() : null;
         private bool _transparent;
-        private string? _material;
         private bool _meshWarned;
-        private readonly Dictionary<(Document, long), int> _indexes = [];
+        private readonly Dictionary<(Document, long, long), int> _indexes = [];
 
         public bool Start() => true;
 
@@ -235,23 +241,19 @@ public static class SceneExtractor
 
         public RenderNodeAction OnElementBegin(ElementId elementId)
         {
-            _elementId = elementId;
-            _elementIndex = -1;
-            _skipElement = false;
-            _material = null;
             var element = Doc.GetElement(elementId);
             if (element?.Category is not { } category || category.CategoryType != CategoryType.Model)
             {
-                _skipElement = true;
+                _elements.Push(new ElementFrame(elementId, skip: true));
                 return RenderNodeAction.Skip;
             }
+            _elements.Push(new ElementFrame(elementId, skip: false));
             return RenderNodeAction.Proceed;
         }
 
         public void OnElementEnd(ElementId elementId)
         {
-            _elementId = null;
-            _elementIndex = -1;
+            if (_elements.Count > 0) _elements.Pop();
         }
 
         public RenderNodeAction OnInstanceBegin(InstanceNode node)
@@ -288,20 +290,21 @@ public static class SceneExtractor
         public void OnMaterial(MaterialNode node)
         {
             _transparent = node.Transparency > 0.5;
-            if (!_transparent && _material is null && node.MaterialId != ElementId.InvalidElementId)
-                _material = Doc.GetElement(node.MaterialId)?.Name;
+            if (!_transparent && CurrentElement is { Material: null } current && node.MaterialId != ElementId.InvalidElementId)
+                current.Material = Doc.GetElement(node.MaterialId)?.Name;
         }
 
         public void OnPolymesh(PolymeshTopology node)
         {
-            if (_skipElement || _elementId is null) return;
+            var current = CurrentElement;
+            if (current is null || current.Skip) return;
             if (_transparent)
             {
                 SkippedTransparent += node.NumberOfFacets;
                 return;
             }
-            if (_elementIndex < 0) _elementIndex = Register(_elementId);
-            if (_elementIndex < 0) return;
+            if (current.Index < 0) current.Index = Register(current.Id, current.Material);
+            if (current.Index < 0) return;
             var points = node.GetPoints();
             var xf = _transforms.Peek();
             var world = new RenderVec[points.Count];
@@ -317,14 +320,15 @@ public static class SceneExtractor
                     if (!_meshWarned) { Warnings.Add("Uma malha com índices fora do intervalo foi ignorada."); _meshWarned = true; }
                     continue;
                 }
-                Scene.AddTriangle(_elementIndex, world[facet.V1], world[facet.V2], world[facet.V3]);
+                Scene.AddTriangle(current.Index, world[facet.V1], world[facet.V2], world[facet.V3]);
             }
         }
 
-        private int Register(ElementId id)
+        private int Register(ElementId id, string? material)
         {
             var doc = Doc;
-            var key = (doc, id.Value);
+            var offset = _offsets.Peek();
+            var key = (doc, offset, id.Value);
             if (_indexes.TryGetValue(key, out var existing)) return existing;
             var element = doc.GetElement(id);
             if (element is null) return -1;
@@ -334,8 +338,8 @@ public static class SceneExtractor
             if (element is FamilyInstance { Symbol: { } symbol }) familyType = $"{symbol.FamilyName} — {symbol.Name}";
             else familyType = typeElement is not null ? $"{category?.Name} — {typeElement.Name}" : element.Name;
             var role = category is not null && Environment.Contains((BuiltInCategory)category.Id.Value) ? SceneRole.Environment : SceneRole.Model;
-            var info = new SceneElement(id.Value + _offsets.Peek(), category?.Name ?? "Sem categoria", familyType,
-                Text(typeElement, BuiltInParameter.ALL_MODEL_MANUFACTURER), Text(typeElement, BuiltInParameter.ALL_MODEL_MODEL), _material, role,
+            var info = new SceneElement(id.Value + offset, category?.Name ?? "Sem categoria", familyType,
+                Text(typeElement, BuiltInParameter.ALL_MODEL_MANUFACTURER), Text(typeElement, BuiltInParameter.ALL_MODEL_MODEL), material, role,
                 (element as FamilyInstance)?.Symbol?.FamilyName);
             var index = Scene.AddElement(info);
             _indexes[key] = index;

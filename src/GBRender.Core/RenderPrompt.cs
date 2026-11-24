@@ -48,11 +48,12 @@ public static class RenderPrompt
     /// <summary>
     /// Troca so os objetos da mascara (uma cadeira, o fundo). Manda o render anterior e a mascara binaria; o resto da cena tem de ficar igual.
     /// </summary>
-    public static RenderRequest BuildEdit(byte[] previousRenderPng, RawImage objectMask, string instruction, string objectDescription)
+    public static RenderRequest BuildEdit(byte[] previousRender, RawImage objectMask, string instruction, string objectDescription, string previousRenderMime = "image/png")
     {
+        var mime = string.IsNullOrWhiteSpace(previousRenderMime) ? "image/png" : previousRenderMime;
         var images = new List<ImagePart>
         {
-            new("0 previous_render", "image/png", previousRenderPng),
+            new("0 previous_render", mime, previousRender),
             new("1 edit_mask", "image/png", Png.Encode(objectMask)),
         };
         var prompt = $"""

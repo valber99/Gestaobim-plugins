@@ -125,11 +125,17 @@ public static class AboutHub
             .Take(4)
             .ToList();
 
+        var failedCount = sections.Count(s => s.Item2.Contains("Não foi possível consultar", StringComparison.Ordinal)
+                                              || s.Item2.Contains("Sem resposta", StringComparison.Ordinal));
         var header = links.Count == 1
             ? $"Nova versão disponível: {links[0].Item2}. Para atualizar, baixe o instalador único, feche o Revit e execute-o."
             : links.Count > 1
                 ? "Há novas versões disponíveis. Escolha abaixo para baixar."
-                : "Você está na versão mais recente.";
+                : sections.Count > 0 && failedCount == sections.Count
+                    ? "Não foi possível verificar atualizações (verifique a conexão com a internet)."
+                    : failedCount > 0
+                        ? "Não foi possível verificar atualizações de todos os plugins (veja abaixo)."
+                        : "Você está na versão mais recente.";
 
         var parts = new List<string> { header };
         foreach (var s in sections)

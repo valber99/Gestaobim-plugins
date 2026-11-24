@@ -84,7 +84,9 @@ public sealed class UpdateState
         {
             Directory.CreateDirectory(DwgPaths.Home);
             var data = new JsonObject { ["last_check_utc"] = LastCheckUtc.ToString("o", CultureInfo.InvariantCulture) };
-            File.WriteAllText(FilePath, data.ToJsonString(), new UTF8Encoding(false));
+            var temp = $"{FilePath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
+            File.WriteAllText(temp, data.ToJsonString(), new UTF8Encoding(false));
+            File.Move(temp, FilePath, overwrite: true);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {

@@ -37,6 +37,7 @@ public partial class BrowserWindow : Window
     private bool _ready;
     private bool _suppress;
     private bool _closed;
+    private int _catalogVersion;
     private WrapPanel? _cardsWrap;
 
     private void OnCardsWrapLoaded(object sender, RoutedEventArgs e)
@@ -136,6 +137,7 @@ public partial class BrowserWindow : Window
         _debounce.Tick += (_, _) => { _debounce.Stop(); Refresh(); };
         BuildFacetPanels();
         RebuildCollections();
+        _catalogVersion = CatalogSync.LocalVersion(lib.Settings.EffectiveDb);
         SyncButton.Visibility = lib.Settings.CatalogSync ? Visibility.Visible : Visibility.Collapsed;
         UpdateAccountUi();
         _ready = true;
@@ -154,6 +156,8 @@ public partial class BrowserWindow : Window
             _closed = true;
             _debounce.Stop();
             _semanticCts?.Cancel();
+            _semanticCts?.Dispose();
+            _semanticCts = null;
             _downloadCts?.Cancel();
             Instance = null;
         };
@@ -181,6 +185,8 @@ public partial class BrowserWindow : Window
 
         var version = ++_version;
         _semanticCts?.Cancel();
+        _semanticCts?.Dispose();
+        _semanticCts = null;
         var sort = CurrentSort;
         var aiOn = AiCheck.IsChecked == true;
         var wantsSemantic = aiOn && (_spec.Text.Length > 0 || _imageQuery is not null);
@@ -213,21 +219,23 @@ public partial class BrowserWindow : Window
             {
                 AiStatusText.Text = "IA iniciando…";
                 await _lib.EnsureSemanticAsync();
+                if (_closed) return;
                 UpdateAiStatus();
             }
-            if (version != _version) return;
+            if (_closed || version != _version) return;
             if (_lib.Semantic is not { IsAlive: true } client)
             {
                 if (_imageQuery is not null) StatusText.Text = _lib.SemanticDetail;
                 return;
             }
 
+            _semanticCts?.Dispose();
             var cts = _semanticCts = new CancellationTokenSource();
             var noText = _spec.Clone();
             noText.Text = "";
             var allowed = noText.IsEmpty ? null : _lib.Index.Query(noText).Select(r => r.Id).ToList();
             var ids = await client.SearchAsync(_spec.Text, _imageQuery, allowed, 150, cts.Token);
-            if (version != _version) return;
+            if (_closed || version != _version) return;
             ShowResults(_lib.Index.Query(_spec, sort, ids));
         }
         catch (OperationCanceledException)
@@ -235,7 +243,7 @@ public partial class BrowserWindow : Window
         }
         catch (Exception error)
         {
-            if (version == _version) StatusText.Text = $"A busca por IA falhou: {error.Message}";
+            if (!_closed && version == _version) StatusText.Text = $"A busca por IA falhou: {error.Message}";
         }
     }
 
@@ -432,6 +440,7 @@ public partial class BrowserWindow : Window
     {
         try
         {
+            if (_closed) return;
             UpdateAiStatus();
             await _lib.EnsureSemanticAsync();
         }
@@ -439,7 +448,7 @@ public partial class BrowserWindow : Window
         {
             // EnsureSemanticAsync nao lanca; o estado ja descreve a falha.
         }
-        UpdateAiStatus();
+        if (!_closed) UpdateAiStatus();
     }
 
     private void UpdateAiStatus()
@@ -641,6 +650,9 @@ public partial class BrowserWindow : Window
             {
                 if (item.IsChecked) _lib.User.AddToCollection(name, sha); else _lib.User.RemoveFromCollection(name, sha);
                 RebuildCollections();
+                if (CollectionsList.SelectedItem is CollectionItem { Kind: CollectionItem.Custom } sel
+                    && string.Equals(sel.Name, name, StringComparison.OrdinalIgnoreCase))
+                    QueueRefresh();
             };
             menu.Items.Add(item);
         }
@@ -695,9 +707,9 @@ public partial class BrowserWindow : Window
             return;
         }
         var note = FamilyCompat.Note(record.RevitVersion, RevitContext.RevitYear);
-        if (note is not null && note.Contains("nao consegue abri", StringComparison.Ordinal))
+        if (!FamilyCompat.CanOpen(record.RevitVersion, RevitContext.RevitYear))
         {
-            Dialogs.Alert(note);
+            Dialogs.Alert(note ?? "Esta família foi salva em uma versão mais nova do Revit.");
             return;
         }
 
@@ -709,8 +721,11 @@ public partial class BrowserWindow : Window
         }
         catch (Exception error)
         {
-            SetBusy(false, error is OperationCanceledException ? "Download cancelado." : "Não foi possível baixar a família.");
-            if (error is not OperationCanceledException) Dialogs.Alert(ServerMessages.Describe(error));
+            if (!_closed)
+            {
+                SetBusy(false, error is OperationCanceledException ? "Download cancelado." : "Não foi possível baixar a família.");
+                if (error is not OperationCanceledException) Dialogs.Alert(ServerMessages.Describe(error));
+            }
             return;
         }
         finally
@@ -718,10 +733,9 @@ public partial class BrowserWindow : Window
             _downloadCts?.Dispose();
             _downloadCts = null;
         }
+        if (_closed) return;
         SetBusy(false);
         RefreshDownloadedMarks(force: true);
-
-        if (_closed) return;
         StatusText.Text = $"Carregando {record.Title}…";
         Hide(); // o posicionamento precisa do foco do Revit; a janela volta quando terminar
         var posted = RevitDispatcher.Post(app =>
@@ -803,12 +817,18 @@ public partial class BrowserWindow : Window
         if (_lib.Session is not { } session)
         {
             AccountText.Text = "";
+            AccountButton.Visibility = Visibility.Collapsed;
+            RegisterButton.Visibility = Visibility.Collapsed;
             return;
         }
-        var version = CatalogSync.LocalVersion(_lib.Settings.EffectiveDb);
-        AccountText.Text = (session.Auth.HasSession ? "Conectado" : "Desconectado") + (version > 0 ? $" · catálogo {version}" : "");
-        AccountButton.Content = session.Auth.HasSession ? "Sair" : "Entrar";
+        var signedIn = session.Auth.HasSession;
+        AccountText.Text = (signedIn ? "Conectado" : "Desconectado") + (_catalogVersion > 0 ? $" · catálogo {_catalogVersion}" : "");
+        AccountButton.Content = signedIn ? "Sair" : "Entrar";
+        AccountButton.Visibility = Visibility.Visible;
+        RegisterButton.Visibility = signedIn ? Visibility.Collapsed : Visibility.Visible;
     }
+
+    private void OnRegister(object sender, RoutedEventArgs e) => ServerFlows.OpenRegistration();
 
     private void OnAccount(object sender, RoutedEventArgs e)
     {
@@ -827,11 +847,12 @@ public partial class BrowserWindow : Window
     /// </summary>
     private void RefreshDownloadedMarks(bool force = false)
     {
-        if (_lib.Session is not { } session || _downloadCts is not null) return;
+        if (_closed || _lib.Session is not { } session || _downloadCts is not null) return;
         if (!force && DateTime.UtcNow - _lastScan < TimeSpan.FromSeconds(20)) return;
         _lastScan = DateTime.UtcNow;
         _ = Task.Run(() => session.Downloaded.Refresh(_lib.Settings.EffectiveRoot)).ContinueWith(_ =>
         {
+            if (_closed) return;
             foreach (var card in _cards) card.RefreshDownloaded();
             if (_selected is not null) ShowDetails(_selected);
             if (OnlyDownloadedCheck.IsChecked == true) QueueRefresh();
@@ -845,47 +866,62 @@ public partial class BrowserWindow : Window
     /// <summary>Procura catalogo novo em segundo plano. Nunca troca o banco com a janela aberta: avisa e oferece aplicar.</summary>
     private async Task CheckCatalogAsync(bool force)
     {
-        if (_lib.Session is not { } session || _syncing) return;
+        if (_closed || _lib.Session is not { } session || _syncing) return;
         _syncing = true;
         try
         {
             if (force) SyncButton.IsEnabled = false;
-            var result = await session.CheckForUpdatesAsync(_lib.Settings.EffectiveDb, _lib.Settings.SyncEveryHours, force, CancellationToken.None);
-            switch (result.Outcome)
+            for (var attempt = 0; attempt < 2; attempt++)
             {
-                case SyncOutcome.Ready:
-                    StatusText.Text = result.Message;
-                    if (Dialogs.Alert($"{result.Message}\n\nAplicar agora? A janela da biblioteca será reaberta.", "GB Famílias", ask: true))
-                    {
-                        Close();
-                        LibraryService.Close();
-                        ShowOrActivate();
-                    }
-                    break;
-                case SyncOutcome.UpToDate:
-                    if (force) StatusText.Text = result.Message;
-                    break;
-                case SyncOutcome.NeedsLogin:
-                    if (force && ServerFlows.SignIn(this)) _syncing = false;
-                    if (force) UpdateAccountUi();
-                    break;
-                default:
-                    if (force) Dialogs.Alert(result.Message);
-                    else StatusText.Text = result.Message.Replace('\n', ' ');
-                    break;
+                var result = await session.CheckForUpdatesAsync(_lib.Settings.EffectiveDb, _lib.Settings.SyncEveryHours, force, CancellationToken.None);
+                if (_closed) return;
+                switch (result.Outcome)
+                {
+                    case SyncOutcome.Ready:
+                        StatusText.Text = result.Message;
+                        if (Dialogs.Alert($"{result.Message}\n\nAplicar agora? A janela da biblioteca será reaberta.", "GB Famílias", ask: true))
+                        {
+                            Close();
+                            LibraryService.Close();
+                            ShowOrActivate();
+                        }
+                        return;
+                    case SyncOutcome.UpToDate:
+                        if (force) StatusText.Text = result.Message;
+                        return;
+                    case SyncOutcome.NeedsLogin:
+                        if (force && attempt == 0 && ServerFlows.SignIn(this))
+                        {
+                            UpdateAccountUi();
+                            continue;
+                        }
+                        if (force) UpdateAccountUi();
+                        return;
+                    default:
+                        if (force) Dialogs.Alert(result.Message);
+                        else StatusText.Text = result.Message.Replace('\n', ' ');
+                        return;
+                }
             }
         }
         finally
         {
             _syncing = false;
-            SyncButton.IsEnabled = true;
-            UpdateAccountUi();
+            if (!_closed)
+            {
+                SyncButton.IsEnabled = true;
+                UpdateAccountUi();
+            }
         }
     }
 
     private void OnOpenFolder(object sender, RoutedEventArgs e)
     {
-        if (_selected is null || _lib.FamilyPath(_selected.Record) is not { } path) return;
+        if (_selected is null) return;
+        var path = _lib.Session.Downloaded.FindRelative(_selected.Record) is { } rel
+            ? FamiliasPaths.ResolveFamilyPath(_lib.Settings.EffectiveRoot, rel) ?? _lib.FamilyPath(_selected.Record)
+            : _lib.FamilyPath(_selected.Record);
+        if (path is null) return;
         if (!File.Exists(path) && !Directory.Exists(Path.GetDirectoryName(path)))
         {
             Dialogs.Alert("Esta família ainda não foi baixada, então a pasta dela não existe no seu computador.");

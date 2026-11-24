@@ -4,6 +4,25 @@ Desde a **0.4.0** os plugins saem num instalador único (cinco desde a 0.5.0), c
 Antes disso, cada um tinha a sua: **GB DWG Export** com tag `dwg-v<versão>` (prefixo "DWG" abaixo), **GB Famílias**
 com `familias-v<versão>` (prefixo "Famílias") e GB Material Studio com `v<versão>`.
 
+## 0.5.5 — Revisão geral de estabilidade, UX de cadastro, múltiplos Revits e desinstalador no `.exe`
+
+### Melhorado
+- **GB Famílias (cadastro e conta na interface)**: botão **Entrar / Sair** agora visível na barra de status da biblioteca, acompanhado do botão **Criar conta** (também presente em **Configurações** e na janela de login) abrindo diretamente **[https://cadastro.gestaobim.com](https://cadastro.gestaobim.com)**; mensagem de conta pendente de aprovação atualizada com o endereço de cadastro.
+- **Instalador e desinstalador**: `Install.ps1` agora copia `Desinstalar.bat` e `Uninstall.ps1` para `%APPDATA%\GestaoBIM\` (permitindo desinstalar mesmo quando instalado pelo `.exe`), aplica `Unblock-File` também nos arquivos `.addin` e remove resíduos `pending/` e `-wal`/`-shm` na desinstalação; empacotamento `.zip` migrado para `System.IO.Compression.ZipFile` (sem limite de 2 GB do PowerShell 5.1) e saída UTF-8 corrigida no instalador gráfico (`SetupStub.cs`).
+- **Atualizações (`AboutHub` e `UpdateNotifier`)**: suporte à variável compartilhada `GB_NO_UPDATE_CHECK=1` para desligar a verificação nos cinco plugins, aviso correto na janela **Sobre** quando não há conexão com a internet (em vez de informar versão mais recente) e escrita atômica de `update-check.json`.
+- **GB Cotas**: perfil de regras (`perfil-regras.json`) recarregado automaticamente ao clicar em **Planejar cotas** após editar via **Abrir regras…**.
+- **GB Material Studio**: rotação automática de backups `.bak.*` do banco de favoritos mantendo os 5 mais recentes.
+- **Documentação**: revisão completa de `README.md`, `CONTRIBUTING.md`, `docs/*` e `tools/gbfam/README.md` refletindo os 5 plugins, os painéis atuais e o fluxo de cadastro.
+
+### Corrigido
+- **GB Famílias (downloads e catálogo)**: recuperação automática de erro HTTP `416` em arquivos `.part` inválidos ou já completos, reaproveitamento de `.part` íntegro antes de baixar novamente, streaming em disco no download de snapshot do catálogo, gravação atômica de deltas e atualização de `catalog.version` no commit.
+- **GB Famílias (interface e sessão)**: remoção de leitura síncrona do SQLite na UI a cada atualização da conta, retry real de sincronização do catálogo após login, abertura da pasta real para famílias reconhecidas em subpastas, atualização imediata da lista ao remover item da coleção atual, checagem estruturada `FamilyCompat.CanOpen`, proteção contra race/desconexão vazia no `LoopbackListener` e fila segura no `RevitDispatcher` quando o Revit recusa o `ExternalEvent`.
+- **GBAi (`GatewayHost` e `AiClient`)**: corrigido `DeleteStaleConfigs()` que apagava o `config.yaml` de uma instância viva do Revit ao abrir uma segunda instância; payload JSON para `/v1/images/generations` sem imagens de entrada, tratamento seguro de base64 inválido/timeout e alinhamento de modelos `dall-e` e `imagen`.
+- **GB Render**: corrigida pilha de elementos aninhados e colisão de chaves entre múltiplas instâncias do mesmo vínculo RVT no `SceneExtractor`, envio do MIME real em edições sucessivas, redação do token de sessão nos relatórios e decodificação WPF na thread de interface.
+- **GB DWG Export**: tratamento de erro de disco/permissão ao exportar configurações (`.zip`).
+- **Atualização em segundo plano**: corrigido vazamento de inscrição no evento `Idling` do Revit nos `UpdateNotifier` de Material Studio, DWG Export e Famílias quando não há versão nova.
+- **Motor `gbfam` (Rust)**: corrigida detecção de marcador `FF D9` em previews JPEG, proteção contra pânico de slice em `parse_json_object` e Unicode em `sanitize`, checagem de status HTTP antes do parse JSON no `enrich` e `VACUUM INTO ?1` parametrizado.
+
 ## 0.5.4 — Novo endereço de login/cadastro (`gestaobim.com`) e melhorias de portabilidade
 
 ### Melhorado

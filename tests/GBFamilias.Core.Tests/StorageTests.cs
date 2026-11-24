@@ -340,8 +340,16 @@ public class UpdateTests
         Assert.Contains("atualiza", FamilyCompat.Note("2012", 2027));
 
     [Fact]
-    public void NewerFamilyWarnsItCannotOpen() =>
+    public void NewerFamilyWarnsItCannotOpen()
+    {
         Assert.Contains("nao consegue abri", FamilyCompat.Note("2028", 2027));
+        Assert.False(FamilyCompat.CanOpen("2028", 2027));
+        Assert.False(FamilyCompat.CanOpen("~2028", 2027));
+        Assert.True(FamilyCompat.CanOpen("2027", 2027));
+        Assert.True(FamilyCompat.CanOpen("2025", 2027));
+        Assert.True(FamilyCompat.CanOpen(null, 2027));
+        Assert.True(FamilyCompat.CanOpen("2028", 0));
+    }
 
     [Fact]
     public void EstimatedVersionIsLabeledApproximate() =>

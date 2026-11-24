@@ -135,10 +135,7 @@ public static class AiUi
     public static bool LooksLikeImageModel(string? model)
     {
         if (string.IsNullOrWhiteSpace(model)) return true; // vazio = automatico
-        return model.Contains("image", StringComparison.OrdinalIgnoreCase)
-               || model.Contains("imagen", StringComparison.OrdinalIgnoreCase)
-               || model.Contains("banana", StringComparison.OrdinalIgnoreCase)
-               || model.Contains("gpt-image", StringComparison.OrdinalIgnoreCase);
+        return AiSettings.IsImageModelName(model);
     }
 }
 

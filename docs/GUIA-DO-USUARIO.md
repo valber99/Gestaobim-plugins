@@ -7,7 +7,7 @@ Estúdio de materiais para o Revit 2025, 2026 e 2027. Não precisa de pyRevit ne
 **Instalar ou atualizar**
 
 1. Baixe o instalador único `GestaoBIM-Setup-<versão>.exe` na página de
-   [Releases](https://github.com/valber99/Gestaobim-plugins/releases). Ele traz os três plugins Gestão BIM.
+   [Releases](https://github.com/valber99/Gestaobim-plugins/releases). Ele traz os cinco plugins Gestão BIM.
 2. **Feche o Revit** e dê dois cliques no `.exe`. Ele instala em todos os Revit 2025, 2026 e 2027 que encontrar,
    confere a integridade do pacote, não pede administrador e recusa instalar se o Revit estiver aberto.
 3. O Windows pode avisar que o editor é desconhecido, porque o instalador não é assinado. Clique em
@@ -16,7 +16,7 @@ Estúdio de materiais para o Revit 2025, 2026 e 2027. Não precisa de pyRevit ne
 
 Quem prefere pode baixar o `.zip`, descompactar e executar `Instalar.bat`. O resultado é o mesmo.
 
-**Remover:** `Desinstalar.bat` (dentro do `.zip`). Os favoritos e a biblioteca não são apagados.
+**Remover:** `Desinstalar.bat` (dentro do `.zip` ou em `%APPDATA%\GestaoBIM\Desinstalar.bat`). Os favoritos e a biblioteca não são apagados.
 
 **Edição antiga em pyRevit:** o instalador move `GBMaterialStudio.extension` e `ValberMaterialStudio.extension`
 para uma pasta de backup em `%APPDATA%\pyRevit`, para a aba "Gestão BIM" não aparecer duplicada. Seus
@@ -89,14 +89,14 @@ Troca o material das camadas de tipos de parede, piso, cobertura e forro.
 ## Sobre e atualizações
 
 **Sobre** (painel **Geral**) é um botão **único**, compartilhado por todos os plugins Gestão BIM instalados (Material
-Studio, DWG Export e Famílias). Ele mostra, numa janela só, a versão instalada de cada um, o diagnóstico de cada um e
+Studio, DWG Export, Famílias, Cotas e Render). Ele mostra, numa janela só, a versão instalada de cada um, o diagnóstico de cada um e
 consulta o GitHub na hora. Se algum tiver versão nova, oferece **Baixar** (abre a página da release). Os add-ins não se
 atualizam sozinhos: baixe e rode o instalador com o Revit fechado.
 
 Ao abrir o Revit, o add-in consulta o GitHub em segundo plano (no máximo uma vez por dia). Se houver versão
 nova de qualquer plugin, o botão **Sobre** ganha uma **bolinha vermelha**. Sem internet, nada acontece.
 
-Para desligar a consulta automática, defina a variável de ambiente `GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`.
+Para desligar a consulta automática, defina a variável de ambiente `GB_NO_UPDATE_CHECK=1` (ou `GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1` só para este plugin).
 
 ## Onde ficam os dados
 

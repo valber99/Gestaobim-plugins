@@ -20,13 +20,12 @@ Depois, escolha o **modelo de planejamento** (GB Cotas) e o **modelo de imagem**
 para conferir. A IA passa por um gateway local, o CLIProxyAPI. Ele roda só neste computador (`127.0.0.1`), com uma senha
 nova a cada sessão do Revit, e fecha junto com o Revit.
 
-### GB Cotas (painel Cotas)
+### GB Cotas (painel IA → Cotar vista)
 
 1. Abra uma **planta** (de piso, de forro, estrutural ou de área). Para cotar só uma parte, selecione as paredes antes.
-2. Clique em **Cotar vista** (painel Cotas). A janela mostra as cadeias propostas (interna, intermediária e externa de cada lado),
-   com o número de segmentos de cada uma.
+2. Clique em **Cotar vista** (painel **IA**). A janela mostra o resumo das referências da vista e permite planejar as cadeias propostas (interna, intermediária e externa de cada lado), com o número de segmentos de cada uma.
 3. Opcional: escreva um pedido para a IA (por exemplo, "cote as fachadas em três linhas e os banheiros por dentro") e
-   clique em **Planejar** (sem modelo escolhido, a opção é **Sem IA**, pelas regras). A IA só escolhe referências da lista que o plugin montou. Uma cadeia com referência
+   clique em **Planejar cotas** (desmarque **"Usar IA para planejar as cadeias"** para usar apenas as regras do escritório). A IA só escolhe referências da lista que o plugin montou. Uma cadeia com referência
    que não existe, ou com referências que não são paralelas, é recusada e aparece com o motivo.
 4. Marque as cadeias que quer e clique em **Criar cotas**.
 
@@ -40,10 +39,10 @@ O que o plugin garante:
   aparece no aviso final.
 - O relatório da última cotagem fica em `%APPDATA%\GestaoBIM\Cotas\autodim_audit.json`.
 
-**Perfil de regras** (botão **Regras…** na janela de cotas): um JSON em `%APPDATA%\GestaoBIM\Cotas\perfil-regras.json`,
+**Perfil de regras** (botão **Abrir regras…** na janela de cotas): um JSON em `%APPDATA%\GestaoBIM\Cotas\perfil-regras.json`,
 com padrão baseado na NBR 6492. Nele ficam os afastamentos em mm de papel (primeira linha a 10 mm, linhas a cada
 7 mm), a altura do texto, os lados com as três linhas e os lados só com a externa, e a faixa da fachada. Se o arquivo
-tiver erro, o plugin diz qual. Apague o arquivo para voltar ao padrão.
+tiver erro, o plugin diz qual. Apague o arquivo para voltar ao padrão. Ao clicar em **Planejar cotas**, o arquivo é relido automaticamente.
 
 Limitações:
 
@@ -54,7 +53,7 @@ Limitações:
   plugin recusa a vista e diz o motivo.
 - Vínculos (RVT dentro do projeto) ainda não são cotados.
 
-### GB Render (painel Render → Render com IA)
+### GB Render (painel IA → Render com IA)
 
 1. Abra uma **vista 3D**, perspectiva (câmera) ou isométrica. Numa perspectiva, **ligue "Recortar vista"** nas
    propriedades e ajuste o recorte. Sem recorte, o Revit usa um enquadramento próprio que a API não informa, e o
@@ -64,10 +63,10 @@ Limitações:
 3. **Gerar camadas (sem IA)**: grava `clay.png`, `color_id.png` (uma cor por objeto), `depth.png` (profundidade em
    16 bits), `background.png` (céu, entorno e prédio), o `manifest.json` (o que é cada cor: categoria, família, tipo,
    material, posição na tela) e o `render_bundle.zip` com tudo conferido.
-4. **Gerar render com IA**: envia as camadas e o manifesto ao modelo de imagem. O render e o `render_report.json`
-   (modelo, hashes, sem chave nem senha) ficam na pasta.
-5. **Editar um objeto do render**: selecione objetos no Revit e descreva a mudança (por exemplo, "trocar o couro por
-   tecido azul"). Vai junto a máscara só desses objetos. O plugin confere se a imagem mudou fora da máscara e avisa
+4. **Gerar render com IA**: envia as camadas e o manifesto ao modelo de imagem. O render (`render_<data>.png`) e o relatório
+   `<imagem>.report.json` (modelo, hashes, sem chave nem senha) ficam na pasta.
+5. **Editar um objeto do render**: após o primeiro render, escolha o objeto na lista (ComboBox) da janela e descreva a mudança (por exemplo, "trocar o couro por
+   tecido azul"). Vai junto a máscara só desse objeto. O plugin confere se a imagem mudou fora da máscara e avisa
    se mudou.
 
 O que vai para fora: as imagens das camadas e o manifesto. Marque **Não enviar fabricante e modelo das famílias**
@@ -113,6 +112,6 @@ src/GBRender         extrator 3D (CustomExporter), janela, autoteste
 | `GBAI_HOME` | Redireciona as pastas do gateway e das configurações (testes) |
 | `GBAI_PROXY_EXE` | Outro caminho para o `cli-proxy-api.exe` (o SHA-256 continua exigido) |
 | `GB_COTAS_HOME` | Outra pasta para o perfil de regras e o relatório |
-| `GB_AI_NO_UPDATE_CHECK` | Não consultar versão nova |
+| `GB_NO_UPDATE_CHECK` / `GB_AI_NO_UPDATE_CHECK` | Não consultar versão nova |
 | `GB_COTAS_SELFTEST`, `GB_COTAS_SELFTEST_MODELS` | Autoteste das cotas no Revit |
 | `GB_RENDER_SELFTEST`, `GB_RENDER_SELFTEST_MODELS` | Autoteste do render no Revit |

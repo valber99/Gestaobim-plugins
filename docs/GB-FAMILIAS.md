@@ -8,9 +8,9 @@ Este documento tem o guia do usuário, a arquitetura do plugin e como empacotar.
 
 ## Guia do usuário
 
-### Como funciona (versão 0.2)
+### Como funciona
 
-O **catálogo** (nomes, previews, descrições e os dados da busca por IA) **vem dentro do instalador do plugin** e fica no
+O **catálogo** (nomes, previews, descrições e os dados da busca por IA de **41.762 famílias**) **vem dentro do instalador do plugin** e fica no
 seu computador, então **buscar e filtrar funciona sem internet, já na primeira abertura**. O **servidor só entrega os
 arquivos `.rfa`**: cada um é baixado só quando você insere a família, um de cada vez, e fica numa pasta que você escolhe.
 O que já foi baixado funciona offline.
@@ -18,7 +18,7 @@ O que já foi baixado funciona offline.
 ### Instalar
 
 1. Feche o Revit e dê dois cliques em `GestaoBIM-Setup-<versão>.exe` (ou, no `.zip`, em `Instalar.bat`). Ele instala os
-   três plugins nos Revit 2025, 2026 e 2027, o motor de busca por IA (`gbfam.exe` e os modelos, ~1 GB) em
+   cinco plugins nos Revit 2025, 2026 e 2027, o motor de busca por IA (`gbfam.exe` e os modelos, ~1 GB) em
    `%APPDATA%\GestaoBIM\Tools` e o **catálogo** em `%LOCALAPPDATA%\GestaoBIM\Familias` (só troca o que já existe se o
    do pacote for mais novo). Nada disso precisa ser configurado.
 2. Abra o Revit: painel **Famílias**, botão **Biblioteca**. A busca já funciona.
@@ -44,7 +44,7 @@ O que já foi baixado funciona offline.
 
 - **Categorias**: árvore com subcategorias e contagens. A contagem de cada item já considera os outros filtros e
   a busca, então você nunca marca um filtro que dê zero resultado sem perceber.
-- **Pasta de origem, Ambiente, Material, Cor, Estilo, Versão do Revit, Categoria no Revit**: dentro de um grupo
+- **Ambiente, Material, Cor, Estilo, Versão do Revit, Categoria no Revit**: dentro de um grupo
   vale "ou"; entre grupos vale "e". Listas longas têm uma caixa para filtrar.
 - **Somente com preview**, **Somente baixadas** (as que já estão no seu computador), **Ordem** (relevância, nome,
   categoria) e **Limpar filtros**.
@@ -96,7 +96,7 @@ do servidor):
   baixa o certo do servidor (na estrutura de pastas da biblioteca).
 - **Espaço usado**: **Sem limite** (padrão) ou **Limitar a N GB**. Com limite, as famílias **baixadas pelo plugin** menos
   usadas são apagadas (podem ser baixadas de novo); as que já estavam na pasta e as pastas de rede **nunca** são apagadas.
-- **Conta**: **Entrar** / **Sair**.
+- **Conta**: **Entrar** / **Sair** / **Criar conta…** (abre [cadastro.gestaobim.com](https://cadastro.gestaobim.com)).
 
 Quem usava a 0.1 com a biblioteca numa pasta ("pasta local") passa a usar o servidor sozinho: a pasta da biblioteca
 vira a pasta das famílias, então tudo o que já tinha continua disponível, sem baixar de novo.
@@ -130,7 +130,7 @@ dois downloads simultâneos do mesmo arquivo não se atrapalham.
 src/GBFamilias.Core          regras puras (sem Revit): índice, filtros, busca, favoritos, caminhos, cliente de IA
 src/GBFamilias.Core/Server   login (OAuth PKCE), cliente do servidor, catálogo (assinatura, delta), downloads
 src/GBFamilias               o add-in: comandos, janela WPF e a camada do Revit (inserir, despachar eventos, DPAPI)
-tests/GBFamilias.Core.Tests  168 testes xUnit
+tests/GBFamilias.Core.Tests  testes xUnit do Core (índice, servidor, catálogo e downloads)
 tools/gbfam                  o motor em Rust: ingestão, IA generativa, embeddings, busca, catálogo e o servidor local (gbfam)
 installer, build             manifesto .addin, instaladores e empacotamento
 ```
@@ -245,7 +245,7 @@ escala. Reavalie acima de ~50 mil famílias.
 
 ## Testes
 
-- `dotnet test tests/GBFamilias.Core.Tests`: **162 testes**. Cobrem texto e acentos, categorias, filtros e facetas
+- `dotnet test tests/GBFamilias.Core.Tests`: testes xUnit do Core. Cobrem texto e acentos, categorias, filtros e facetas
   (inclusive `CountsAll` igual a cada faceta separada, em acervo aleatório), busca híbrida, caminhos (inclusive
   tentativas de fuga), favoritos e coleções, configurações (inclusive a de um usuário da 0.1.0), **Ed25519 (vetores da
   RFC 8032 e uma assinatura gerada pelo Rust)**, **PKCE e o login completo** (retorno pelo navegador, `state` falso,
@@ -291,7 +291,7 @@ disponível; `-NoExe` gera só o `.zip`.
 
 - Os modelos de IA pesam ~1 GB (o e5 em precisão total tem 448 MB). Versões quantizadas reduziriam bastante.
 - As miniaturas têm ~128 px, então a busca por imagem e as descrições têm pouco detalhe visual.
-- Uma pequena fração das famílias (~3%) não tem preview embutido no `.rfa`; elas continuam pesquisáveis por nome e metadados.
+- Uma pequena fração das famílias (~1%) não tem preview embutido no `.rfa`; elas continuam pesquisáveis por nome e metadados.
 - O CLIP foi treinado em inglês: consultas em português dependem sobretudo do e5 sobre a descrição gerada.
 - Sem conexão com o servidor de arquivos, a busca local e as famílias já baixadas continuam funcionando, mas não é
   possível fazer login novo nem baixar famílias ainda não presentes no computador.

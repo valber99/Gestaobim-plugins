@@ -23,7 +23,7 @@ public sealed class App : IExternalApplication
         }
         catch (Exception error)
         {
-            TaskDialog.Show("GB Render", $"Nao foi possivel criar o painel Render.\n\n{error.Message}");
+            TaskDialog.Show("GB Render", $"Não foi possível criar o painel IA.\n\n{error.Message}");
             return Result.Failed;
         }
         return Result.Succeeded;

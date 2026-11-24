@@ -143,19 +143,36 @@ public sealed class AiClient : IAiGateway, IDisposable
             _ => "1024x1024",
         };
         var path = images.Count > 0 ? "/v1/images/edits" : "/v1/images/generations";
-        using var form = new MultipartFormDataContent();
-        form.Add(new StringContent(model), "model");
-        form.Add(new StringContent(prompt), "prompt");
-        form.Add(new StringContent(size), "size");
-        foreach (var img in images)
+        HttpContent requestContent;
+        if (images.Count == 0)
         {
-            var ext = img.MimeType.Contains("jpeg", StringComparison.OrdinalIgnoreCase) ? ".jpg" : ".png";
-            var content = new ByteArrayContent(img.Bytes);
-            content.Headers.ContentType = new MediaTypeHeaderValue(img.MimeType);
-            form.Add(content, "image[]", img.Label + ext);
+            var body = new JsonObject
+            {
+                ["model"] = model,
+                ["prompt"] = prompt,
+                ["size"] = size,
+            };
+            if (model.StartsWith("dall-e", StringComparison.OrdinalIgnoreCase))
+                body["response_format"] = "b64_json";
+            requestContent = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
+        }
+        else
+        {
+            var form = new MultipartFormDataContent();
+            form.Add(new StringContent(model), "model");
+            form.Add(new StringContent(prompt), "prompt");
+            form.Add(new StringContent(size), "size");
+            foreach (var img in images)
+            {
+                var ext = img.MimeType.Contains("jpeg", StringComparison.OrdinalIgnoreCase) ? ".jpg" : ".png";
+                var content = new ByteArrayContent(img.Bytes);
+                content.Headers.ContentType = new MediaTypeHeaderValue(img.MimeType);
+                form.Add(content, "image[]", img.Label + ext);
+            }
+            requestContent = form;
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = form };
+        using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = requestContent };
         HttpResponseMessage response;
         try
         {
@@ -172,7 +189,15 @@ public sealed class AiClient : IAiGateway, IDisposable
 
         using (response)
         {
-            var text = await response.Content.ReadAsStringAsync(cancel).ConfigureAwait(false);
+            string text;
+            try
+            {
+                text = await response.Content.ReadAsStringAsync(cancel).ConfigureAwait(false);
+            }
+            catch (TaskCanceledException) when (!cancel.IsCancellationRequested)
+            {
+                throw new AiException("O gateway de IA demorou demais para concluir a resposta.");
+            }
             if (!response.IsSuccessStatusCode)
                 throw new AiException($"O gateway respondeu {(int)response.StatusCode}: {Redactor.Shorten(Redactor.Scrub(ErrorMessage(text), _token), 400)}", (int)response.StatusCode);
             JsonNode? node;
@@ -181,7 +206,14 @@ public sealed class AiClient : IAiGateway, IDisposable
             var b64 = node?["data"]?[0]?["b64_json"]?.GetValue<string>();
             if (string.IsNullOrWhiteSpace(b64))
                 throw new AiException("O modelo de imagem nao devolveu dados base64 na resposta.");
-            return new ImageResult(Convert.FromBase64String(b64), "image/png", null);
+            try
+            {
+                return new ImageResult(Convert.FromBase64String(b64), "image/png", null);
+            }
+            catch (FormatException)
+            {
+                throw new AiException("O modelo devolveu uma imagem em base64 invalida.");
+            }
         }
     }
 

@@ -259,13 +259,18 @@ public sealed class CatalogSync(ServerApi api, string publicKeyBase64, Version p
 
     private async Task<PreparedCatalog> DownloadSnapshotAsync(CatalogManifest manifest, string tempDir, CancellationToken cancel)
     {
-        var gzBytes = await DownloadChecked(manifest.Snapshot, cancel).ConfigureAwait(false);
+        var gzTmp = Path.Combine(tempDir, $"snapshot.{Guid.NewGuid():N}.gz.tmp");
         var tmp = Path.Combine(tempDir, $"catalog.sqlite.{Guid.NewGuid():N}.tmp");
         var path = Path.Combine(tempDir, "catalog.sqlite.next");
         try
         {
-            using (var input = new GZipStream(new MemoryStream(gzBytes), CompressionMode.Decompress))
-            using (var output = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, useAsync: true))
+            await api.DownloadCatalogFileAsync(manifest.Snapshot.File, gzTmp, cancel).ConfigureAwait(false);
+            if (!string.Equals(CatalogCrypto.Sha256HexOfFile(gzTmp), manifest.Snapshot.Sha256, StringComparison.OrdinalIgnoreCase))
+                throw new CatalogRejectedException($"O arquivo {manifest.Snapshot.File} nao confere com o manifesto assinado (hash diferente). Recusado.");
+
+            await using (var raw = new FileStream(gzTmp, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, useAsync: true))
+            await using (var input = new GZipStream(raw, CompressionMode.Decompress))
+            await using (var output = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, useAsync: true))
             {
                 await input.CopyToAsync(output, cancel).ConfigureAwait(false);
             }
@@ -277,6 +282,10 @@ public sealed class CatalogSync(ServerApi api, string publicKeyBase64, Version p
             TryDelete(tmp);
             throw;
         }
+        finally
+        {
+            TryDelete(gzTmp);
+        }
         return new PreparedCatalog(path, manifest.Version, SyncKind.Snapshot, manifest.Families);
     }
 
@@ -285,11 +294,12 @@ public sealed class CatalogSync(ServerApi api, string publicKeyBase64, Version p
         var deltas = new List<byte[]>();
         foreach (var d in chain) deltas.Add(Gunzip(await DownloadChecked(d.File, d.Sha256, cancel).ConfigureAwait(false)));
 
+        var tmp = Path.Combine(tempDir, $"catalog.sqlite.{Guid.NewGuid():N}.tmp");
         var path = Path.Combine(tempDir, "catalog.sqlite.next");
-        CopyDatabase(localDb, path);
+        CopyDatabase(localDb, tmp);
         try
         {
-            using (var c = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Mode = SqliteOpenMode.ReadWrite, Pooling = false }.ToString()))
+            using (var c = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = tmp, Mode = SqliteOpenMode.ReadWrite, Pooling = false }.ToString()))
             {
                 c.Open();
                 using (var pragma = c.CreateCommand())
@@ -299,11 +309,12 @@ public sealed class CatalogSync(ServerApi api, string publicKeyBase64, Version p
                 }
                 foreach (var delta in deltas) DeltaApplier.Apply(c, delta);
             }
-            Validate(path, manifest);
+            Validate(tmp, manifest);
+            File.Move(tmp, path, overwrite: true);
         }
         catch
         {
-            TryDelete(path);
+            TryDelete(tmp);
             throw;
         }
         return new PreparedCatalog(path, manifest.Version, SyncKind.Deltas, manifest.Families);
@@ -342,10 +353,16 @@ public sealed class CatalogSync(ServerApi api, string publicKeyBase64, Version p
     /// <summary>Troca o banco local pelo preparado. O chamador garante que nenhum leitor esta com o banco aberto.</summary>
     public static void Commit(PreparedCatalog prepared, string localDbPath)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(localDbPath)!);
+        var dir = Path.GetDirectoryName(localDbPath)!;
+        Directory.CreateDirectory(dir);
         foreach (var suffix in new[] { "-wal", "-shm", "-journal" }) TryDelete(localDbPath + suffix);
         if (File.Exists(localDbPath)) File.Replace(prepared.TempPath, localDbPath, localDbPath + ".anterior", ignoreMetadataErrors: true);
         else File.Move(prepared.TempPath, localDbPath);
+        if (prepared.Version > 0)
+        {
+            try { FamiliasPaths.WriteAtomic(Path.Combine(dir, "catalog.version"), prepared.Version.ToString()); }
+            catch (IOException) { }
+        }
     }
 
     private static void TryDelete(string path)

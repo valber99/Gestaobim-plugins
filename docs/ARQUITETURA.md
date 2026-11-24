@@ -21,7 +21,7 @@ não é preciso ter o Revit para compilar. O Core é compilado dentro da mesma D
 
 | Pasta / arquivo | Papel |
 |---|---|
-| `Addin/App.cs` | `IExternalApplication`: cria a aba "Gestão BIM", o painel "Materiais" e os seis botões |
+| `Addin/App.cs` | `IExternalApplication`: cria a aba "Gestão BIM", registra o botão único "Sobre" (painel "Geral") e cria o painel "Materiais" com os cinco botões |
 | `Addin/Commands.cs` | Um `IExternalCommand` por botão, todos via `CommandRunner` (captura erros em vez de derrubar o Revit) |
 | `Addin/Flows.cs` | Fluxos: editar material (modal e fixo), favoritos, organizar, aplicar em tipo |
 | `Addin/UpdateNotifier.cs` | Consulta de versão nova deste plugin e a sua seção na janela única **Sobre** (`src/GBShared/AboutHub.cs`, compartilhado com os outros plugins) |
@@ -116,11 +116,11 @@ Na primeira abertura, `StoragePaths.MigrateFromPyRevit` copia favoritos, configu
 `Idling`, porque a faixa só pode ser alterada na thread de interface do Revit. Só são aceitos lançamentos
 oficiais (nem rascunho nem pré-lançamento) com link do `github.com`. Qualquer falha de rede é silenciosa. Não há
 atualização automática: trocar a DLL com o Revit aberto não é possível, então o botão leva à página de download.
-`GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1` desliga a consulta automática.
+`GB_NO_UPDATE_CHECK=1` (ou `GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`) desliga a consulta automática.
 
 ### Instalador `.exe`
 
-Gerado pelos scripts de `build/` (`New-LargeSetupExe` em `common.ps1`), igual para os três plugins. É o
+Gerado pelos scripts de `build/` (`New-LargeSetupExe` em `common.ps1`), igual para os cinco plugins. É o
 `build/SetupStub.cs`, compilado pelo `csc` do .NET Framework que já vem no Windows (sem dependências), com o `.zip`
 colado no fim e um rodapé com o nome do log, o SHA-256 e o tamanho do pacote. Ao rodar, ele:
 1. recusa instalar com o Revit aberto;
@@ -135,7 +135,7 @@ clique na confirmação do Windows.
 
 ## Testes
 
-- `dotnet test tests/GBMaterialStudio.Core.Tests`: 51 testes (renomeação, duplicados, banco de favoritos,
+- `dotnet test tests/GBMaterialStudio.Core.Tests`: testes xUnit do Core (renomeação, duplicados, banco de favoritos,
   configurações, regras de atualização).
 - A camada do Revit não tem testes automáticos. Foi verificada dentro do Revit 2027 (carregamento, faixa,
   análise de materiais, botão Sobre). Revit 2025 e 2026 compilam, mas não foram abertos.

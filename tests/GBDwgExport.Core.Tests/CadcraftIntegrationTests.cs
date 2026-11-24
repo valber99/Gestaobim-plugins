@@ -34,7 +34,8 @@ public class CadcraftIntegrationTests : IDisposable
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
         Assert.True(process.WaitForExit(120_000), "cadcraft-cli demorou demais");
-        return (process.ExitCode, output.Result, error.Result);
+        process.WaitForExit();
+        return (process.ExitCode, output.GetAwaiter().GetResult(), error.GetAwaiter().GetResult());
     }
 
     private string Sample(string name)

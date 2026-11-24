@@ -95,12 +95,13 @@ INSTALAR
   2. De dois cliques em GestaoBIM-Setup-$version.exe (ou, neste .zip, em Instalar.bat).
      Instala em todos os Revit 2025, 2026 e 2027 encontrados. Nao precisa de administrador.
   3. Abra o Revit. Na primeira vez ele pergunta se confia nos complementos: escolha "Sempre carregar".
-  4. GB Familias, na primeira vez que inserir uma familia: escolha a PASTA DAS FAMILIAS (local ou de rede) e entre
-     com a sua conta (o administrador cria as contas). Se voce ja tem familias numa pasta, escolha essa pasta: as que
-     ja estao la sao reconhecidas e nao sao baixadas de novo.
+  4. GB Familias, para baixar e inserir familias da biblioteca:
+     - Cadastre-se primeiro em: https://cadastro.gestaobim.com (aguarde a aprovacao da conta).
+     - Na primeira vez que inserir uma familia, escolha a PASTA DAS FAMILIAS (local ou de rede) e entre com a sua conta.
+     - Se voce ja tem familias numa pasta, escolha essa pasta: as que ja estao la sao reconhecidas e nao sao baixadas de novo.
 
 DESINSTALAR
-  Dois cliques em Desinstalar.bat. Seus favoritos e configuracoes continuam em %APPDATA%\GestaoBIM.
+  Dois cliques em Desinstalar.bat (no .zip ou em %APPDATA%\GestaoBIM\Desinstalar.bat). Seus favoritos e configuracoes continuam em %APPDATA%\GestaoBIM.
 
 BUSCA POR IA (GB Familias)
   Roda no seu computador (CPU), sem enviar nada para fora: gbfam.exe e tres modelos ONNX em

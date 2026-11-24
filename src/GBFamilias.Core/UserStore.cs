@@ -76,6 +76,8 @@ public sealed class UserStore
             {
                 held = true; // o dono anterior travou; o arquivo e gravado de forma atomica, entao esta integro
             }
+            if (!held)
+                throw new IOException("Os dados do usuario estao em uso por outra janela do Revit. Tente novamente em instantes.");
             try
             {
                 var data = Read();
@@ -85,7 +87,7 @@ public sealed class UserStore
             }
             finally
             {
-                if (held) mutex.ReleaseMutex();
+                mutex.ReleaseMutex();
             }
         }
     }

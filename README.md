@@ -37,10 +37,10 @@ baixados sob demanda, com login, quando você insere a família.
    Enquanto isso, a busca local já funciona normalmente.
 
 Quando sair uma versão nova, o botão único **Sobre** (no painel **Geral**) mostra uma bolinha vermelha e leva direto
-para o download do instalador único. Para desativar a checagem automática, defina a variável de ambiente
-`GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`.
+para o download do instalador único. Para desativar a checagem automática de todos os plugins, defina a variável de ambiente
+`GB_NO_UPDATE_CHECK=1`.
 
-Para remover os plugins, execute `Desinstalar.bat`. Seus favoritos, bibliotecas e configurações não são apagados.
+Para remover os plugins, execute `Desinstalar.bat` (no `.zip` ou em `%APPDATA%\GestaoBIM\Desinstalar.bat`). Seus favoritos, bibliotecas e configurações não são apagados.
 
 **Requisitos:** Windows e **Revit 2025, 2026 ou 2027**.
 
@@ -87,13 +87,13 @@ Um código-fonte, três compilações (Revit 2025, 2026 e 2027), com a API do Re
 (`Nice3point.Revit.Api`) — **não é preciso ter o Revit instalado para compilar ou rodar os testes unitários**.
 
 ### Pré-requisitos
-- **.NET 10 SDK** (os projetos miram `net8.0` / `net8.0-windows`, compilados pelo SDK 10)
+- **.NET 10 SDK** (compila `net8.0` / `net8.0-windows` para Revit 2025/2026 e `net10.0-windows` para Revit 2027)
 - **Rust (stable)** — apenas se for alterar o motor de busca `tools/gbfam`
 
 ### Comandos principais
 
 ```powershell
-# Rodar todas as 6 suítes de testes .NET (485 testes)
+# Rodar todas as 6 suítes de testes .NET
 dotnet test tests/GBMaterialStudio.Core.Tests
 dotnet test tests/GBDwgExport.Core.Tests
 dotnet test tests/GBFamilias.Core.Tests
@@ -123,7 +123,7 @@ cargo test --release --manifest-path tools/gbfam/Cargo.toml
 - `src/GBAi.Shared`, `src/GBAi.Revit`, `tests/GBAi.Shared.Tests` — camada compartilhada de IA, DPAPI e gateway local.
 - `src/GBCotas*` e `tests/GBCotas.Core.Tests` — GB Cotas.
 - `src/GBRender*` e `tests/GBRender.Core.Tests` — GB Render.
-- `src/Shared` — componentes compartilhados entre os 5 plugins (como a janela unificada `AboutHub`).
+- `src/GBShared` — componentes compartilhados entre os 5 plugins (como a janela unificada `AboutHub`).
 - `build/` e `installer/` — scripts de empacotamento, instalador gráfico nativo (`SetupStub.cs`) e manifestos `.addin`.
 - `GBMaterialStudio.extension/` — **edição legada em pyRevit** (mantida apenas como referência).
 

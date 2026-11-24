@@ -379,8 +379,11 @@
         <!-- Barra de status -->
         <Border Grid.Row="2" Background="White" BorderBrush="#FFE2E8F0" BorderThickness="0,1,0,0" Padding="14,7">
             <DockPanel>
-                <Button x:Name="AccountButton" DockPanel.Dock="Right" Content="Entrar" Margin="12,0,0,0" MinWidth="0" Padding="10,3" FontSize="12"
+                <Button x:Name="AccountButton" DockPanel.Dock="Right" Content="Entrar" Margin="8,0,0,0" MinWidth="0" Padding="10,3" FontSize="12"
                         Click="OnAccount" Visibility="Collapsed"/>
+                <Button x:Name="RegisterButton" DockPanel.Dock="Right" Content="Criar conta" Margin="8,0,0,0" MinWidth="0" Padding="10,3" FontSize="12"
+                        Click="OnRegister" Visibility="Collapsed"
+                        ToolTip="Abre cadastro.gestaobim.com no navegador para solicitar acesso à biblioteca"/>
                 <TextBlock x:Name="AccountText" DockPanel.Dock="Right" Foreground="#FF64748B" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
                 <TextBlock x:Name="AiStatusText" DockPanel.Dock="Right" Foreground="#FF15803D" FontWeight="SemiBold" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
                 <Button x:Name="CancelDownloadButton" DockPanel.Dock="Right" Content="Cancelar" Margin="8,0,0,0" MinWidth="0" Padding="10,3" FontSize="12"

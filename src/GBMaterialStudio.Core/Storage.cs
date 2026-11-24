@@ -227,13 +227,41 @@ public static class FavoriteStore
         return result;
     }
 
+    private const int MaxBackups = 5;
+
     private static void Backup(string path, byte[] raw)
     {
         var stamp = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmssffffff'Z'");
         var backup = $"{path}.bak.{stamp}.{Guid.NewGuid():N}";
-        using var stream = new FileStream(backup, FileMode.CreateNew, FileAccess.Write);
-        stream.Write(raw);
-        stream.Flush(true);
+        using (var stream = new FileStream(backup, FileMode.CreateNew, FileAccess.Write))
+        {
+            stream.Write(raw);
+            stream.Flush(true);
+        }
+        PruneBackups(path);
+    }
+
+    private static void PruneBackups(string path)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(path);
+            var name = Path.GetFileName(path);
+            if (string.IsNullOrEmpty(dir)) return;
+            var backups = Directory.GetFiles(dir, $"{name}.bak.*")
+                .OrderByDescending(f => f, StringComparer.Ordinal)
+                .Skip(MaxBackups);
+            foreach (var old in backups)
+            {
+                try { File.Delete(old); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     private static IDisposable AcquireLock(string path)

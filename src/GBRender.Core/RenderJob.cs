@@ -74,7 +74,8 @@ public static class RenderJob
     /// regiao da mascara mudou; sem ele so PNG e conferido.
     /// </summary>
     public static async Task<EditedRender> EditAsync(IAiGateway ai, string model, RenderPasses passes, byte[] previousRender, IEnumerable<long> elementIds, string instruction,
-        string description, RenderQuality quality, string folder, Func<byte[], RawImage?>? decoder = null, string? token = null, CancellationToken cancel = default)
+        string description, RenderQuality quality, string folder, Func<byte[], RawImage?>? decoder = null, string? token = null, CancellationToken cancel = default,
+        string previousRenderMime = "image/png")
     {
         if (string.IsNullOrWhiteSpace(model)) throw new AiException("Nenhum modelo de imagem foi escolhido. Abra \"Configurar IA\".");
         var ids = elementIds.ToHashSet();
@@ -84,7 +85,7 @@ public static class RenderJob
         if (!mask.Data.Any(v => v != 0)) throw new InvalidOperationException("O objeto escolhido nao tem pixels visiveis nesta vista.");
 
         Directory.CreateDirectory(folder);
-        var request = RenderPrompt.BuildEdit(previousRender, mask, instruction, description);
+        var request = RenderPrompt.BuildEdit(previousRender, mask, instruction, description, previousRenderMime);
         var report = new RenderReport { Kind = "edit", Model = model, Width = passes.Width, Height = passes.Height, EditedObject = description, ObjectCount = indexes.Count };
         AddInputHashes(report, request);
         var timer = Stopwatch.StartNew();

@@ -112,8 +112,9 @@ public static class CotasFlow
         var chosen = CotasWindow.Show(extraction, rules, view.Name);
         if (chosen is null) return;
 
-        var applied = DimensionWriter.Apply(doc, view, extraction, chosen.Selected, rules);
-        var solverAudit = DimSolver.Audit(new SolverResult(chosen.Selected, chosen.Result.Unplaced), extraction.Summary, rules);
+        var activeRules = chosen.Rules;
+        var applied = DimensionWriter.Apply(doc, view, extraction, chosen.Selected, activeRules);
+        var solverAudit = DimSolver.Audit(new SolverResult(chosen.Selected, chosen.Result.Unplaced), extraction.Summary, activeRules);
         var audit = AuditWriter.Build(view.Name, extraction.Summary.Scale, chosen.Plan, chosen.Result, solverAudit, applied, extraction.Warnings);
         AuditWriter.Save(audit);
 

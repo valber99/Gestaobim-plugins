@@ -65,7 +65,8 @@ public static class SettingsWindow
         var session = LibraryService.GetSession();
         var account = new TextBlock { Margin = new Thickness(0, 14, 0, 4), FontWeight = FontWeights.SemiBold };
         var signIn = new Button { Content = "Entrar", Padding = new Thickness(14, 4, 14, 4), Margin = new Thickness(0, 0, 8, 0) };
-        var signOut = new Button { Content = "Sair", Padding = new Thickness(14, 4, 14, 4) };
+        var signOut = new Button { Content = "Sair", Padding = new Thickness(14, 4, 14, 4), Margin = new Thickness(0, 0, 8, 0) };
+        var register = new Button { Content = "Criar conta…", Padding = new Thickness(14, 4, 14, 4), ToolTip = $"Abre {session.Config.RegisterUrl} no navegador" };
         void UpdateAccount()
         {
             account.Text = session.Auth.HasSession ? "Conta: conectada ao servidor." : "Conta: não conectada. Entre para baixar as famílias.";
@@ -75,8 +76,14 @@ public static class SettingsWindow
         var accountButtons = new StackPanel { Orientation = Orientation.Horizontal };
         accountButtons.Children.Add(signIn);
         accountButtons.Children.Add(signOut);
+        accountButtons.Children.Add(register);
         panel.Children.Add(account);
         panel.Children.Add(accountButtons);
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"Ainda não tem conta? Solicite acesso em {session.Config.RegisterUrl} (após aprovação, clique em Entrar).",
+            FontSize = 11, Foreground = hintBrush, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0),
+        });
         UpdateAccount();
 
         var problems = new TextBlock { Foreground = System.Windows.Media.Brushes.Firebrick, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0) };
@@ -102,6 +109,7 @@ public static class SettingsWindow
         // O login abre a janela de andamento por cima DESTA (que esta visivel).
         signIn.Click += (_, _) => { ServerFlows.SignIn(window); UpdateAccount(); };
         signOut.Click += (_, _) => { session.Auth.Logout(); UpdateAccount(); };
+        register.Click += (_, _) => ServerFlows.OpenRegistration();
 
         save.Click += (_, _) =>
         {

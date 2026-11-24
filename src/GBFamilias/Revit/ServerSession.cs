@@ -53,7 +53,7 @@ public sealed class ServerSession
     {
         Config = config ?? new ServerConfig();
         Auth = new AuthClient(Config, SharedHttp, new TokenStore(FamiliasPaths.TokenFile, new DpapiProtector()));
-        Api = new ServerApi(SharedHttp, Config.ApiBase, (cancel, force) => Auth.GetAccessTokenAsync(cancel, force));
+        Api = ServerApi.WithTokenResolver(SharedHttp, Config.ApiBase, (cancel, failed) => Auth.GetAccessTokenAsync(cancel, failed is not null, failed));
         Downloads = new DownloadManager(Api, Environment.MachineName);
         Catalog = new CatalogSync(Api, Config.CatalogPublicKey, Version.Parse(PluginVersion));
     }
@@ -78,8 +78,16 @@ public sealed class ServerSession
             TryDelete(PendingFile);
             return false;
         }
-        CatalogSync.Commit(new PreparedCatalog(PendingFile, pendingVersion, SyncKind.Snapshot, 0), localDb);
-        return true;
+        try
+        {
+            CatalogSync.Commit(new PreparedCatalog(PendingFile, pendingVersion, SyncKind.Snapshot, 0), localDb);
+            return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // Outra janela do Revit pode estar usando o banco: mantem pendente para a proxima abertura.
+            return false;
+        }
     }
 
     private DateTime LastCheck()

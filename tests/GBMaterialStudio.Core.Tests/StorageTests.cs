@@ -145,7 +145,7 @@ public class FavoriteStoreTests
     }
 
     [Fact]
-    public void Held_lock_times_out()
+    public async Task Held_lock_times_out()
     {
         using var home = new TempHome();
         var path = Path.Combine(home.Path, "f.json");
@@ -168,8 +168,19 @@ public class FavoriteStoreTests
         {
             FavoriteStore.LockTimeout = previous;
             release.Set();
-            holder.Wait();
+            await holder;
         }
+    }
+
+    [Fact]
+    public void Backups_are_pruned_to_latest_five()
+    {
+        using var home = new TempHome();
+        var path = Path.Combine(home.Path, "f.json");
+        for (var i = 0; i < 9; i++)
+            FavoriteStore.Mutate(path, Empty, db => { AddFavorite(db, $"Mat {i}"); return 0; });
+        var backups = Directory.GetFiles(home.Path, "f.json.bak.*");
+        Assert.Equal(5, backups.Length);
     }
 }
 

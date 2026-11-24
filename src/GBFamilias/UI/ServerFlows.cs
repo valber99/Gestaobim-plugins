@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,19 +14,42 @@ namespace Gestaobim.Familias.UI;
 /// <summary>Os passos do modo servidor que precisam de uma janela: entrar, baixar o catalogo e atualizar.</summary>
 public static class ServerFlows
 {
+    /// <summary>Abre a pagina de cadastro no navegador padrao para solicitar acesso a biblioteca.</summary>
+    public static void OpenRegistration()
+    {
+        var url = LibraryService.GetSession().Config.RegisterUrl;
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception error)
+        {
+            Dialogs.Alert($"Não foi possível abrir o navegador automaticamente.\n\nAcesse: {url}\n\n{error.Message}");
+        }
+    }
+
     /// <summary>Janela modal simples com andamento e Cancelar. Devolve o erro (ou null se terminou bem).</summary>
-    public static Exception? RunWithProgress(Window? owner, string title, string message, Func<CancellationToken, IProgress<string>, Task> work)
+    public static Exception? RunWithProgress(Window? owner, string title, string message, Func<CancellationToken, IProgress<string>, Task> work,
+        bool showRegister = false)
     {
         using var cts = new CancellationTokenSource();
         Exception? failure = null;
 
         var text = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) };
         var bar = new ProgressBar { IsIndeterminate = true, Height = 8, Margin = new Thickness(0, 0, 0, 14) };
-        var cancel = new Button { Content = "Cancelar", IsCancel = true, Width = 90, HorizontalAlignment = HorizontalAlignment.Right, Padding = new Thickness(0, 5, 0, 5) };
+        var cancel = new Button { Content = "Cancelar", IsCancel = true, Width = 90, Padding = new Thickness(0, 5, 0, 5) };
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        if (showRegister)
+        {
+            var register = new Button { Content = "Criar conta…", Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 0, 8, 0) };
+            register.Click += (_, _) => OpenRegistration();
+            actions.Children.Add(register);
+        }
+        actions.Children.Add(cancel);
         var panel = new StackPanel { Margin = new Thickness(18) };
         panel.Children.Add(text);
         panel.Children.Add(bar);
-        panel.Children.Add(cancel);
+        panel.Children.Add(actions);
 
         var window = new Window
         {
@@ -63,8 +87,9 @@ public static class ServerFlows
     {
         var session = LibraryService.GetSession();
         var error = RunWithProgress(owner, "GB Famílias — Entrar",
-            "Conclua o login na janela do navegador que acabou de abrir.\n\nEsta janela fecha sozinha quando terminar.",
-            (cancel, _) => session.LoginAsync(cancel));
+            $"Conclua o login na janela do navegador que acabou de abrir.\n\nAinda não tem conta? Clique em \"Criar conta…\" ou acesse {session.Config.RegisterUrl}\n\nEsta janela fecha sozinha quando terminar.",
+            (cancel, _) => session.LoginAsync(cancel),
+            showRegister: true);
         if (error is null) return true;
         if (error is not OperationCanceledException) Dialogs.Alert(ServerMessages.Describe(error), "GB Famílias — Entrar");
         return false;

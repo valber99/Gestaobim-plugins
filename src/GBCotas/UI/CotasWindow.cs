@@ -14,6 +14,7 @@ public sealed class CotasChoice
     public required PlanOutcome Plan { get; init; }
     public required SolverResult Result { get; init; }
     public required IReadOnlyList<PlacedChain> Selected { get; init; }
+    public required RuleProfile Rules { get; init; }
 }
 
 /// <summary>
@@ -168,6 +169,7 @@ public static class CotasWindow
 
         PlanOutcome? outcome = null;
         SolverResult? solved = null;
+        var activeRules = rules;
         var boxes = new List<(CheckBox Box, PlacedChain Chain)>();
         CotasChoice? result = null;
 
@@ -193,6 +195,7 @@ public static class CotasWindow
             AiUi.SetStatus(statusBox, statusText, statusBar, useAi.IsChecked == true ? "Conectando à IA e planejando cadeias…" : "Planejando pelas regras do escritório…", StatusKind.Info, busy: true);
             try
             {
+                activeRules = CotasPaths.LoadProfile();
                 AiConnection? connection = null;
                 string? connectionNote = null;
                 if (useAi.IsChecked == true)
@@ -207,12 +210,12 @@ public static class CotasWindow
                 if (closed) { connection?.Dispose(); return; }
                 var model = connection?.PlanModel ?? "";
                 if (connection is not null && model.Length == 0) connectionNote = AiService.NoModelsMessage + " Usei as regras do escritório.";
-                try { outcome = await AiPlanner.PlanAsync(connection?.Client, model, summary, rules, request.Text, windowCts.Token); }
+                try { outcome = await AiPlanner.PlanAsync(connection?.Client, model, summary, activeRules, request.Text, windowCts.Token); }
                 finally { connection?.Dispose(); }
                 if (closed) return;
                 if (connectionNote is not null) outcome = outcome with { Note = connectionNote };
 
-                solved = DimSolver.Solve(outcome.Chains, summary, rules);
+                solved = DimSolver.Solve(outcome.Chains, summary, activeRules);
                 foreach (var placed in solved.Placed.OrderBy(p => p.Chain.Side).ThenBy(p => p.Chain.Level))
                 {
                     var length = placed.Refs[^1].Pos - placed.Refs[0].Pos;
@@ -265,7 +268,7 @@ public static class CotasWindow
                 AiUi.SetStatus(statusBox, statusText, statusBar, "Marque pelo menos uma cadeia para criar.", StatusKind.Warn);
                 return;
             }
-            result = new CotasChoice { Plan = outcome, Result = solved, Selected = selected };
+            result = new CotasChoice { Plan = outcome, Result = solved, Selected = selected, Rules = activeRules };
             window.DialogResult = true;
         };
 

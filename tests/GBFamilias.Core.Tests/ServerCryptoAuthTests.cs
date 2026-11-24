@@ -298,6 +298,25 @@ public sealed class AuthClientTests : IDisposable
     }
 
     [Fact]
+    public async Task LoopbackIgnoraConexaoVaziaEChavesDuplicadas()
+    {
+        using var listener = LoopbackListener.Start([53696, 53697]);
+        var waitTask = listener.WaitAsync(CancellationToken.None);
+        // 1) conexao que fecha sem enviar bytes (read == 0) nao derruba o listener
+        using (var empty = new System.Net.Sockets.TcpClient())
+        {
+            await empty.ConnectAsync(System.Net.IPAddress.Loopback, listener.Port);
+        }
+        // 2) callback real com parametro duplicado e sequencia % invalida nao lanca excecao
+        using var http = new HttpClient();
+        var resp = await http.GetAsync($"http://127.0.0.1:{listener.Port}/callback?code=OK1&code=OK2&state=S1&bad=%ZZ");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var result = await waitTask;
+        Assert.Equal("OK1", result.Code);
+        Assert.Equal("S1", result.State);
+    }
+
+    [Fact]
     public async Task UsaAProximaPortaSeAPrimeiraEstaOcupada()
     {
         using var busy = LoopbackListener.Start([53694]);

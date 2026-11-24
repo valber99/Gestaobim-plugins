@@ -59,7 +59,7 @@ public sealed class App : IExternalApplication
         panel.AddItem(Button("GBFamLibrary", "Biblioteca", typeof(OpenLibraryCommand).FullName!, "biblioteca",
             "Abre a biblioteca de famílias: busca por texto ou imagem, filtros, categorias, favoritos e coleções. Insere a família no projeto."));
         panel.AddItem(Button("GBFamSettings", "Configurações", typeof(SettingsCommand).FullName!, "config",
-            "Onde estão o banco da biblioteca e a pasta das famílias, e a busca por IA."));
+            "Pasta das famílias baixadas, limite de cache e conta do servidor."));
         UpdateNotifier.Start(application);
     }
 

@@ -114,6 +114,29 @@ public sealed class ServerApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Resposta416DescartaParcialERecomecaDoZero()
+    {
+        var part = Path.Combine(_dir, "stale.part");
+        File.WriteAllBytes(part, [1, 2, 3, 4, 5, 6, 7, 8]);
+        var calls = 0;
+        var handler = new FakeHandler(r =>
+        {
+            calls++;
+            if (calls == 1)
+            {
+                Assert.Equal(8, r.Headers.Range!.Ranges.Single().From);
+                return Task.FromResult(Bytes(HttpStatusCode.RequestedRangeNotSatisfiable, []));
+            }
+            Assert.Null(r.Headers.Range);
+            return Task.FromResult(Bytes(HttpStatusCode.OK, [42, 43, 44]));
+        });
+        var total = await Api(handler).DownloadFamilyAsync(Sha, part, null, CancellationToken.None);
+        Assert.Equal(2, calls);
+        Assert.Equal(3, total);
+        Assert.Equal(new byte[] { 42, 43, 44 }, File.ReadAllBytes(part));
+    }
+
+    [Fact]
     public async Task ServidorQueIgnoraRangeRecomecaDoZero()
     {
         var part = Path.Combine(_dir, "a.part");

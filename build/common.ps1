@@ -3,7 +3,8 @@
 function New-ZipWithChecksum {
     param([string]$Stage, [string]$Zip)
     if (Test-Path $Zip) { Remove-Item $Zip -Force }
-    Compress-Archive -Path (Join-Path $Stage '*') -DestinationPath $Zip
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [IO.Compression.ZipFile]::CreateFromDirectory($Stage, $Zip, [IO.Compression.CompressionLevel]::Optimal, $false)
     $hash = (Get-FileHash $Zip -Algorithm SHA256).Hash.ToLower()
     [IO.File]::WriteAllText("$Zip.sha256", "$hash  $(Split-Path $Zip -Leaf)`n")
     Write-Host "Pacote: $Zip"
@@ -25,7 +26,7 @@ function New-LargeSetupExe {
     $ico = Join-Path $PSScriptRoot 'gestaobim.ico'
     $logo = Join-Path $PSScriptRoot 'gestaobim-logo.png'
     $cscArgs = @(
-        '/nologo', '/optimize+', '/target:winexe', "/out:$stub",
+        '/nologo', '/optimize+', '/codepage:65001', '/target:winexe', "/out:$stub",
         '/r:System.IO.Compression.dll', '/r:System.IO.Compression.FileSystem.dll',
         '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll'
     )

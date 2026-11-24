@@ -19,6 +19,7 @@ public sealed class ServerConfig
 {
     public string Issuer { get; init; } = "https://auth.gestaobim.com";
     public string ApiBase { get; init; } = "https://gbf.valbermotta.org";
+    public string RegisterUrl { get; init; } = "https://cadastro.gestaobim.com";
     public string ClientId { get; init; } = "400731524095344643";
     public string ProjectId { get; init; } = "400731521125711875";
     public int[] RedirectPorts { get; init; } = [53682, 53683, 53684];
@@ -92,10 +93,16 @@ public sealed class TokenStore(string path, ITokenProtector protector)
             ["expires_at"] = tokens.ExpiresAtUtc.ToString("O"),
         }.ToJsonString();
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var temp = path + ".tmp";
-        File.WriteAllBytes(temp, protector.Protect(Encoding.UTF8.GetBytes(json)));
-        if (File.Exists(path)) File.Replace(temp, path, null);
-        else File.Move(temp, path);
+        var temp = $"{path}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllBytes(temp, protector.Protect(Encoding.UTF8.GetBytes(json)));
+            File.Move(temp, path, overwrite: true);
+        }
+        finally
+        {
+            try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { }
+        }
     }
 
     public void Clear()
@@ -165,26 +172,53 @@ public sealed class LoopbackListener : IDisposable
             {
                 continue;
             }
+            catch (IOException)
+            {
+                continue;
+            }
+            if (read == 0) continue;
             var request = Encoding.ASCII.GetString(buffer, 0, read);
             var line = request.Split('\n', 2)[0].Trim();
             var parts = line.Split(' ');
             if (parts.Length < 2 || parts[0] != "GET" || !parts[1].StartsWith("/callback", StringComparison.Ordinal))
             {
-                await Respond(stream, 404, "Nao encontrado.").ConfigureAwait(false);
+                await TryRespond(stream, 404, "Nao encontrado.").ConfigureAwait(false);
                 continue; // ex.: /favicon.ico
             }
             var query = parts[1].Contains('?') ? parts[1][(parts[1].IndexOf('?') + 1)..] : "";
-            var values = query.Split('&', StringSplitOptions.RemoveEmptyEntries)
-                .Select(p => p.Split('=', 2))
-                .ToDictionary(p => Uri.UnescapeDataString(p[0]), p => p.Length > 1 ? Uri.UnescapeDataString(p[1].Replace('+', ' ')) : "");
+            var values = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var segment in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = segment.Split('=', 2);
+                var key = TryUnescape(kv[0]);
+                var val = kv.Length > 1 ? TryUnescape(kv[1].Replace('+', ' ')) : "";
+                values.TryAdd(key, val);
+            }
             values.TryGetValue("code", out var code);
             values.TryGetValue("state", out var state);
             values.TryGetValue("error", out var error);
             var ok = !string.IsNullOrEmpty(code) && string.IsNullOrEmpty(error);
-            await Respond(stream, 200, ok
+            await TryRespond(stream, 200, ok
                 ? "Login concluido. Pode fechar esta aba e voltar para o Revit."
                 : "O login nao foi concluido. Volte para o Revit e tente de novo.").ConfigureAwait(false);
             return new CallbackResult(code, state, error);
+        }
+    }
+
+    private static string TryUnescape(string value)
+    {
+        try { return Uri.UnescapeDataString(value); }
+        catch (UriFormatException) { return value; }
+    }
+
+    private static async Task TryRespond(NetworkStream stream, int status, string message)
+    {
+        try
+        {
+            await Respond(stream, status, message).ConfigureAwait(false);
+        }
+        catch (IOException)
+        {
         }
     }
 
@@ -279,19 +313,23 @@ public sealed class AuthClient
     }
 
     /// <summary>Um token valido: o guardado, ou um novo pela renovacao. Lanca <see cref="AuthRequiredException"/> se precisar de login.</summary>
-    public async Task<string> GetAccessTokenAsync(CancellationToken cancel, bool forceRefresh = false)
+    public async Task<string> GetAccessTokenAsync(CancellationToken cancel, bool forceRefresh = false, string? failedToken = null)
     {
         var current = _tokens;
-        if (current is null) throw new AuthRequiredException("Entre com a sua conta para usar a biblioteca.");
+        if (current is null)
+            throw new AuthRequiredException($"Entre com a sua conta para usar a biblioteca.\n\nAinda não tem conta? Cadastre-se em {_config.RegisterUrl}");
         if (!forceRefresh && current.IsFresh(_now(), TimeSpan.FromSeconds(60))) return current.AccessToken;
 
         await _refreshLock.WaitAsync(cancel).ConfigureAwait(false);
         try
         {
             current = _tokens;
-            if (current is null) throw new AuthRequiredException("Entre com a sua conta para usar a biblioteca.");
-            // outra chamada pode ter renovado enquanto esperavamos
-            if (!forceRefresh && current.IsFresh(_now(), TimeSpan.FromSeconds(60))) return current.AccessToken;
+            if (current is null)
+                throw new AuthRequiredException($"Entre com a sua conta para usar a biblioteca.\n\nAinda não tem conta? Cadastre-se em {_config.RegisterUrl}");
+            // outra chamada pode ter renovado enquanto esperavamos (mesmo em forceRefresh com token antigo diferente)
+            if ((!forceRefresh || (failedToken is not null && !string.Equals(current.AccessToken, failedToken, StringComparison.Ordinal)))
+                && current.IsFresh(_now(), TimeSpan.FromSeconds(60)))
+                return current.AccessToken;
             if (string.IsNullOrEmpty(current.RefreshToken))
             {
                 Logout();

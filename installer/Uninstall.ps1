@@ -39,11 +39,13 @@ if (Test-Path (Join-Path $PSScriptRoot 'GBFamilias.addin')) {
     }
     # O catalogo (banco com previews e dados de busca) vem no instalador e e recriado por ele.
     $catalogFolder = Join-Path $env:LOCALAPPDATA 'GestaoBIM\Familias'
-    foreach ($f in 'catalog.sqlite', 'catalog.sqlite.anterior', 'catalog.version') {
+    foreach ($f in 'catalog.sqlite', 'catalog.sqlite-wal', 'catalog.sqlite-shm', 'catalog.sqlite-journal', 'catalog.sqlite.anterior', 'catalog.version') {
         $file = Join-Path $catalogFolder $f
         if (Test-Path $file) { try { Remove-Item $file -Force } catch { Write-Warning "Nao consegui remover $f (em uso? feche o Revit)." } }
     }
-    Write-Host 'Catalogo removido. As familias baixadas (na pasta que voce escolheu) e a biblioteca do modo local NAO foram apagadas.'
+    $pendingDir = Join-Path $catalogFolder 'pending'
+    if (Test-Path $pendingDir) { try { Remove-Item $pendingDir -Recurse -Force } catch { Write-Warning 'Nao consegui remover pending (em uso? feche o Revit).' } }
+    Write-Host 'Catalogo removido. As familias baixadas (na pasta que voce escolheu) NAO foram apagadas.'
 }
 # O gateway de IA (CLIProxyAPI) so e usado pelo GB Cotas e pelo GB Render. As contas conectadas (auth) ficam: sao do usuario.
 if ((Test-Path (Join-Path $PSScriptRoot 'GBCotas.addin')) -or (Test-Path (Join-Path $PSScriptRoot 'GBRender.addin'))) {

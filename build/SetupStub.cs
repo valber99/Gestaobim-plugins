@@ -28,7 +28,7 @@ static class SetupStub
 {
     const string Magic = "GBSETUP2";
     const int TrailerSize = 32 + 32 + 8 + 8;
-    static readonly int[] SupportedYears = new int[] { 2025, 2026, 2027 };
+    internal static readonly int[] SupportedYears = new int[] { 2025, 2026, 2027 };
 
     static readonly object LogLock = new object();
     static string slug = "gb-setup";
@@ -231,20 +231,22 @@ static class SetupStub
             throw new FileNotFoundException("O pacote nao contem o Install.ps1.");
 
         report(82, "Instalando plugins e catalogo no Revit...");
-        var psArgs = new StringBuilder();
-        psArgs.Append("-NoProfile -ExecutionPolicy Bypass -File \"").Append(install).Append("\"");
+        var psCmd = new StringBuilder();
+        psCmd.Append("[Console]::OutputEncoding = [Text.Encoding]::UTF8; $OutputEncoding = [Text.Encoding]::UTF8; & '")
+             .Append(install.Replace("'", "''")).Append("'");
         if (selectedYears != null && selectedYears.Length > 0)
         {
-            psArgs.Append(" -Versions ");
+            psCmd.Append(" -Versions ");
             for (int i = 0; i < selectedYears.Length; i++)
             {
-                if (i > 0) psArgs.Append(",");
-                psArgs.Append(selectedYears[i]);
+                if (i > 0) psCmd.Append(",");
+                psCmd.Append(selectedYears[i]);
             }
         }
+        string psArgs = "-NoProfile -ExecutionPolicy Bypass -Command \"" + psCmd.ToString().Replace("\"", "\\\"") + "\"";
 
         string psExe = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe");
-        var psi = new ProcessStartInfo(psExe, psArgs.ToString());
+        var psi = new ProcessStartInfo(psExe, psArgs);
         psi.UseShellExecute = false;
         psi.CreateNoWindow = true;
         psi.RedirectStandardOutput = true;
@@ -348,6 +350,8 @@ sealed class SetupForm : Form
     readonly Button btnCancel;
     readonly Button btnDetails;
     readonly Button btnOpenLog;
+    readonly Font statusFontRegular;
+    readonly Font statusFontBold;
 
     bool isInstalling;
     bool isFinished;
@@ -367,7 +371,9 @@ sealed class SetupForm : Form
         MaximizeBox = false;
         MinimizeBox = true;
         BackColor = Color.White;
-        Font = new Font("Segoe UI", 9.5f);
+        statusFontRegular = new Font("Segoe UI", 9.5f);
+        statusFontBold = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+        Font = statusFontRegular;
         ClientSize = new Size(560, 445);
         try { Icon = Icon.ExtractAssociatedIcon(exePath); } catch { }
 
@@ -447,7 +453,7 @@ sealed class SetupForm : Form
 
         int x = 28;
         int foundCount = 0;
-        foreach (int year in new int[] { 2025, 2026, 2027 })
+        foreach (int year in SetupStub.SupportedYears)
         {
             bool installed = SetupStub.IsRevitInstalled(year);
             if (installed) foundCount++;
@@ -639,7 +645,7 @@ sealed class SetupForm : Form
         warningPanel.Visible = false;
         isInstalling = true;
         statusLabel.ForeColor = Color.FromArgb(51, 65, 85);
-        statusLabel.Font = new Font("Segoe UI", 9.5f);
+        statusLabel.Font = statusFontRegular;
         btnInstall.Enabled = false;
         btnCancel.Enabled = false;
         foreach (var cb in yearChecks.Values) cb.Enabled = false;
@@ -711,7 +717,7 @@ sealed class SetupForm : Form
             isFinished = true;
             progressBar.Value = 100;
             statusLabel.ForeColor = Color.FromArgb(21, 128, 61);
-            statusLabel.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            statusLabel.Font = statusFontBold;
             statusLabel.Text = "Instalacao concluida! Voce ja pode abrir o Revit.";
             btnInstall.Text = "Concluir";
             btnInstall.BackColor = Color.FromArgb(22, 163, 74);
@@ -729,7 +735,7 @@ sealed class SetupForm : Form
         else
         {
             statusLabel.ForeColor = Color.FromArgb(185, 28, 28);
-            statusLabel.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            statusLabel.Font = statusFontBold;
             statusLabel.Text = "A instalacao falhou: " + (errorMsg ?? ("codigo " + code)) + " (veja o log).";
             if (!detailsExpanded) OnToggleDetails(this, EventArgs.Empty);
             btnInstall.Text = "Tentar de novo";
@@ -748,5 +754,15 @@ sealed class SetupForm : Form
             return;
         }
         base.OnFormClosing(e);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            if (statusFontBold != null) statusFontBold.Dispose();
+            if (statusFontRegular != null) statusFontRegular.Dispose();
+        }
+        base.Dispose(disposing);
     }
 }

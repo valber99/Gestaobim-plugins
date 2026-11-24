@@ -5,7 +5,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::json;
 use std::path::Path;
 
-/// Escreve `missing.json` com as familias sem preview, para `tools/revit_gerar_previews.py`.
+/// Escreve `missing.json` com as familias sem preview, para o script gerador de previews no Revit.
 pub fn export_missing(conn: &Connection, out: &Path) -> Result<()> {
     let mut st = conn.prepare("SELECT sha256, path FROM families WHERE has_preview = 0 ORDER BY id")?;
     let list: Vec<_> = st

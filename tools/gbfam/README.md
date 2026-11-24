@@ -1,8 +1,8 @@
 # gbfam — banco de famílias Revit
 
-CLI em Rust que lê os `.rfa` de `..\familias`, extrai preview e metadados, gera descrição/tags com o
+CLI em Rust que lê os `.rfa` da pasta informada (`--root`, padrão `familias`), extrai preview e metadados, gera descrição/tags com o
 **Claude Haiku 5.5**, calcula embeddings locais (CPU) e grava tudo em **um único arquivo SQLite**
-(`gbfam.sqlite`) para busca por texto ou por imagem. Sem servidor de banco.
+(`banco_familias/gbfam.sqlite`) para busca por texto ou por imagem. Sem servidor de banco.
 
 ## Pipeline
 
@@ -24,15 +24,15 @@ famílias, vale trocar por um índice ANN (ex.: extensão sqlite-vec).
 
 1. A chave do Claude é lida da variável `key` no arquivo `.env` (informe com `--env` ou use `ANTHROPIC_API_KEY`).
 2. `cargo build --release` → `target\release\gbfam.exe`
-3. O banco é criado sozinho em `gbfam.sqlite` (mude com `--db` ou `GBFAM_DB`).
+3. O banco é criado sozinho em `banco_familias/gbfam.sqlite` (mude com `--db` ou `GBFAM_DB`).
 
 ## Uso
 
 ```powershell
-gbfam inspect                    # teste de extração, sem tocar no banco
-gbfam ingest                     # varre ..\familias
+gbfam inspect --root <pasta>     # teste de extração, sem tocar no banco
+gbfam ingest --root <pasta>      # varre a pasta de .rfa
 gbfam enrich --limit 50          # piloto de 50; depois sem --limit (--concurrency 16 é mais rápido)
-gbfam embed                      # 1ª vez baixa ~400 MB de modelos para .models\
+gbfam embed                      # 1ª vez baixa ~1 GB de modelos para .models\
 gbfam search "cadeira de escritório"
 gbfam search --image foto.png
 gbfam stats
@@ -45,7 +45,7 @@ cliente SQLite (DB Browser for SQLite, `sqlite3`, etc.).
 
 ```powershell
 gbfam missing --out missing.json
-# No Revit: rodar tools\revit_gerar_previews.py (abre cada .rfa, exporta vista 3D, NÃO salva o original)
+# No Revit: gerar os PNGs (<sha256>.png) a partir de missing.json
 gbfam import-previews --dir previews_gerados
 gbfam enrich ; gbfam embed
 ```
@@ -74,8 +74,3 @@ inglês antes do CLIP, reranquear os top-N com o Haiku, ou gerar previews maiore
 
 `BasicFileInfo` grava usuário e caminhos locais; o gbfam guarda só `Format`, `Revit Build` e `Worksharing`.
 Para a API do Claude vão: miniatura, nome do arquivo, caminho relativo e metadados do Revit.
-
-## Migração antiga
-
-`examples/pg_to_sqlite.rs` foi usado uma vez para trazer os dados de um Postgres de teste para o SQLite.
-Não é necessário no uso normal.

@@ -213,13 +213,20 @@ async fn describe(client: &reqwest::Client, key: &str, it: &Item) -> Result<Valu
                 continue;
             }
         }
-        let v: Value = resp.json().await.context("resposta nao e JSON")?;
+        let body_text = resp.text().await.context("falha ao ler resposta da API")?;
+        let parsed: std::result::Result<Value, _> = serde_json::from_str(&body_text);
+        if !status.is_success() {
+            let msg = parsed
+                .as_ref()
+                .ok()
+                .and_then(|v| v["error"]["message"].as_str())
+                .unwrap_or_else(|| body_text.trim());
+            let short: String = msg.chars().take(200).collect();
+            bail!("API {status}: {short}");
+        }
+        let v = parsed.context("resposta nao e JSON")?;
         IN_TOKENS.fetch_add(v["usage"]["input_tokens"].as_u64().unwrap_or(0), Ordering::Relaxed);
         OUT_TOKENS.fetch_add(v["usage"]["output_tokens"].as_u64().unwrap_or(0), Ordering::Relaxed);
-        if !status.is_success() {
-            let msg = v["error"]["message"].as_str().unwrap_or("erro desconhecido");
-            bail!("API {status}: {msg}");
-        }
         if v["stop_reason"].as_str() == Some("max_tokens") {
             bail!("resposta cortada por max_tokens");
         }
@@ -245,6 +252,9 @@ async fn describe(client: &reqwest::Client, key: &str, it: &Item) -> Result<Valu
 fn parse_json_object(text: &str) -> Result<Value> {
     let start = text.find('{').ok_or_else(|| anyhow!("sem JSON na resposta"))?;
     let end = text.rfind('}').ok_or_else(|| anyhow!("JSON incompleto"))?;
+    if end < start {
+        bail!("JSON incompleto");
+    }
     let v: Value = serde_json::from_str(&text[start..=end]).context("JSON invalido")?;
     if v.get("descricao").and_then(|d| d.as_str()).is_none() {
         bail!("JSON sem o campo descricao");

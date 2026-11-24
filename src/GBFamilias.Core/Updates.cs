@@ -94,6 +94,13 @@ public sealed class UpdateState
 /// <summary>Avisos sobre carregar uma familia salva em outra versao do Revit.</summary>
 public static class FamilyCompat
 {
+    /// <summary>True se o Revit <paramref name="revitYear"/> consegue abrir a familia (ou quando a versao nao e conhecida).</summary>
+    public static bool CanOpen(string? familyVersion, int revitYear)
+    {
+        if (string.IsNullOrWhiteSpace(familyVersion) || revitYear <= 0) return true;
+        return !int.TryParse(familyVersion.TrimStart('~'), out var year) || year <= revitYear;
+    }
+
     /// <summary>Aviso em portugues, ou null se nao ha o que avisar.</summary>
     public static string? Note(string? familyVersion, int revitYear)
     {

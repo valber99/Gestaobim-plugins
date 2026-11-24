@@ -23,7 +23,7 @@ public sealed class App : IExternalApplication
         }
         catch (Exception error)
         {
-            TaskDialog.Show("GB Cotas", $"Nao foi possivel criar o painel Cotas.\n\n{error.Message}");
+            TaskDialog.Show("GB Cotas", $"Não foi possível criar o painel IA.\n\n{error.Message}");
             return Result.Failed;
         }
         return Result.Succeeded;

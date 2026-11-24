@@ -8,16 +8,18 @@ namespace Gestaobim.Ai.Revit;
 /// <summary>Uma conexao pronta com o gateway: o cliente, as configuracoes e os modelos que ele oferece.</summary>
 public sealed class AiConnection : IDisposable
 {
-    public AiConnection(AiClient client, AiSettings settings, IReadOnlyList<string> models)
+    public AiConnection(AiClient client, AiSettings settings, IReadOnlyList<string> models, string? clientToken = null)
     {
         Client = client;
         Settings = settings;
         Models = models;
+        ClientToken = clientToken;
     }
 
     public AiClient Client { get; }
     public AiSettings Settings { get; }
     public IReadOnlyList<string> Models { get; }
+    public string? ClientToken { get; }
 
     /// <summary>O modelo que planeja: o escolhido pelo usuario se o gateway o oferece, senao o primeiro adequado.</summary>
     public string PlanModel => Resolve(Settings.PlanModel, image: false);
@@ -53,7 +55,7 @@ public static class AiService
         try
         {
             var models = await client.ListModelsAsync(cancel).ConfigureAwait(false);
-            return new AiConnection(client, settings, models);
+            return new AiConnection(client, settings, models, endpoint.ClientToken);
         }
         catch (Exception)
         {

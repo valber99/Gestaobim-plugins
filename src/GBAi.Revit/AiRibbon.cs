@@ -54,7 +54,8 @@ public sealed class AiUpdateNotifier(string displayName, Version current, Func<s
 
     public void Start(UIControlledApplication application)
     {
-        if (Environment.GetEnvironmentVariable("GB_AI_NO_UPDATE_CHECK") == "1") return;
+        if (Environment.GetEnvironmentVariable("GB_NO_UPDATE_CHECK") == "1"
+            || Environment.GetEnvironmentVariable("GB_AI_NO_UPDATE_CHECK") == "1") return;
         application.Idling += OnIdling;
         _ = Task.Run(CheckInBackground);
     }

@@ -71,8 +71,15 @@ public partial class ExportWindow : Window
         _settings.RevitSetup = SetupBox.SelectedItem as string is { } chosen && chosen != NoSetup ? chosen : "";
         _settings.OpenFolder = OpenBox.IsChecked == true;
         _settings.Save();
-        SettingsTransfer.Export(_settings, file, typeof(ExportWindow).Assembly.GetName().Version?.ToString(3) ?? "0");
-        Dialogs.Alert($"Configurações salvas em:\n{file}");
+        try
+        {
+            SettingsTransfer.Export(_settings, file, typeof(ExportWindow).Assembly.GetName().Version?.ToString(3) ?? "0");
+            Dialogs.Alert($"Configurações salvas em:\n{file}");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            Dialogs.Alert($"Não foi possível salvar o arquivo de configurações:\n{error.Message}");
+        }
     }
 
     private void OnImportSettings(object sender, RoutedEventArgs e)
@@ -199,7 +206,7 @@ public partial class ExportWindow : Window
         }
         if (Mode != OutputMode.SeparateFiles && !CadcraftAvailable)
         {
-            Dialogs.Alert("O motor de mesclagem (cadcraft-cli) não foi encontrado. Rode o instalador do GB DWG Export de novo.");
+            Dialogs.Alert("O motor de mesclagem (cadcraft-cli) não foi encontrado. Rode o instalador do Gestão BIM de novo.");
             return;
         }
 

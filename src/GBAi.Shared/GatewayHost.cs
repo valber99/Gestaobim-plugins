@@ -299,15 +299,32 @@ public static class GatewayHost
         }
     }
 
-    /// <summary>Apaga os config.yaml (que guardam o token) de sessoes que ja acabaram.</summary>
-    private static void DeleteStaleConfigs()
+    private static bool IsHostProcessAlive(int pid)
     {
         try
         {
-            foreach (var file in Directory.GetFiles(GbAiPaths.RunDir, "config-*.yaml"))
+            using var p = Process.GetProcessById(pid);
+            return !p.HasExited;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Apaga os config.yaml (que guardam o token) de sessoes que ja acabaram.</summary>
+    public static void DeleteStaleConfigs(string? runDir = null)
+    {
+        try
+        {
+            var dir = runDir ?? GbAiPaths.RunDir;
+            if (!Directory.Exists(dir)) return;
+            foreach (var file in Directory.GetFiles(dir, "config-*.yaml"))
             {
                 var parts = Path.GetFileNameWithoutExtension(file).Split('-');
-                if (parts.Length == 3 && int.TryParse(parts[1], out var pid) && pid != Environment.ProcessId && !IsAlive(pid)) TryDelete(file);
+                // O PID no nome e o do processo hospedeiro (Revit), nao o do cli-proxy-api.
+                if (parts.Length == 3 && int.TryParse(parts[1], out var pid) && pid != Environment.ProcessId && !IsHostProcessAlive(pid))
+                    TryDelete(file);
             }
         }
         catch (Exception)

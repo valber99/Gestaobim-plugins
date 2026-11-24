@@ -98,14 +98,15 @@ INSTALAR
   2. De dois cliques em GBFamilias-Setup-$version.exe (ou, no .zip, em Instalar.bat). Ele instala o plugin, o motor de busca por IA e o CATALOGO de familias
      (previews e dados de busca), tudo no seu computador.
   3. Abra o Revit: o painel "Familias" aparece na aba "Gestao BIM". Clique em "Biblioteca": a busca ja funciona.
-  4. Na primeira vez que inserir uma familia: escolha a PASTA DAS FAMILIAS BAIXADAS (obrigatoria; local ou de rede)
-     e entre com a sua conta (abre o navegador; o administrador cria as contas).
+  4. Para baixar e inserir familias: cadastre-se primeiro em https://cadastro.gestaobim.com (aguarde a aprovacao).
+     Na primeira vez que inserir uma familia, escolha a PASTA DAS FAMILIAS BAIXADAS (obrigatoria; local ou de rede)
+     e entre com a sua conta (abre o navegador).
   Na primeira vez o Revit pergunta se confia no add-in: escolha "Sempre carregar".
   Cada arquivo de familia e baixado do servidor quando voce o insere; o que ja foi baixado funciona sem internet.
   Catalogo novo: o administrador entrega um pacote pequeno "GBFamilias-Catalogo" (Instalar.bat atualiza so o catalogo).
 
 DESINSTALAR
-  Dois cliques em Desinstalar.bat. Seus favoritos e colecoes continuam em %APPDATA%\GestaoBIM\Familias.
+  Dois cliques em Desinstalar.bat (no .zip ou em %APPDATA%\GestaoBIM\Desinstalar.bat). Seus favoritos e colecoes continuam em %APPDATA%\GestaoBIM\Familias.
 
 REVIT SUPORTADO
   2025, 2026 e 2027 (Windows).

@@ -37,7 +37,7 @@ gateway, mude os três valores nos dois lugares e rode `tests/GBAi.Shared.Tests`
 
 | Arquivo | Para quê |
 |---|---|
-| `GestaoBIM-Setup-<versão>.exe` e `.sha256` | O instalador (~0,8 GB): os cinco plugins, o catálogo, a busca por IA (gbfam + modelos), o cadcraft-cli e o CLIProxyAPI. Só os `.rfa` ficam de fora. |
+| `GestaoBIM-Setup-<versão>.exe` e `.sha256` | O instalador (~1 GB): os cinco plugins, o catálogo, a busca por IA (gbfam + modelos), o cadcraft-cli e o CLIProxyAPI. Só os `.rfa` ficam de fora. |
 | `GestaoBIM-<versão>.zip` e `.sha256` | O mesmo conteúdo, com `Instalar.bat` e `Desinstalar.bat` |
 
 O `.exe` é o instalador próprio `build/SetupStub.cs` (o IExpress travava com esse tamanho), compilado pelo `csc` do .NET
@@ -58,7 +58,7 @@ O código que usa a API do Revit só pode ser testado dentro do Revit. Com o Rev
 ```
 
 O teste abre o Revit com dados isolados e um login de teste e roda o GB Famílias por dentro (login, catálogo, busca,
-baixar, carregar e posicionar, família que o usuário já tinha, sem internet, sem login) e o botão **Sobre** dos três.
+baixar, carregar e posicionar, família que o usuário já tinha, sem internet, sem login) e o botão **Sobre** unificado.
 O DWG Export tem o próprio autoteste, que só exige o Revit daquele ano fechado (os outros anos podem estar abertos):
 
 ```powershell
@@ -109,15 +109,14 @@ do aviso do Windows sobre o `.exe`. Confira os direitos de redistribuição das 
 `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push`.
 
 **Releases antigas:** até a 0.3.2 / 0.2.0 / 0.1.1 cada plugin tinha a sua release (`v*`, `familias-v*`, `dwg-v*`). Desde
-a 0.4.0 os três procuram atualização só nas tags `v*`. Quem tem o Material Studio 0.3.2 recebe o aviso da 0.4.0 (ele já
-lia `v*`), e o botão Sobre é único, então o aviso aparece para os três.
+a 0.4.0 (e com os cinco plugins desde a 0.5.0) todos procuram atualização só nas tags `v*` e compartilham o botão **Sobre** único.
 
 ## 5. CI
 
 `.github/workflows/tests.yml` roda a cada push:
 
 - **core**: testes xUnit no Windows e no Linux.
-- **addin**: compila as três versões e empacota (artefato `GBMaterialStudio`).
+- **addin**: compila os cinco plugins nas três versões do Revit (2025, 2026 e 2027).
 - **pyrevit-edition**: pytest da edição legada em pyRevit.
 - **gbfam**: `cargo test` do motor em Rust (`tools/gbfam`).
 

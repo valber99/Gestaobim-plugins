@@ -21,7 +21,7 @@ public static class CadcraftBridge
 
     public static string Require() =>
         Find() ?? throw new BridgeException(
-            "O motor de mesclagem (cadcraft-cli) nao foi encontrado. Rode o instalador do GB DWG Export de novo.");
+            "O motor de mesclagem (cadcraft-cli) não foi encontrado. Rode o instalador do Gestão BIM de novo.");
 
     public static RunResult Run(IEnumerable<string> arguments, int timeoutMs = DefaultTimeoutMs)
     {

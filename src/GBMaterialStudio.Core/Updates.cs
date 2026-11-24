@@ -89,7 +89,9 @@ public sealed class UpdateState
                 ["last_check_utc"] = LastCheckUtc.ToString("o", CultureInfo.InvariantCulture),
                 ["ignored_tag"] = IgnoredTag,
             };
-            File.WriteAllText(FilePath, data.ToJsonString(), new UTF8Encoding(false));
+            var temp = $"{FilePath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
+            File.WriteAllText(temp, data.ToJsonString(), new UTF8Encoding(false));
+            File.Move(temp, FilePath, overwrite: true);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {

@@ -45,6 +45,7 @@ public sealed class RealGatewayFactAttribute : FactAttribute
 }
 
 /// <summary>A fase 1 do plano: o contrato de seguranca do gateway, verificado no CLIProxyAPI de verdade.</summary>
+[Collection("gbai-env")]
 public class GatewayIntegrationTests : IDisposable
 {
     private readonly string _home = Path.Combine(Path.GetTempPath(), "gbai-gw-" + Guid.NewGuid().ToString("N"));
@@ -119,14 +120,21 @@ public class GatewayIntegrationTests : IDisposable
         }
 
         // A pasta de contas e a de execucao so dao acesso ao usuario e ao SYSTEM, sem heranca.
-        foreach (var dir in new[] { GbAiPaths.AuthDir, GbAiPaths.RunDir, GbAiPaths.DataDir })
+        if (OperatingSystem.IsWindows())
         {
-            var rules = new DirectoryInfo(dir).GetAccessControl().GetAccessRules(true, true, typeof(SecurityIdentifier)).Cast<FileSystemAccessRule>().ToList();
-            Assert.All(rules, r => Assert.False(r.IsInherited, $"{dir}: regra herdada para {r.IdentityReference}"));
-            var allowed = rules.Select(r => r.IdentityReference.Value).Distinct().ToList();
-            Assert.Equal(2, allowed.Count);
-            Assert.Contains(WindowsIdentity.GetCurrent().User!.Value, allowed);
-            Assert.Contains("S-1-5-18", allowed);
+            foreach (var dir in new[] { GbAiPaths.AuthDir, GbAiPaths.RunDir, GbAiPaths.DataDir })
+            {
+                var rules = new DirectoryInfo(dir).GetAccessControl().GetAccessRules(true, true, typeof(SecurityIdentifier)).Cast<FileSystemAccessRule>().ToList();
+                var allowed = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var r in rules)
+                {
+                    Assert.False(r.IsInherited, $"{dir}: regra herdada para {r.IdentityReference}");
+                    allowed.Add(r.IdentityReference.Value);
+                }
+                Assert.Equal(2, allowed.Count);
+                Assert.Contains(WindowsIdentity.GetCurrent().User!.Value, allowed);
+                Assert.Contains("S-1-5-18", allowed);
+            }
         }
 
         // A configuracao em execucao e a endurecida (le o arquivo do disco, que guarda o token).
@@ -207,7 +215,10 @@ public class GatewayIntegrationTests : IDisposable
                 File.WriteAllText(cfg, GatewayConfig.Build(port, "tokentokentoken" + i + "0000", "mgmtmgmtmgmtmgmt" + i + "0", GbAiPaths.AuthDir));
                 var info = new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
                 foreach (var a in new[] { "-config", cfg, "-local-model" }) info.ArgumentList.Add(a);
-                processes.Add(Process.Start(info)!);
+                var proc = Process.Start(info)!;
+                proc.BeginOutputReadLine();
+                proc.BeginErrorReadLine();
+                processes.Add(proc);
             }
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
             for (var i = 0; i < 2; i++)
@@ -256,13 +267,35 @@ public class GatewayIntegrationTests : IDisposable
         Assert.Contains("instalador", error.Message);
     }
 
+    [Fact]
+    public void DeleteStaleConfigsKeepsLivingHostProcessAndRemovesDeadPid()
+    {
+        var runDir = Path.Combine(_home, "run-stale");
+        Directory.CreateDirectory(runDir);
+        // Usa outro processo real em execucao (ex.: processo pai ou qualquer PID ativo != atual) para simular um 2o Revit aberto.
+        var otherLive = Process.GetProcesses()
+            .FirstOrDefault(p => { try { return p.Id != Environment.ProcessId && p.Id > 4 && !p.HasExited; } catch { return false; } });
+        Assert.NotNull(otherLive);
+        var liveFile = Path.Combine(runDir, $"config-{otherLive!.Id}-54321.yaml");
+        var deadFile = Path.Combine(runDir, "config-9999999-54322.yaml");
+        File.WriteAllText(liveFile, "host: 127.0.0.1");
+        File.WriteAllText(deadFile, "host: 127.0.0.1");
+
+        GatewayHost.DeleteStaleConfigs(runDir);
+
+        Assert.True(File.Exists(liveFile), "config de outra instancia viva nao deve ser apagado");
+        Assert.False(File.Exists(deadFile), "config de processo morto deve ser apagado");
+    }
+
     [RealGatewayFact]
     public void EveryOAuthLoginFlagExistsInTheApprovedBinary()
     {
         var info = new ProcessStartInfo(RealProxy.Find()!, "-h") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         using var process = Process.Start(info)!;
-        var text = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
+        var text = stdout.GetAwaiter().GetResult() + stderr.GetAwaiter().GetResult();
         foreach (var provider in OAuthLogin.Providers) Assert.Contains(provider.Flag.TrimStart('-') + "\n", text.Replace("\r", ""));
         Assert.Contains("-no-browser", text);
         Assert.Contains("-local-model", text);

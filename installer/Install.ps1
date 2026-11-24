@@ -43,9 +43,11 @@ foreach ($manifest in $manifests) {
         $payload = Join-Path $here "$year\$folderName"
         if (-not (Test-Path $payload)) { Write-Warning "Sem arquivos de $product para o Revit $year neste pacote. Pulando."; continue }
         $target = Join-Path $addins "$year\$folderName"
+        $destManifest = Join-Path $addins "$year\$($manifest.Name)"
         New-Item -ItemType Directory -Force $target | Out-Null
         Copy-Item (Join-Path $payload '*') $target -Recurse -Force
-        Copy-Item $manifest.FullName (Join-Path $addins "$year\$($manifest.Name)") -Force
+        Copy-Item $manifest.FullName $destManifest -Force
+        Unblock-File $destManifest
         Get-ChildItem $target -Recurse -File | Unblock-File
         Write-Host "$product - Revit $year : instalado em $target"
     }
@@ -103,6 +105,27 @@ if (-not $KeepPyRevitEdition -and ($manifests | Where-Object Name -eq 'GBMateria
             } catch {
                 Write-Warning "Nao consegui mover $folder (o Revit esta aberto?). Feche o Revit e rode de novo."
             }
+        }
+    }
+}
+
+# Copia o desinstalador para %APPDATA%\GestaoBIM para quem instalou pelo .exe poder remover depois.
+if ($manifests) {
+    $uninstallTarget = Join-Path $env:APPDATA 'GestaoBIM'
+    if ([IO.Path]::GetFullPath($here).TrimEnd('\') -ne [IO.Path]::GetFullPath($uninstallTarget).TrimEnd('\')) {
+        New-Item -ItemType Directory -Force $uninstallTarget | Out-Null
+        foreach ($uFile in 'Desinstalar.bat', 'Uninstall.ps1') {
+            $src = Join-Path $here $uFile
+            if (Test-Path $src) {
+                $dst = Join-Path $uninstallTarget $uFile
+                Copy-Item $src $dst -Force
+                Unblock-File $dst
+            }
+        }
+        foreach ($manifest in $manifests) {
+            $dst = Join-Path $uninstallTarget $manifest.Name
+            Copy-Item $manifest.FullName $dst -Force
+            Unblock-File $dst
         }
     }
 }

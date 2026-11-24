@@ -64,7 +64,10 @@ fn carve_png(data: &[u8]) -> Option<Vec<u8>> {
     }
     // JPEG: de FF D8 FF ate o ultimo FF D9.
     let start = find(data, &[0xFF, 0xD8, 0xFF], 0)?;
-    let end = data.iter().rposition(|&b| b == 0xD9).filter(|&i| i > start && data[i - 1] == 0xFF)? + 1;
+    let end = data[start..]
+        .windows(2)
+        .rposition(|w| w == [0xFF, 0xD9])
+        .map(|p| start + p + 2)?;
     let img = image::load_from_memory_with_format(&data[start..end], image::ImageFormat::Jpeg).ok()?;
     let mut out = std::io::Cursor::new(Vec::new());
     img.write_to(&mut out, image::ImageFormat::Png).ok()?;

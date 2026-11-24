@@ -140,8 +140,44 @@ public class AiClientTests
         using var client = new AiClient(fake.BaseUrl, Token);
         await Assert.ThrowsAsync<AiException>(() => client.ChatAsync("m", "s", "u"));
     }
+
+    [Fact]
+    public async Task OpenAiImageGenerationUsesJsonWhenNoInputImages()
+    {
+        var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 1, 2 };
+        using var fake = new FakeGateway
+        {
+            Responder = (_, _) => (200, """{"data":[{"b64_json":"DATA"}]}""".Replace("DATA", Convert.ToBase64String(png))),
+        };
+        using var client = new AiClient(fake.BaseUrl, Token);
+        var result = await client.GenerateImageAsync("gpt-image-1", "casa moderna", [], "16:9", "2K");
+        Assert.Equal(png, result.Bytes);
+        Assert.Equal("/v1/images/generations", fake.Requests[0].Path);
+        var sent = JsonNode.Parse(fake.Requests[0].Body)!;
+        Assert.Equal("gpt-image-1", sent["model"]!.GetValue<string>());
+        Assert.Equal("1536x1024", sent["size"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task OpenAiInvalidBase64ThrowsAiException()
+    {
+        using var fake = new FakeGateway { Responder = (_, _) => (200, """{"data":[{"b64_json":"!!!invalido!!!"}]}""") };
+        using var client = new AiClient(fake.BaseUrl, Token);
+        await Assert.ThrowsAsync<AiException>(() => client.GenerateImageAsync("gpt-image-1", "teste", [], "1:1", null));
+    }
+
+    [Fact]
+    public void PickModelRecognizesDallEAndImagenAsImageModels()
+    {
+        var models = new[] { "imagen-3.0-generate", "dall-e-3", "gpt-4o" };
+        Assert.Equal("gpt-4o", AiSettings.PickModel(models, image: false));
+        Assert.Equal("imagen-3.0-generate", AiSettings.PickModel(models, image: true));
+        Assert.Equal("dall-e-3", AiSettings.PickModel(["dall-e-3"], image: true));
+        Assert.Equal("", AiSettings.PickModel(["dall-e-3", "imagen-3.0"], image: false));
+    }
 }
 
+[Collection("gbai-env")]
 public class AiSettingsTests : IDisposable
 {
     private readonly string _home = Path.Combine(Path.GetTempPath(), "gbai-test-" + Guid.NewGuid().ToString("N"));
