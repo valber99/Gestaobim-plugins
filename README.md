@@ -19,7 +19,7 @@ IA (`gbfam.exe`) e o gateway local de IA (`CLIProxyAPI`). Apenas os arquivos `.r
 baixados sob demanda, com login, quando você insere a família.
 
 > **Acesso à biblioteca GB Famílias (cadastro obrigatório):** para baixar e inserir famílias da biblioteca no Revit,
-> acesse **[https://cadastro.valbermotta.org](https://cadastro.valbermotta.org)** e preencha o formulário de
+> acesse **[https://cadastro.gestaobim.com](https://cadastro.gestaobim.com)** e preencha o formulário de
 > cadastro. O acesso passa por aprovação do administrador; depois de liberado, basta clicar em **Entrar** no plugin com
 > o e-mail e a senha cadastrados.
 
@@ -34,7 +34,7 @@ baixados sob demanda, com login, quando você insere a família.
    > clique em **"Mais informações"** → **"Executar assim mesmo"**.
 3. Abra o Revit. Na primeira abertura, clique em **"Sempre carregar"** nos avisos de add-in.
 4. **Para usar a biblioteca do GB Famílias:** faça seu cadastro em
-   **[https://cadastro.valbermotta.org](https://cadastro.valbermotta.org)** e aguarde a liberação do acesso.
+   **[https://cadastro.gestaobim.com](https://cadastro.gestaobim.com)** e aguarde a liberação do acesso.
    Enquanto isso, a busca local já funciona normalmente.
 
 Quando sair uma versão nova, o botão único **Sobre** (no painel **Geral**) mostra uma bolinha vermelha e leva direto

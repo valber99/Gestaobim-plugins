@@ -26,7 +26,7 @@ O que já foi baixado funciona offline.
    - escolha a **pasta das famílias** (obrigatória; pode ser local ou de rede). Se você **já tem famílias** numa pasta
      (ou a biblioteca inteira), escolha essa pasta: as que já estão lá aparecem como **✓ baixada** e não são baixadas
      de novo;
-   - faça seu cadastro em **[https://cadastro.valbermotta.org](https://cadastro.valbermotta.org)** (o acesso
+   - faça seu cadastro em **[https://cadastro.gestaobim.com](https://cadastro.gestaobim.com)** (o acesso
      passa por aprovação do administrador) e depois clique em **Entrar** no plugin (abre o navegador para login com o
      e-mail e a senha cadastrados).
 
@@ -116,7 +116,7 @@ dois downloads simultâneos do mesmo arquivo não se atrapalham.
 | "O catálogo da biblioteca não está instalado neste computador" | Rode de novo o instalador Gestão BIM (o catálogo vai junto) ou o pacote `GBFamilias-Catalogo`. |
 | Pede a pasta das famílias ao inserir | É obrigatória para baixar (a busca funciona sem ela): escolha uma pasta onde você tenha permissão de gravar (o caminho deve ter até 150 caracteres). |
 | Tenho a família na pasta, mas ela não aparece como baixada | O plugin reconhece pelo caminho da biblioteca ou pelo nome do arquivo **e** o tamanho. Um arquivo renomeado ou de outra versão (tamanho diferente) não é reconhecido: o plugin baixa o do catálogo. |
-| "Sua conta não tem permissão" | A conta existe, mas o acesso ainda não foi liberado (ou foi revogado). Se você acabou de se cadastrar em [cadastro.valbermotta.org](https://cadastro.valbermotta.org), aguarde a aprovação do administrador. |
+| "Sua conta não tem permissão" | A conta existe, mas o acesso ainda não foi liberado (ou foi revogado). Se você acabou de se cadastrar em [cadastro.gestaobim.com](https://cadastro.gestaobim.com), aguarde a aprovação do administrador. |
 | "Entre com a sua conta" / "A sessão expirou" | Clique em **Entrar** (barra de status ou Configurações). |
 | "Sem conexão com o servidor" | As famílias já baixadas e a busca continuam funcionando. Tente de novo quando a internet voltar. |
 | "O servidor limitou os downloads" | Há um limite por minuto e por dia. O plugin espera e tenta de novo; se passar da cota do dia, volte amanhã. |

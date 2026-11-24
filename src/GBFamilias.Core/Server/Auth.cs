@@ -17,7 +17,7 @@ namespace Gestaobim.Familias.Core.Server;
 /// <summary>Enderecos e identificadores publicos do servidor. Nada aqui e segredo: o app e publico (PKCE, sem chave).</summary>
 public sealed class ServerConfig
 {
-    public string Issuer { get; init; } = "https://auth.valbermotta.org";
+    public string Issuer { get; init; } = "https://auth.gestaobim.com";
     public string ApiBase { get; init; } = "https://gbf.valbermotta.org";
     public string ClientId { get; init; } = "400731524095344643";
     public string ProjectId { get; init; } = "400731521125711875";
