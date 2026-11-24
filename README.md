@@ -18,6 +18,11 @@ O instalador leva os cinco plugins, o catálogo local de famílias (banco com pr
 IA (`gbfam.exe`) e o gateway local de IA (`CLIProxyAPI`). Apenas os arquivos `.rfa` das famílias ficam no servidor e são
 baixados sob demanda, com login, quando você insere a família.
 
+> **Acesso à biblioteca GB Famílias (cadastro obrigatório):** para baixar e inserir famílias da biblioteca no Revit,
+> acesse **[https://gbf.valbermotta.org/cadastro](https://gbf.valbermotta.org/cadastro)** e preencha o formulário de
+> cadastro. O acesso passa por aprovação do administrador; depois de liberado, basta clicar em **Entrar** no plugin com
+> o e-mail e a senha cadastrados.
+
 ## Instalação
 
 1. Baixe na página de [Releases](https://github.com/valber99/Gestaobim-plugins/releases/latest) o instalador
@@ -28,6 +33,9 @@ baixados sob demanda, com login, quando você insere a família.
    > O Windows SmartScreen pode avisar que o editor é desconhecido (o instalador ainda não possui assinatura digital):
    > clique em **"Mais informações"** → **"Executar assim mesmo"**.
 3. Abra o Revit. Na primeira abertura, clique em **"Sempre carregar"** nos avisos de add-in.
+4. **Para usar a biblioteca do GB Famílias:** faça seu cadastro em
+   **[https://gbf.valbermotta.org/cadastro](https://gbf.valbermotta.org/cadastro)** e aguarde a liberação do acesso.
+   Enquanto isso, a busca local já funciona normalmente.
 
 Quando sair uma versão nova, o botão único **Sobre** (no painel **Geral**) mostra uma bolinha vermelha e leva direto
 para o download do instalador único. Para desativar a checagem automática, defina a variável de ambiente
