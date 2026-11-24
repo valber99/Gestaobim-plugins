@@ -49,25 +49,8 @@ public sealed class App : IExternalApplication
         PushButtonData Button(string name, string text, string command, string icon, string tooltip) =>
             new(name, text, assembly, command) { ToolTip = tooltip, LargeImage = Icon(icon), Image = Icon(icon) };
 
-        panel.AddItem(Button("GBDwgSheets", "Exportar\nfolhas", typeof(ExportSheetsCommand).FullName!, "exportar-folhas",
-            "Exporta as folhas escolhidas para um só DWG, com um layout por folha, no mesmo papel que a folha usa no Revit. Não precisa do AutoCAD."));
-        panel.AddItem(Button("GBDwgModel", "Model\nspace", typeof(ModelSpaceCommand).FullName!, "model-space",
-            "Junta as folhas escolhidas lado a lado no model space de um só desenho. Não precisa do AutoCAD."));
-        panel.AddItem(Button("GBDwgSingle", "Layout\núnico", typeof(SingleLayoutCommand).FullName!, "layout-unico",
-            "Junta todas as folhas escolhidas num único layout. Não precisa do AutoCAD."));
-        panel.AddItem(Button("GBDwgViews", "Exportar\nvistas", typeof(ExportViewsCommand).FullName!, "exportar-vistas",
-            "Exporta vistas (plantas, cortes, elevações, 3D...) para DWG ou DXF, e não só folhas."));
-        panel.AddSeparator();
-        var configMenu = (PulldownButton)panel.AddItem(new PulldownButtonData("GBDwgSettings", "Configurações")
-        {
-            ToolTip = "Exportar ou importar as configurações do GB DWG Export (.zip).",
-            LargeImage = Icon("config-exportar"),
-            Image = Icon("config-exportar"),
-        });
-        configMenu.AddPushButton(Button("GBDwgSettingsOut", "Exportar configurações", typeof(ExportSettingsCommand).FullName!, "config-exportar",
-            "Salva as configurações do GB DWG Export num arquivo .zip para levar a outra máquina."));
-        configMenu.AddPushButton(Button("GBDwgSettingsIn", "Importar configurações", typeof(ImportSettingsCommand).FullName!, "config-importar",
-            "Lê um .zip de configurações do GB DWG Export."));
+        panel.AddItem(Button("GBDwgExport", "Exportar\nDWG", typeof(ExportSheetsCommand).FullName!, "exportar-folhas",
+            "Abre a interface do GB DWG Export: exporte folhas ou vistas para DWG/DXF (múltiplos layouts, model space, layout único ou arquivos separados) e gerencie configurações."));
         UpdateNotifier.Start(application);
     }
 

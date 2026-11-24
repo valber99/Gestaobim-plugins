@@ -35,7 +35,7 @@ internal static class CommandRunner
 public sealed class ExportSheetsCommand : IExternalCommand
 {
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements) =>
-        CommandRunner.Run(commandData, ref message, app => Flows.Export(app, OutputMode.MultipleLayouts, views: false));
+        CommandRunner.Run(commandData, ref message, app => Flows.Export(app));
 }
 
 [Transaction(TransactionMode.Manual)]

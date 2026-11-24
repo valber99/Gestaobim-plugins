@@ -10,7 +10,7 @@ namespace Gestaobim.DwgExport.Addin;
 
 internal static class Flows
 {
-    public static void Export(UIApplication app, OutputMode mode, bool views)
+    public static void Export(UIApplication app, OutputMode? mode = null, bool views = false)
     {
         var doc = app.ActiveUIDocument?.Document;
         if (doc is null || doc.IsFamilyDocument)
@@ -20,7 +20,7 @@ internal static class Flows
         }
 
         var settings = ExportSettings.Load();
-        settings.Mode = mode;
+        if (mode is { } forcedMode) settings.Mode = forcedMode;
         var window = new ExportWindow(doc, settings, views);
         if (window.ShowDialog() != true || window.Request is not { } request) return;
 

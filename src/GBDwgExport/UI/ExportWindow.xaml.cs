@@ -34,8 +34,17 @@ public partial class ExportWindow : Window
 
         SetupBox.Items.Add(NoSetup);
         foreach (var name in SheetSource.RevitSetups(doc)) SetupBox.Items.Add(name);
-        SetupBox.SelectedItem = SetupBox.Items.Contains(settings.RevitSetup) ? settings.RevitSetup : NoSetup;
+        ApplySettingsToUi(settings);
 
+        _ready = true;
+        (startWithViews ? ViewsRadio : SheetsRadio).IsChecked = true;
+        ShowItems(startWithViews);
+        RefreshMode();
+    }
+
+    private void ApplySettingsToUi(ExportSettings settings)
+    {
+        SetupBox.SelectedItem = SetupBox.Items.Contains(settings.RevitSetup) ? settings.RevitSetup : NoSetup;
         FolderBox.Text = string.IsNullOrWhiteSpace(settings.Folder)
             ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
             : settings.Folder;
@@ -49,11 +58,41 @@ public partial class ExportWindow : Window
             OutputMode.SingleLayout => SingleRadio,
             _ => SeparateRadio,
         }).IsChecked = true;
+    }
 
-        _ready = true;
-        (startWithViews ? ViewsRadio : SheetsRadio).IsChecked = true;
-        ShowItems(startWithViews);
-        RefreshMode();
+    private void OnExportSettings(object sender, RoutedEventArgs e)
+    {
+        var file = Dialogs.PickFile(save: true, "Configurações GB DWG Export (*.zip)|*.zip", "Exportar configurações", "GBDwgExport-configuracoes.zip");
+        if (file is null) return;
+        _settings.Folder = FolderBox.Text.Trim();
+        _settings.Dxf = FormatBox.SelectedIndex == 1;
+        _settings.Pattern = PatternBox.SelectedIndex == 1 ? NamePattern.NumberOnly : NamePattern.NumberAndName;
+        _settings.Mode = Mode;
+        _settings.RevitSetup = SetupBox.SelectedItem as string is { } chosen && chosen != NoSetup ? chosen : "";
+        _settings.OpenFolder = OpenBox.IsChecked == true;
+        _settings.Save();
+        SettingsTransfer.Export(_settings, file, typeof(ExportWindow).Assembly.GetName().Version?.ToString(3) ?? "0");
+        Dialogs.Alert($"Configurações salvas em:\n{file}");
+    }
+
+    private void OnImportSettings(object sender, RoutedEventArgs e)
+    {
+        var file = Dialogs.PickFile(save: false, "Configurações GB DWG Export (*.zip)|*.zip", "Importar configurações");
+        if (file is null) return;
+        try
+        {
+            var imported = SettingsTransfer.Import(file);
+            imported.Save();
+            ApplySettingsToUi(imported);
+            if (ViewsSelected && Mode is OutputMode.MultipleLayouts or OutputMode.SingleLayout)
+                ModelRadio.IsChecked = true;
+            RefreshMode();
+            Dialogs.Alert("Configurações importadas e aplicadas.");
+        }
+        catch (TransferException error)
+        {
+            Dialogs.Alert(error.Message);
+        }
     }
 
     private bool ViewsSelected => ViewsRadio.IsChecked == true;

@@ -4,6 +4,17 @@ Desde a **0.4.0** os plugins saem num instalador único (cinco desde a 0.5.0), c
 Antes disso, cada um tinha a sua: **GB DWG Export** com tag `dwg-v<versão>` (prefixo "DWG" abaixo), **GB Famílias**
 com `familias-v<versão>` (prefixo "Famílias") e GB Material Studio com `v<versão>`.
 
+## 0.5.3 — Botão único do GB DWG Export e novos ícones modernos HiDPI
+
+### Melhorado
+- **GB DWG Export**: todos os comandos da faixa de opções (Exportar folhas, Model space, Layout único, Exportar vistas
+  e Configurações) foram unificados em **um único botão clicável (`Exportar DWG`)** que abre diretamente a interface
+  modernizada de exportação (com seleção de Folhas/Vistas, todos os modos de saída e botões *Exportar config.* /
+  *Importar config.* no cabeçalho).
+- **Novos ícones em todos os 5 plugins**: toda a identidade visual dos botões do Revit foi redesenhada em estilo
+  moderno, consistente e representativo (`64×64` a `192 DPI`, nítido em monitores HiDPI sem cortes no Ribbon) para
+  **GB Material Studio**, **GB DWG Export**, **GB Famílias**, **GB Cotas**, **GB Render** e **Sobre**.
+
 ## 0.5.2 — Nova interface, barra organizada, logo GBiM e correções no GB Render
 
 ### Melhorado

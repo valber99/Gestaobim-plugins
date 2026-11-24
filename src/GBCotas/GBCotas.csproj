@@ -12,7 +12,7 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>GBCotas</AssemblyName>
     <RootNamespace>Gestaobim.Cotas</RootNamespace>
-    <Version>0.5.2</Version>
+    <Version>0.5.3</Version>
     <Company>Gestão BIM</Company>
     <Product>GB Cotas</Product>
     <Description>Cotagem automática com IA: a IA planeja as cadeias de cotas, o programa posiciona e cria cotas nativas do Revit sem colisão.</Description>
