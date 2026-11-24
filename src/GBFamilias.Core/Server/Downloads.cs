@@ -114,13 +114,19 @@ public sealed class DownloadManager(ServerApi api, string machineName)
         }
     }
 
+    private sealed class ProgressAdapter(IProgress<DownloadProgress> target) : IProgress<(long done, long total)>
+    {
+        public void Report((long done, long total) p) =>
+            target.Report(new DownloadProgress(DownloadPhase.Downloading, p.done, p.total, 0));
+    }
+
     private async Task DownloadWithRetriesAsync(FamilyRecord record, string part, IProgress<DownloadProgress>? progress, CancellationToken cancel)
     {
         for (var wait = 0; ; wait++)
         {
             try
             {
-                var adapter = progress is null ? null : new Progress<(long done, long total)>(p => progress.Report(new DownloadProgress(DownloadPhase.Downloading, p.done, p.total, 0)));
+                var adapter = progress is null ? null : new ProgressAdapter(progress);
                 await api.DownloadFamilyAsync(record.Sha, part, adapter, cancel).ConfigureAwait(false);
                 return;
             }

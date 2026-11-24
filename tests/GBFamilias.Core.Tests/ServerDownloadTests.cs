@@ -271,8 +271,8 @@ public sealed class DownloadManagerTests : IDisposable
             }
             return Ok(content);
         });
-        var phases = new List<DownloadPhase>();
-        var result = await manager.EnsureAsync(Record(content), _root, new SyncProgress<DownloadProgress>(p => phases.Add(p.Phase)), CancellationToken.None);
+        var phases = new System.Collections.Concurrent.ConcurrentQueue<DownloadPhase>();
+        var result = await manager.EnsureAsync(Record(content), _root, new SyncProgress<DownloadProgress>(p => phases.Enqueue(p.Phase)), CancellationToken.None);
         Assert.Equal(DownloadStatus.Downloaded, result.Status);
         Assert.Contains(DownloadPhase.WaitingForSlot, phases);
         Assert.Equal(2, handler.Requests.Count);
