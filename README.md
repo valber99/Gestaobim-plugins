@@ -1,23 +1,47 @@
 # Gestaobim-plugins
 
-Plugins do ecossistema **Gestão BIM** para o Revit.
+Plugins do ecossistema **Gestão BIM** para o Revit (**2025, 2026 e 2027**).
 
-O repositório tem três plugins, que saem juntos num **instalador único** (`GestaoBIM-Setup-<versão>.exe`, uma versão
-para os três, tag `v<versão>`). Todos são **add-ins nativos (.NET)**: não precisam de pyRevit nem de Python, e dividem
-a aba **Gestão BIM**.
+O repositório reúne **cinco plugins** em um **instalador gráfico único** (`GestaoBIM-Setup-<versão>.exe`, mesma versão
+para os cinco, tag `v<versão>`). Todos são **add-ins nativos (.NET)**: não precisam de pyRevit nem de Python, e dividem
+a aba **Gestão BIM** no Revit.
 
-| Plugin | Para que serve |
-|---|---|
-| **GB Material Studio** | Estúdio de materiais: editor, favoritos, organização e material por camada |
-| **GB DWG Export** | Exporta folhas e vistas para DWG/DXF e junta tudo num só desenho, sem AutoCAD: cada folha vira um layout igual à do Revit e as vistas ficam lado a lado no model space ([detalhes](docs/GB-DWG-EXPORT.md)) |
-| **GB Famílias** | Biblioteca de famílias com busca por texto e por imagem (IA local), filtros, categorias, favoritos e coleções; baixa e insere a família no projeto ([detalhes](docs/GB-FAMILIAS.md)) |
+| Plugin | Painel no Ribbon | Para que serve |
+|---|---|---|
+| **GB Material Studio** | Materiais | Estúdio de materiais: editor instantâneo, editor fixo ao lado do Revit, favoritos portáteis, organização/limpeza segura e troca de material por camada de tipo |
+| **GB DWG Export** | Exportar DWG | Um único botão que abre a interface unificada para exportar folhas ou vistas em DWG/DXF (múltiplos layouts, model space, layout único ou arquivos separados), sem AutoCAD ([detalhes](docs/GB-DWG-EXPORT.md)) |
+| **GB Famílias** | Famílias | Biblioteca com **41.762 famílias** com busca por texto e por imagem (IA local em RAM), filtros, categorias, favoritos e coleções; baixa e insere no projeto ([detalhes](docs/GB-FAMILIAS.md)) |
+| **GB Cotas** | IA | Cotagem automática de plantas com cotas nativas do Revit sem sobreposição — funciona 100% por regras (NBR 6492) ou com planejamento opcional por IA ([detalhes](docs/GB-COTAS-E-RENDER.md)) |
+| **GB Render** | IA | Renderização arquitetônica com IA a partir da vista 3D do Revit (com camadas estruturais/clay, pré-visualização ao vivo e edição localizada por elemento) ([detalhes](docs/GB-COTAS-E-RENDER.md)) |
 
-O instalador leva os três plugins, o catálogo de famílias (banco com previews e dados de busca) e a busca por IA. Só os
-arquivos `.rfa` das famílias ficam de fora: cada um é baixado do servidor, com login, quando você o insere.
+O instalador leva os cinco plugins, o catálogo local de famílias (banco com previews e embeddings), o motor de busca por
+IA (`gbfam.exe`) e o gateway local de IA (`CLIProxyAPI`). Apenas os arquivos `.rfa` das famílias ficam no servidor e são
+baixados sob demanda, com login, quando você insere a família.
+
+## Instalação
+
+1. Baixe na página de [Releases](https://github.com/valber99/Gestaobim-plugins/releases/latest) o instalador
+   **`GestaoBIM-Setup-<versão>.exe`** (ou o `.zip`, se preferir instalar pelo `Instalar.bat`).
+2. Feche o Revit e dê dois cliques no `.exe`. Ele abre uma janela gráfica nativa do Windows para escolher as versões do
+   Revit (2025, 2026 e/ou 2027), confere a integridade SHA-256 do pacote, recusa instalar com o Revit aberto e **não
+   pede administrador**. Também aceita `/quiet` para instalação silenciosa.
+   > O Windows SmartScreen pode avisar que o editor é desconhecido (o instalador ainda não possui assinatura digital):
+   > clique em **"Mais informações"** → **"Executar assim mesmo"**.
+3. Abra o Revit. Na primeira abertura, clique em **"Sempre carregar"** nos avisos de add-in.
+
+Quando sair uma versão nova, o botão único **Sobre** (no painel **Geral**) mostra uma bolinha vermelha e leva direto
+para o download do instalador único. Para desativar a checagem automática, defina a variável de ambiente
+`GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`.
+
+Para remover os plugins, execute `Desinstalar.bat`. Seus favoritos, bibliotecas e configurações não são apagados.
+
+**Requisitos:** Windows e **Revit 2025, 2026 ou 2027**.
+
+---
 
 ## O que o GB Material Studio faz
 
-Tudo fica na aba **Gestão BIM**, painel **Materiais**.
+Tudo fica na aba **Gestão BIM**, painel **Materiais**:
 
 | Botão | Para que serve |
 |---|---|
@@ -48,62 +72,77 @@ Um material só é tratado como "não usado" quando duas verificações concorda
 próprio Revit, o mesmo critério do Purge Unused. Cada exclusão é desfeita se o Revit indicar que ela
 removeria outros elementos. Tudo é uma entrada só de desfazer.
 
-## Instalação
-
-1. Baixe da página de [Releases](https://github.com/valber99/Gestaobim-plugins/releases) o instalador
-   **`GestaoBIM-Setup-<versão>.exe`** (ou o `.zip`, se preferir instalar pelo `Instalar.bat`).
-2. Feche o Revit e dê dois cliques no `.exe` (ele recusa instalar com o Revit aberto, confere a integridade do pacote e
-   não pede administrador). O Windows pode avisar que o
-   editor é desconhecido, porque o instalador não é assinado: clique em "Mais informações" e "Executar assim mesmo".
-3. Abra o Revit. Na primeira vez ele pergunta se confia no add-in (não há assinatura digital ainda):
-   escolha **"Sempre carregar"**.
-
-Quando sai uma versão nova de qualquer plugin, o botão **Sobre** (um só para todos, no painel **Geral**) ganha uma bolinha vermelha (uma consulta por dia ao GitHub, em
-segundo plano; clicar no botão consulta na hora e leva à página de download. Para desligar a consulta automática, defina a variável de ambiente `GB_MATERIAL_STUDIO_NO_UPDATE_CHECK=1`).
-
-Para remover, `Desinstalar.bat`. Seus favoritos e a biblioteca não são apagados.
-
-Requisitos: Windows e **Revit 2025, 2026 ou 2027**.
+---
 
 ## Desenvolvimento
 
-Um código-fonte, três compilações (uma por ano do Revit), com a API vinda do NuGet
-(`Nice3point.Revit.Api`), então não é preciso ter o Revit instalado para compilar.
+Um código-fonte, três compilações (Revit 2025, 2026 e 2027), com a API do Revit vinda do NuGet
+(`Nice3point.Revit.Api`) — **não é preciso ter o Revit instalado para compilar ou rodar os testes unitários**.
+
+### Pré-requisitos
+- **.NET 10 SDK** (os projetos miram `net8.0` / `net8.0-windows`, compilados pelo SDK 10)
+- **Rust (stable)** — apenas se for alterar o motor de busca `tools/gbfam`
+
+### Comandos principais
 
 ```powershell
-dotnet test tests/GBMaterialStudio.Core.Tests        # regras puras, configurações e banco de favoritos
+# Rodar todas as 6 suítes de testes .NET (485 testes)
+dotnet test tests/GBMaterialStudio.Core.Tests
+dotnet test tests/GBDwgExport.Core.Tests
+dotnet test tests/GBFamilias.Core.Tests
+dotnet test tests/GBCotas.Core.Tests
+dotnet test tests/GBRender.Core.Tests
+dotnet test tests/GBAi.Shared.Tests
+
+# Compilar um plugin específico para um ano do Revit (2025, 2026 ou 2027)
 dotnet build src/GBMaterialStudio -c Release -p:RevitVersion=2027
-dotnet test tests/GBFamilias.Core.Tests              # GB Famílias: índice, filtros, busca, favoritos, caminhos
-cargo test --release --manifest-path tools/gbfam/Cargo.toml   # o motor gbfam (catálogo assinado, delta)
-./build/package-gestaobim.ps1                        # o instalador único em dist/ (~0,7 GB): os três plugins,
-                                                     # o catálogo e a busca por IA (ver docs/RELEASE.md)
-./build/revit-selftest.ps1 -Year 2027                # teste dentro do Revit real (com o Revit fechado)
+dotnet build src/GBDwgExport -c Release -p:RevitVersion=2027
+dotnet build src/GBFamilias -c Release -p:RevitVersion=2027
+dotnet build src/GBCotas -c Release -p:RevitVersion=2027
+dotnet build src/GBRender -c Release -p:RevitVersion=2027
+
+# Testes do motor de busca em Rust (GB Famílias)
+cargo test --release --manifest-path tools/gbfam/Cargo.toml
+
+# Gerar o instalador único completo (requer catálogo/modelos locais; ver docs/RELEASE.md)
+./build/package-gestaobim.ps1
 ```
 
-Estrutura:
+### Estrutura do repositório
 
-- `src/GBMaterialStudio.Core` — regras puras e o banco de favoritos (sem Revit; testado em Windows e Linux).
-- `src/GBMaterialStudio` — o add-in: comandos, janelas (WPF/XAML) e a camada que usa a API do Revit.
-- `tests/GBMaterialStudio.Core.Tests` — testes xUnit.
-- `src/GBFamilias*`, `tests/GBFamilias.Core.Tests`, `tools/gbfam` — o plugin GB Famílias, seus testes e o motor em Rust.
-- `installer` e `build` — manifesto `.addin`, instaladores e empacotamento.
-- `GBMaterialStudio.extension` — **edição legada em pyRevit** (mantida só como referência, ver abaixo).
+- `src/GBMaterialStudio*` e `tests/GBMaterialStudio.Core.Tests` — GB Material Studio (regras puras + add-in WPF).
+- `src/GBDwgExport*` e `tests/GBDwgExport.Core.Tests` — GB DWG Export (integração com `cadcraft-cli`).
+- `src/GBFamilias*`, `tests/GBFamilias.Core.Tests` e `tools/gbfam` — GB Famílias (interface WPF + motor Rust/ONNX).
+- `src/GBAi.Shared`, `src/GBAi.Revit`, `tests/GBAi.Shared.Tests` — camada compartilhada de IA, DPAPI e gateway local.
+- `src/GBCotas*` e `tests/GBCotas.Core.Tests` — GB Cotas.
+- `src/GBRender*` e `tests/GBRender.Core.Tests` — GB Render.
+- `src/Shared` — componentes compartilhados entre os 5 plugins (como a janela unificada `AboutHub`).
+- `build/` e `installer/` — scripts de empacotamento, instalador gráfico nativo (`SetupStub.cs`) e manifestos `.addin`.
+- `GBMaterialStudio.extension/` — **edição legada em pyRevit** (mantida apenas como referência).
 
-Documentação:
+### Documentação
 
-- [`docs/GUIA-DO-USUARIO.md`](docs/GUIA-DO-USUARIO.md): instalar, usar cada botão, onde ficam os dados, problemas comuns.
-- [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md): como o add-in é organizado e por que cada decisão foi tomada.
-- [`docs/RELEASE.md`](docs/RELEASE.md): como gerar e publicar uma versão.
-- [`docs/GB-DWG-EXPORT.md`](docs/GB-DWG-EXPORT.md): o plugin GB DWG Export (guia, arquitetura, como publicar).
-- [`docs/GB-FAMILIAS.md`](docs/GB-FAMILIAS.md): o plugin GB Famílias (guia, arquitetura, como publicar).
-- [`CHANGELOG.md`](CHANGELOG.md): histórico de versões.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): como contribuir com código, reportar bugs ou sugerir melhorias.
+- [`docs/GUIA-DO-USUARIO.md`](docs/GUIA-DO-USUARIO.md): guia de uso, botões, onde ficam os dados e solução de problemas.
+- [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md): organização interna e decisões técnicas.
+- [`docs/GB-DWG-EXPORT.md`](docs/GB-DWG-EXPORT.md): guia e arquitetura do GB DWG Export.
+- [`docs/GB-FAMILIAS.md`](docs/GB-FAMILIAS.md): guia e arquitetura do GB Famílias.
+- [`docs/GB-COTAS-E-RENDER.md`](docs/GB-COTAS-E-RENDER.md): guia de configuração de IA, GB Cotas e GB Render.
+- [`docs/RELEASE.md`](docs/RELEASE.md): como gerar e publicar novas versões.
+- [`CHANGELOG.md`](CHANGELOG.md): histórico completo de versões.
 
 ### Edição legada em pyRevit
 
-Antes do add-in nativo, o plugin existia como extensão do pyRevit (`GBMaterialStudio.extension`, Python 3).
-Ela continua no repositório, com testes (`python -m pytest -q`), mas **não é mais a edição recomendada**:
-exige pyRevit 5+. Se as duas estiverem instaladas, a aba "Gestão BIM" aparece duplicada; o
-`Instalar.bat` move a edição pyRevit para fora do caminho automaticamente.
+Antes do add-in nativo, o Material Studio existia como extensão do pyRevit (`GBMaterialStudio.extension`, Python 3).
+Ela continua no repositório com testes (`python -m pytest -q`), mas **não é mais a edição recomendada**. Se as duas
+estiverem instaladas, a aba "Gestão BIM" aparece duplicada; o instalador move a edição pyRevit para fora do caminho
+automaticamente.
+
+## Contribuindo
+
+Contribuições são muito bem-vindas! Leia o guia em [`CONTRIBUTING.md`](CONTRIBUTING.md), abra uma
+[Issue](https://github.com/valber99/Gestaobim-plugins/issues) para bugs/melhorias ou participe das
+[Discussions](https://github.com/valber99/Gestaobim-plugins/discussions) para dúvidas e ideias.
 
 ## Licença
 

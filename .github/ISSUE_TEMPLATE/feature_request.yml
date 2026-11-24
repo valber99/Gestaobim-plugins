@@ -1,0 +1,41 @@
+name: Sugerir melhoria ou novo recurso
+description: Propor uma funcionalidade nova ou melhoria em um plugin existente
+title: "[Sugestão]: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: Área / Plugin
+      options:
+        - GB Material Studio
+        - GB DWG Export
+        - GB Famílias
+        - GB Cotas
+        - GB Render
+        - Instalador / Experiência geral
+        - Novo plugin
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Qual problema ou necessidade isso resolve?
+      placeholder: "Hoje, quando preciso fazer X no Revit..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Como você imagina a solução?
+      placeholder: "Seria útil ter um botão/opção que..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Referências ou exemplos (opcional)
+      description: Prints, fluxos de trabalho ou exemplos de outros softwares que ajudem a ilustrar a ideia.

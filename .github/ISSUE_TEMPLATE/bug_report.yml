@@ -1,0 +1,76 @@
+name: Relatar um bug
+description: Algo não funcionou como esperado em um dos plugins do Gestão BIM
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por ajudar a melhorar o **Gestão BIM**! Preencha as informações abaixo para facilitar a reprodução do problema.
+
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: Plugin afetado
+      options:
+        - GB Material Studio
+        - GB DWG Export
+        - GB Famílias
+        - GB Cotas
+        - GB Render
+        - Configurar IA / Sobre
+        - Instalador (GestaoBIM-Setup)
+    validations:
+      required: true
+
+  - type: input
+    id: plugin_version
+    attributes:
+      label: Versão do Gestão BIM
+      placeholder: "Ex.: 0.5.3 (visível no botão Sobre)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: revit_version
+    attributes:
+      label: Versão do Revit
+      options:
+        - Revit 2025
+        - Revit 2026
+        - Revit 2027
+        - Não se aplica (instalador / build)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: O que aconteceu?
+      description: Descreva o problema de forma clara e objetiva.
+      placeholder: "Ao clicar em..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para reproduzir
+      placeholder: |
+        1. Abrir um projeto com...
+        2. Clicar no botão...
+        3. Observar o erro...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento esperado
+      placeholder: "O que deveria ter acontecido?"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Prints ou mensagem de erro
+      description: Cole a mensagem de erro completa ou arraste capturas de tela aqui.

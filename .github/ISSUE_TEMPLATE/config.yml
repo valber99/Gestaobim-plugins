@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Dúvidas e ideias da comunidade (Discussions)
+    url: https://github.com/valber99/Gestaobim-plugins/discussions
+    about: Use as Discussions para tirar dúvidas de uso, compartilhar fluxos no Revit ou discutir ideias antes de abrir uma Issue.
