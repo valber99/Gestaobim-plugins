@@ -17,10 +17,10 @@ use std::path::PathBuf;
 #[command(name = "gbfam", version, about = "Banco de familias Revit: extracao, IA, embeddings e busca")]
 struct Cli {
     /// Arquivo SQLite do banco (criado se nao existir)
-    #[arg(long, env = "GBFAM_DB", global = true, default_value = r"F:\Projetos\Gestaobim-plugins\banco_familias\gbfam.sqlite")]
+    #[arg(long, env = "GBFAM_DB", global = true, default_value = "banco_familias/gbfam.sqlite")]
     db: PathBuf,
     /// Arquivo .env extra (chave da API do Claude etc.)
-    #[arg(long, global = true, default_value = r"F:\Projetos\.env")]
+    #[arg(long, global = true, default_value = ".env")]
     env_file: PathBuf,
     #[command(subcommand)]
     cmd: Cmd,
@@ -32,7 +32,7 @@ enum Cmd {
     Init,
     /// Varre uma pasta de .rfa: extrai preview/metadados e grava no banco (retomavel)
     Ingest {
-        #[arg(long, default_value = r"F:\Projetos\Gestaobim-plugins\familias")]
+        #[arg(long, default_value = "familias")]
         root: PathBuf,
         #[arg(long, default_value_t = 8)]
         workers: usize,
@@ -72,7 +72,7 @@ enum Cmd {
     Stats,
     /// Monta o pacote da biblioteca (banco + so as familias unicas) para distribuir com o plugin
     ExportLibrary {
-        #[arg(long, default_value = r"F:\Projetos\Gestaobim-plugins\familias")]
+        #[arg(long, default_value = "familias")]
         root: PathBuf,
         /// Pasta de saida (precisa estar vazia ou nao existir)
         #[arg(long)]
@@ -127,7 +127,7 @@ enum Cmd {
     },
     /// Teste de extracao SEM banco: percorre .rfa e mostra estatisticas e uma amostra
     Inspect {
-        #[arg(long, default_value = r"F:\Projetos\Gestaobim-plugins\familias")]
+        #[arg(long, default_value = "familias")]
         root: PathBuf,
         /// Quantos arquivos examinar (0 = todos)
         #[arg(long, default_value_t = 200)]

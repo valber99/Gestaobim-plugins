@@ -182,7 +182,7 @@ public static class CacheEvictor
         {
             if (total - freed <= limitBytes) break;
             if (used > recent || guarded.Contains(file.FullName)) continue;
-            if (deletable is not null && !deletable.Contains(file.FullName[prefix.Length..])) continue;
+            if (deletable is not null && !deletable.Contains(file.FullName[prefix.Length..].Replace('/', '\\').Trim('\\'))) continue;
             try
             {
                 var size = file.Length;

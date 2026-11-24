@@ -128,7 +128,7 @@ public sealed class LoopbackListener : IDisposable
         Port = port;
     }
 
-    /// <summary>Tenta cada porta da lista (as registradas no ZITADEL) e usa a primeira livre.</summary>
+    /// <summary>Tenta cada porta da lista (as registradas no provedor OIDC) e usa a primeira livre.</summary>
     public static LoopbackListener Start(IEnumerable<int> ports)
     {
         foreach (var port in ports)
@@ -203,7 +203,7 @@ public sealed class LoopbackListener : IDisposable
     public void Dispose() => _listener.Stop();
 }
 
-/// <summary>OAuth 2.0 Authorization Code + PKCE contra o ZITADEL, pelo navegador do sistema.</summary>
+/// <summary>OAuth 2.0 Authorization Code + PKCE contra o provedor OIDC, pelo navegador do sistema.</summary>
 public sealed class AuthClient
 {
     private readonly ServerConfig _config;

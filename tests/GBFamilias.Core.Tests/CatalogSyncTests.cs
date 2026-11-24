@@ -439,7 +439,9 @@ public sealed class CatalogSyncTests : IDisposable
 
     // ---- Rust <-> C#: o catalogo gerado pelo gbfam de verdade, aplicado pelo plugin
 
-    private const string GbfamExe = @"F:\Projetos\Gestaobim-plugins\tools\gbfam\target\release\gbfam.exe";
+    private static readonly string RepoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+    private static readonly string GbfamExe = Environment.GetEnvironmentVariable("GBFAM_EXE")
+        ?? Path.Combine(RepoRoot, "tools", "gbfam", "target", "release", OperatingSystem.IsWindows() ? "gbfam.exe" : "gbfam");
 
     private static string Run(string args)
     {

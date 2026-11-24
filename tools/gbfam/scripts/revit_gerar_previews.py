@@ -41,8 +41,9 @@ from Autodesk.Revit.DB import (
     DetachFromCentralOption,
 )
 
-MISSING_JSON = os.environ.get("GBFAM_MISSING", r"F:\Projetos\Gestaobim-plugins\banco_familias\missing.json")
-OUT_DIR = os.environ.get("GBFAM_OUT", r"F:\Projetos\Gestaobim-plugins\banco_familias\previews_gerados")
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+MISSING_JSON = os.environ.get("GBFAM_MISSING", os.path.join(_REPO_ROOT, "banco_familias", "missing.json"))
+OUT_DIR = os.environ.get("GBFAM_OUT", os.path.join(_REPO_ROOT, "banco_familias", "previews_gerados"))
 PIXELS = 512
 
 

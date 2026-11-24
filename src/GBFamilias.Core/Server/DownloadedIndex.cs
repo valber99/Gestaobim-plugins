@@ -23,6 +23,7 @@ public sealed class DownloadedIndex
     public int Count { get { lock (_lock) return _files.Count; } }
 
     private static string Key(string relativePath) => relativePath.Replace('/', '\\').Trim('\\');
+    private static string FileName(string key) => key.LastIndexOf('\\') is >= 0 and var i ? key[(i + 1)..] : key;
 
     /// <summary>Varre a pasta. Pasta inexistente ou ilegivel = nada baixado (nunca lanca).</summary>
     public void Refresh(string? root)
@@ -69,7 +70,7 @@ public sealed class DownloadedIndex
         lock (_lock)
         {
             if (_files.TryGetValue(key, out var length) && (record.SizeBytes <= 0 || length == record.SizeBytes)) return key;
-            if (record.SizeBytes > 0 && _byName.TryGetValue((Path.GetFileName(key), record.SizeBytes), out var other)) return other;
+            if (record.SizeBytes > 0 && _byName.TryGetValue((FileName(key), record.SizeBytes), out var other)) return other;
             return null;
         }
     }
@@ -80,7 +81,7 @@ public sealed class DownloadedIndex
         lock (_lock)
         {
             _files[key] = length;
-            _byName.TryAdd((Path.GetFileName(key), length), key);
+            _byName.TryAdd((FileName(key), length), key);
         }
     }
 
@@ -90,9 +91,9 @@ public sealed class DownloadedIndex
         var key = Key(relativePath);
         lock (_lock)
         {
-            if (_files.Remove(key, out var length) && _byName.TryGetValue((Path.GetFileName(key), length), out var mapped)
+            if (_files.Remove(key, out var length) && _byName.TryGetValue((FileName(key), length), out var mapped)
                 && string.Equals(mapped, key, StringComparison.OrdinalIgnoreCase))
-                _byName.Remove((Path.GetFileName(key), length));
+                _byName.Remove((FileName(key), length));
         }
     }
 

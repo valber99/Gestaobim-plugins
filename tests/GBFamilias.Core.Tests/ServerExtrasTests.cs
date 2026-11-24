@@ -13,7 +13,7 @@ public sealed class DownloadedIndexTests : IDisposable
 
     private void Write(string rel, int bytes)
     {
-        var path = Path.Combine(_root, rel);
+        var path = Path.Combine(_root, rel.Replace('\\', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllBytes(path, new byte[bytes]);
     }
@@ -114,10 +114,13 @@ public sealed class DownloadedIndexTests : IDisposable
     [Fact]
     public void RegistroDasBaixadasESeparadoPorPastaENaoFicaDentroDela()
     {
-        var a = DownloadLedger.FileFor(@"C:\home", @"D:\Familias");
-        Assert.Equal(a, DownloadLedger.FileFor(@"C:\home", @"d:\familias\"));
-        Assert.NotEqual(a, DownloadLedger.FileFor(@"C:\home", @"E:\Familias"));
-        Assert.StartsWith(@"C:\home\baixadas\", a);
+        var home = Path.Combine(_root, "home");
+        var dirA = Path.Combine(_root, "FamiliasA");
+        var dirB = Path.Combine(_root, "FamiliasB");
+        var a = DownloadLedger.FileFor(home, dirA);
+        Assert.Equal(a, DownloadLedger.FileFor(home, dirA.ToLowerInvariant() + Path.DirectorySeparatorChar));
+        Assert.NotEqual(a, DownloadLedger.FileFor(home, dirB));
+        Assert.StartsWith(Path.Combine(home, "baixadas") + Path.DirectorySeparatorChar, a);
         Assert.Empty(new DownloadLedger(Path.Combine(_root, "nao-existe", "x.txt")).Load());
     }
 

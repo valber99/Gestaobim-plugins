@@ -26,7 +26,8 @@ $root = Split-Path $PSScriptRoot
 $install = (Get-ChildItem "HKLM:\SOFTWARE\Autodesk\Revit\$Year" -ErrorAction SilentlyContinue | ForEach-Object { (Get-ItemProperty $_.PSPath).InstallationLocation } | Where-Object { $_ } | Select-Object -First 1)
 $candidates = @()
 if ($install) { $candidates += Join-Path $install 'Revit.exe' }
-$candidates += "C:\Program Files\Autodesk\Revit $Year\Revit.exe", "F:\Gbim\instalado\Revit $Year\Revit.exe", "F:\Gbim\instalado\$Year\Revit $Year\Revit.exe"
+if ($env:REVIT_INSTALL_ROOT) { $candidates += (Join-Path $env:REVIT_INSTALL_ROOT "Revit $Year\Revit.exe"), (Join-Path $env:REVIT_INSTALL_ROOT "$Year\Revit $Year\Revit.exe") }
+$candidates += "C:\Program Files\Autodesk\Revit $Year\Revit.exe"
 $revitExe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $revitExe) { throw "Revit.exe do $Year nao encontrado." }
 $sameYear = Get-Process Revit -ErrorAction SilentlyContinue | Where-Object { $_.Path -and ((Resolve-Path $_.Path).Path -eq (Resolve-Path $revitExe).Path) }

@@ -58,7 +58,7 @@ public sealed class ServerSession
         Catalog = new CatalogSync(Api, Config.CatalogPublicKey, Version.Parse(PluginVersion));
     }
 
-    /// <summary>Abre o navegador padrao na pagina de login do ZITADEL e espera o retorno.</summary>
+    /// <summary>Abre o navegador padrao na pagina de login OIDC e espera o retorno.</summary>
     public Task LoginAsync(CancellationToken cancel) =>
         Auth.LoginAsync(url => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }), cancel);
 

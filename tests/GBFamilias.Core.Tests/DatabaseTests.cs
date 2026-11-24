@@ -112,8 +112,11 @@ public sealed class DatabaseTests : IDisposable
 /// <summary>Contra o banco real e o gbfam.exe, quando existem nesta maquina. Sem eles, o teste passa sem fazer nada.</summary>
 public class RealLibraryTests
 {
-    private const string RealDb = @"F:\Projetos\Gestaobim-plugins\banco_familias\gbfam.sqlite";
-    private const string RealExe = @"F:\Projetos\Gestaobim-plugins\tools\gbfam\target\release\gbfam.exe";
+    private static readonly string RepoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+    private static readonly string RealDb = Environment.GetEnvironmentVariable("GBFAM_DB")
+        ?? Path.Combine(RepoRoot, "banco_familias", "gbfam.sqlite");
+    private static readonly string RealExe = Environment.GetEnvironmentVariable("GBFAM_EXE")
+        ?? Path.Combine(RepoRoot, "tools", "gbfam", "target", "release", OperatingSystem.IsWindows() ? "gbfam.exe" : "gbfam");
 
     [Fact]
     public void LoadsTheRealLibraryAndSearchesInstantly()
