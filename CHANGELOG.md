@@ -4,6 +4,13 @@ Desde a **0.4.0** os plugins saem num instalador único (cinco desde a 0.5.0), c
 Antes disso, cada um tinha a sua: **GB DWG Export** com tag `dwg-v<versão>` (prefixo "DWG" abaixo), **GB Famílias**
 com `familias-v<versão>` (prefixo "Famílias") e GB Material Studio com `v<versão>`.
 
+## 0.5.4 — Novo endereço de login/cadastro (`gestaobim.com`) e melhorias de portabilidade
+
+### Melhorado
+- **GB Famílias (login e cadastro)**: autenticação atualizada para `https://auth.gestaobim.com` e cadastro de acesso à biblioteca disponível em **`https://cadastro.gestaobim.com`** (com link em destaque no início do `README.md` e em `docs/GB-FAMILIAS.md`).
+- **Portabilidade e CI**: corrigido tratamento de separadores de caminho no `GBFamilias.Core` (testes 100% verdes em Windows e Linux) e generalizados caminhos padrão nos scripts de desenvolvimento e no motor `gbfam`.
+- **Comunidade open-source**: adicionados `CONTRIBUTING.md`, modelos de Issues/PR e GitHub Discussions habilitado.
+
 ## 0.5.3 — Botão único do GB DWG Export e novos ícones modernos HiDPI
 
 ### Melhorado

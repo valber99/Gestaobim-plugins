@@ -2,6 +2,10 @@
 
 Plugins do ecossistema **Gestão BIM** para o Revit (**2025, 2026 e 2027**).
 
+> **Cadastro obrigatório para acessar a biblioteca GB Famílias (41.762 famílias):**
+> acesse **[https://cadastro.gestaobim.com](https://cadastro.gestaobim.com)** para criar sua conta e solicitar acesso.
+> Após a liberação pelo administrador, basta clicar em **Entrar** no plugin dentro do Revit com o e-mail e a senha cadastrados.
+
 O repositório reúne **cinco plugins** em um **instalador gráfico único** (`GestaoBIM-Setup-<versão>.exe`, mesma versão
 para os cinco, tag `v<versão>`). Todos são **add-ins nativos (.NET)**: não precisam de pyRevit nem de Python, e dividem
 a aba **Gestão BIM** no Revit.
@@ -17,11 +21,6 @@ a aba **Gestão BIM** no Revit.
 O instalador leva os cinco plugins, o catálogo local de famílias (banco com previews e embeddings), o motor de busca por
 IA (`gbfam.exe`) e o gateway local de IA (`CLIProxyAPI`). Apenas os arquivos `.rfa` das famílias ficam no servidor e são
 baixados sob demanda, com login, quando você insere a família.
-
-> **Acesso à biblioteca GB Famílias (cadastro obrigatório):** para baixar e inserir famílias da biblioteca no Revit,
-> acesse **[https://cadastro.gestaobim.com](https://cadastro.gestaobim.com)** e preencha o formulário de
-> cadastro. O acesso passa por aprovação do administrador; depois de liberado, basta clicar em **Entrar** no plugin com
-> o e-mail e a senha cadastrados.
 
 ## Instalação
 
