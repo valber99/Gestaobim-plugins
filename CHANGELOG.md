@@ -4,6 +4,32 @@ Desde a **0.4.0** os plugins saem num instalador único (cinco desde a 0.5.0), c
 Antes disso, cada um tinha a sua: **GB DWG Export** com tag `dwg-v<versão>` (prefixo "DWG" abaixo), **GB Famílias**
 com `familias-v<versão>` (prefixo "Famílias") e GB Material Studio com `v<versão>`.
 
+## 0.5.1 — Instalador gráfico, busca IA em RAM e correções de estabilidade
+
+### Novo
+- **Instalador gráfico (`GestaoBIM-Setup-0.5.1.exe`)**: interface nativa do Windows (sem abrir janela preta de CMD),
+  com seleção das versões do Revit (2025, 2026 e 2027), barra de progresso real, painel de detalhes expansível e
+  suporte completo a `/quiet`.
+
+### Melhorado
+- **GB Famílias (`gbfam.exe`)**: os vetores das 41.762 famílias agora são carregados uma única vez em memória RAM
+  (`VectorIndex` contíguo), eliminando leituras repetidas do SQLite e tornando a busca semântica quase instantânea;
+  banco aberto em modo somente leitura (`READ_ONLY`) e ordenação segura com `total_cmp`.
+- **GB Famílias**: buscas sem filtros laterais não serializam mais os 41.762 IDs em JSON; abertura da biblioteca não
+  trava mais a UI com varredura síncrona de pasta de downloads.
+
+### Corrigido
+- **GB Famílias**: corrigido erro *"The command to place an instance of this family is disabled"* e o travamento do
+  Revit ao inserir famílias MEP/perfis/anotações (captura de `Autodesk.Revit.Exceptions.InvalidOperationException` e
+  aviso WPF vinculado à janela do plugin).
+- **GB Famílias**: corrigido lock em `LibraryDb.Dispose()`, crash ao fechar a janela durante download/inserção,
+  botão "Aplicar agora" de atualização de catálogo e streaming atômico em disco no `CatalogSync`.
+- **GB IA / Cotas / Render**: escape de `\r`/`\n` no `config.yaml`, proteção contra perda de `keys.dat` em
+  `IOException` transitório, timeout de 2 s no `Mutex` ao fechar o Revit, validação de `ProcessName` em `KillPid`,
+  tratamento de `NewDimension` nulo e eixos invertidos no `GB Cotas`, e `OnLinkBegin` seguro no `GB Render`.
+- **Instalador (`Install.ps1` / `SetupStub.cs`)**: suporte a múltiplas versões do Revit selecionadas, cópia atômica
+  do catálogo, caminhos absolutos do Windows e limpeza garantida de arquivos temporários em `finally`.
+
 ## 0.5.0 — GB Cotas e GB Render (IA) no instalador único
 
 ### Novo
