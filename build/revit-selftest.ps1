@@ -12,7 +12,8 @@
 .PARAMETER TimeoutMinutes
   Quanto esperar o relatorio (padrao 15; o primeiro download e o carregamento dos modelos de IA levam alguns minutos).
 .NOTES
-  Exige o Revit FECHADO (o teste instala o plugin e abre uma sessao propria) e o diretorio administrativo do servidor (-ServerRepo ou GBFAM_SERVER_REPO) com o catalogo gerado. Nunca imprime segredos.
+  Exige o Revit FECHADO (o teste instala o plugin e abre uma sessao propria) e o diretorio administrativo do servidor
+  (informado em -ServerRepo ou na variavel GBFAM_SERVER_REPO) com o catalogo gerado e script de token de teste. Nunca imprime segredos.
 #>
 param(
     [Parameter(Mandatory)][ValidateSet(2025, 2026, 2027)][int]$Year,
@@ -23,6 +24,7 @@ param(
     [switch]$SkipInstall
 )
 $ErrorActionPreference = 'Stop'
+if (-not $ServerRepo) { throw 'Informe -ServerRepo <pasta> ou defina a variavel de ambiente GBFAM_SERVER_REPO.' }
 $root = Split-Path $PSScriptRoot
 
 if (Get-Process Revit -ErrorAction SilentlyContinue) { throw 'O Revit esta aberto. Salve e feche o Revit antes (o teste abre uma sessao propria e instala o plugin).' }

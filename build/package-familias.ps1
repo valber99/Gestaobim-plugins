@@ -3,7 +3,7 @@
   Compila o GB Familias para o Revit 2025, 2026 e 2027 e gera o pacote do plugin (.zip e o instalador GBFamilias-Setup-<versao>.exe).
   O pacote leva o gbfam.exe (motor de busca por IA) e os modelos ONNX (~1 GB): a busca por IA funciona offline.
   O CATALOGO (banco com previews e dados de busca) vai no pacote; os arquivos .rfa NAO: o servidor entrega cada um
-  quando voce insere a familia (o administrador gera o catalogo com 'gbfam export-catalog').
+  quando voce insere a familia (gere o catalogo com 'gbfam export-catalog' e informe -CatalogDir ou GBFAM_CATALOG_DIR).
 .NOTES
   O gbfam.exe e os modelos NAO estao no repositorio (tools/gbfam/ compila o gbfam; os modelos ficam fora do git): informe os caminhos nos parametros.
 #>
@@ -12,12 +12,12 @@ param(
     [int[]]$Years = @(2025, 2026, 2027),
     [string]$GbfamExe = (Join-Path (Split-Path $PSScriptRoot) 'tools\gbfam\target\release\gbfam.exe'),
     [string]$Models = (Join-Path (Split-Path $PSScriptRoot) 'tools\gbfam\.models'),
-    # O IExpress trava com este payload (~0,7 GB), entao o .exe usa o instalador proprio (build/SetupStub.cs, o .zip
+    # O IExpress trava com este payload, entao o .exe usa o instalador proprio (build/SetupStub.cs, o .zip
     # colado no fim, conferido por SHA-256). -NoExe gera so o .zip.
     [switch]$NoExe,
-    # So compila e monta a pasta em dist\ (o instalador unico, package-gestaobim.ps1, junta os tres plugins).
+    # So compila e monta a pasta em dist\ (o instalador unico, package-gestaobim.ps1, junta os cinco plugins).
     [switch]$StageOnly,
-    # O catalogo (banco) vai dentro do instalador. Vem da pasta gerada por 'gbfam export-catalog'.
+    # Pasta do catalogo gerado por 'gbfam export-catalog' (manifest.json + snapshot .gz).
     [string]$CatalogDir = $env:GBFAM_CATALOG_DIR
 )
 $ErrorActionPreference = 'Stop'
@@ -64,10 +64,13 @@ foreach ($file in 'Install.ps1', 'Uninstall.ps1', 'Instalar.bat', 'Desinstalar.b
     Copy-Item (Join-Path $root "installer\$file") $stage
 }
 # 2) O catalogo (banco com previews, dados de busca e vetores): vai DENTRO do instalador, o servidor so entrega os .rfa.
-#    Sai do `gbfam export-catalog` (a pasta catalog-out do repositorio do servidor): snapshot .gz + manifesto com o hash.
+#    Sai do `gbfam export-catalog`: snapshot .gz + manifesto com o hash.
+if (-not $CatalogDir) {
+    throw "Informe -CatalogDir <pasta-do-catalogo> ou defina a variavel de ambiente GBFAM_CATALOG_DIR."
+}
 $manifestFile = Join-Path $CatalogDir 'manifest.json'
 if (-not (Test-Path $manifestFile)) {
-    throw "Catalogo nao encontrado em ${CatalogDir}. Gere com: 'gbfam export-catalog', ou informe -CatalogDir."
+    throw "Catalogo nao encontrado em ${CatalogDir}. Gere com 'gbfam export-catalog' e informe -CatalogDir."
 }
 $manifest = Get-Content $manifestFile -Raw -Encoding UTF8 | ConvertFrom-Json
 $snapshotFile = Join-Path $CatalogDir $manifest.snapshot.file

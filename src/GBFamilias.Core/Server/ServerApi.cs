@@ -20,7 +20,7 @@ public sealed class NotAuthorizedException(string message) : Exception(message);
 
 public sealed class IntegrityException(string message) : Exception(message);
 
-/// <summary>Cliente HTTP do servidor de arquivos: so conhece o SHA-256 da familia, nunca caminhos internos.</summary>
+/// <summary>Cliente HTTP do servidor de arquivos: só conhece o SHA-256 da família, nunca caminhos internos.</summary>
 public sealed class ServerApi
 {
     private readonly HttpClient _http;
@@ -35,7 +35,7 @@ public sealed class ServerApi
         _token = token;
     }
 
-    /// <summary>Sempre enviamos um User-Agent identificando o plugin e a versao.</summary>
+    /// <summary>Sempre enviamos um User-Agent identificando o plugin e a versão.</summary>
     public static void ConfigureClient(HttpClient http, string version)
     {
         http.DefaultRequestHeaders.UserAgent.Clear();

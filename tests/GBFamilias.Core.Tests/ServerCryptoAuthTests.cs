@@ -96,7 +96,7 @@ public class Ed25519Tests
     [Fact]
     public void AssinaturaGeradaPeloRustConferePeloCSharp()
     {
-        // o catalogo real publicado (se existir nesta maquina): chave publica, manifesto e assinatura vindos do gbfam
+        // Se o catálogo publicado estiver disponível via variável de ambiente, valida assinatura real gerada pelo Rust
         var dir = Environment.GetEnvironmentVariable("GBFAM_CATALOG_TEST_DIR");
         if (string.IsNullOrWhiteSpace(dir)) return;
         var pubFile = Path.Combine(dir, "catalog.pub");

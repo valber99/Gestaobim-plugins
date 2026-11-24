@@ -22,7 +22,7 @@ famílias, vale trocar por um índice ANN (ex.: extensão sqlite-vec).
 
 ## Preparação
 
-1. A chave do Claude é lida da variável `key` de `.env` (ou `ANTHROPIC_API_KEY`).
+1. A chave do Claude é lida da variável `key` no arquivo `.env` (informe com `--env` ou use `ANTHROPIC_API_KEY`).
 2. `cargo build --release` → `target\release\gbfam.exe`
 3. O banco é criado sozinho em `gbfam.sqlite` (mude com `--db` ou `GBFAM_DB`).
 

@@ -10,7 +10,8 @@
     dist\GestaoBIM-Setup-<versao>.exe  (build/SetupStub.cs: confere o SHA-256, recusa com o Revit aberto, /quiet)
   Os cinco plugins tem a MESMA versao (o <Version> dos cinco .csproj) e a release do GitHub usa a tag v<versao>.
 .NOTES
-  Precisa do gbfam.exe compilado (cargo build --release em tools/gbfam), dos modelos de IA e da pasta do catalogo gerado por 'gbfam export-catalog' (-CatalogDir ou GBFAM_CATALOG_DIR); os parametros sao repassados ao package-familias.ps1.
+  Precisa do gbfam.exe compilado (cargo build --release em tools/gbfam), dos modelos de IA e da pasta do catalogo
+  gerado por 'gbfam export-catalog' (informe -CatalogDir ou defina a variavel de ambiente GBFAM_CATALOG_DIR).
 #>
 param(
     [string]$Configuration = 'Release',

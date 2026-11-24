@@ -22,12 +22,12 @@ Os cinco plugins (GB Material Studio, GB DWG Export, GB Famílias, GB Cotas e GB
 
 ## 2. Empacotar
 
-O pacote é gerado na máquina de quem publica porque leva o `gbfam.exe` e os modelos de IA, que não estão no
-repositório, e o **catálogo** de famílias (gerado fora do repositório com `gbfam export-catalog`):
+O pacote é gerado na máquina de quem publica porque leva o `gbfam.exe`, os modelos de IA e o **catálogo** de famílias
+(gerado fora do repositório público com `gbfam export-catalog`):
 
 ```powershell
 cargo build --release --manifest-path tools/gbfam/Cargo.toml     # o gbfam.exe
-./build/package-gestaobim.ps1
+./build/package-gestaobim.ps1 -CatalogDir <pasta-do-catalogo>
 ```
 
 O script compila os cinco plugins para o Revit 2025, 2026 e 2027, junta tudo e gera em `dist/`. O
@@ -87,7 +87,7 @@ Export compilado do código atual no Revit daquele ano. Detalhes em [GB-DWG-EXPO
 Os comandos do Material Studio e as janelas (cliques) continuam sendo testados à mão: abra o Revit,
 confira a aba "Gestão BIM", **Configurações → Entrar** e inserir uma família que ainda não foi baixada.
 
-Antes de publicar, confira também o status do servidor (saúde do serviço de arquivos). A versão do plugin precisa ser
+Antes de publicar, confira também se o servidor de arquivos está online. A versão do plugin precisa ser
 igual ou maior que o `min_plugin` do catálogo publicado.
 
 ## 4. Publicar

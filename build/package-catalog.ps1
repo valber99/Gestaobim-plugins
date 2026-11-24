@@ -4,7 +4,7 @@
   familias de quem ja tem o plugin instalado, sem reinstalar o plugin nem baixar de novo os ~1 GB do motor de IA.
   O Instalar.bat so troca o catalogo se a versao do pacote for mais nova que a instalada.
 .NOTES
-  O catalogo vem da pasta gerada por 'gbfam export-catalog' (-CatalogDir ou GBFAM_CATALOG_DIR).
+  O catalogo vem da pasta gerada por 'gbfam export-catalog' (informe -CatalogDir ou defina GBFAM_CATALOG_DIR).
 #>
 param(
     [string]$CatalogDir = $env:GBFAM_CATALOG_DIR
@@ -13,8 +13,9 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')
 
 $root = Split-Path $PSScriptRoot
+if (-not $CatalogDir) { throw 'Informe -CatalogDir <pasta-do-catalogo> ou defina GBFAM_CATALOG_DIR.' }
 $manifestFile = Join-Path $CatalogDir 'manifest.json'
-if (-not (Test-Path $manifestFile)) { throw "Catalogo nao encontrado em ${CatalogDir}. Gere com: 'gbfam export-catalog'." }
+if (-not (Test-Path $manifestFile)) { throw "Catalogo nao encontrado em ${CatalogDir}. Gere com 'gbfam export-catalog'." }
 $manifest = Get-Content $manifestFile -Raw -Encoding UTF8 | ConvertFrom-Json
 $snapshot = Join-Path $CatalogDir $manifest.snapshot.file
 if (-not (Test-Path $snapshot)) { throw "Falta $($manifest.snapshot.file) em $CatalogDir." }

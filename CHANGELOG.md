@@ -199,7 +199,7 @@ A partir desta versão os três plugins saem juntos, com **uma versão só** e a
 ### Limitações
 - Testado por dentro dos Revit 2025, 2026 e 2027 reais (27/27 em cada: baixar, carregar e posicionar, sem internet, sem
   login, Sobre único); a janela em si foi exercitada fora do Revit, então vale um uso manual curto antes de distribuir.
-- Os modelos de IA pesam ~1 GB. Confira os direitos de redistribuição das famílias.
+- Os modelos de IA pesam ~1 GB. Confira os direitos de redistribuição das famílias antes de compartilhar acesso.
 
 ## Famílias 0.1.0
 

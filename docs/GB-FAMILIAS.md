@@ -3,8 +3,8 @@
 Biblioteca de famílias do Revit com **busca por texto e por imagem**, filtros, categorias, favoritos e coleções.
 Aparece como o painel **Famílias** na aba **Gestão BIM**, junto dos outros plugins.
 
-Este documento tem o guia do usuário, a arquitetura e como publicar. Desde a 0.4.0 o GB Famílias sai no **instalador
-único Gestão BIM** (`GestaoBIM-Setup-<versão>.exe`, tag `v<versão>`), junto dos outros dois plugins.
+Este documento tem o guia do usuário, a arquitetura do plugin e como empacotar. Desde a 0.4.0 o GB Famílias sai no **instalador
+único Gestão BIM** (`GestaoBIM-Setup-<versão>.exe`, tag `v<versão>`), junto dos outros plugins.
 
 ## Guia do usuário
 
@@ -133,7 +133,8 @@ tools/gbfam                  o motor em Rust: ingestão, IA generativa, embeddin
 installer, build             manifesto .addin, instaladores e empacotamento
 ```
 
-O **servidor de arquivos e autenticação** é mantido separadamente deste repositório público. O plugin só conhece o contrato HTTP público abaixo.
+O **servidor de arquivos e autenticação** é mantido separadamente deste repositório público. O plugin só conhece o
+contrato HTTP público abaixo.
 
 Mesmo padrão dos outros plugins: um código-fonte e uma compilação por ano do Revit (`-p:RevitVersion=2025|2026|2027`),
 o Core compilado dentro da DLL do add-in, a aba **Gestão BIM** compartilhada, o `Install.ps1` genérico, o botão
@@ -148,13 +149,13 @@ o Core compilado dentro da DLL do add-in, a aba **Gestão BIM** compartilhada, o
 | `GET /v1/catalog/manifest.json` + `manifest.sig` | (opcional, `catalog_sync`) versão, hashes e deltas do catálogo, **assinado com Ed25519** |
 | `GET /v1/catalog/<arquivo>` | (opcional) snapshot (`catalog-<v>.sqlite.gz`) ou delta (`delta-<a>-<b>.json.gz`) |
 
-Todas exigem `Authorization: Bearer <token>` e o papel `revit:user`. O pedido é **só pelo SHA-256**: o servidor não aceita caminho nem nome de arquivo, então não há como
-pedir algo fora do catálogo. (O caminho relativo de cada família viaja no catálogo, para montar a mesma estrutura de
-pastas no seu computador.)
+Todas exigem `Authorization: Bearer <token>` (OIDC/OAuth 2.0 + PKCE) e o papel `revit:user`. O pedido é **só pelo
+SHA-256**: o servidor não aceita caminho nem nome de arquivo, impedindo pedidos fora do catálogo. (O caminho relativo de
+cada família viaja no catálogo para organizar as pastas no computador do usuário.)
 
 ### Decisões
 
-**Um só botão "Sobre" para os três plugins.** Cada plugin é uma DLL separada, então `src/GBShared/AboutHub.cs` é compilado
+**Um só botão "Sobre" para os plugins.** Cada plugin é uma DLL separada, então `src/GBShared/AboutHub.cs` é compilado
 dentro de cada uma e as cópias se coordenam por dados do `AppDomain` (só tipos da biblioteca padrão, que têm a mesma
 identidade em todas as DLLs): o primeiro plugin a iniciar cria o painel **Geral** com o botão; os outros só se
 registram. Ao clicar, uma janela mostra todos os plugins instalados (versão, aviso de versão nova e diagnóstico de cada
@@ -162,8 +163,8 @@ um); a bolinha vermelha acende se qualquer um tiver versão nova. Testado nos Re
 
 **Login: OAuth 2.0 Authorization Code + PKCE, sem segredo no plugin.** O plugin abre o navegador do sistema e recebe
 o retorno num servidor mínimo em `127.0.0.1` (uma das portas 53682 a 53684, só `TcpListener`, sem reserva de URL nem
-administrador). O cliente OIDC é público (sem segredo embutido), o `state` é conferido, e o `access_token` é renovado sozinho
-(com o `refresh_token`, uma única renovação mesmo com várias chamadas ao mesmo tempo). Os tokens ficam no disco
+administrador). O cliente OIDC é público (sem segredo embutido), o `state` é conferido, e o `access_token` é renovado
+sozinho (com o `refresh_token`, uma única renovação mesmo com várias chamadas ao mesmo tempo). Os tokens ficam no disco
 protegidos pela **DPAPI do Windows** (chamada direta a `crypt32`, sem pacote extra dentro do Revit). Sem internet a
 renovação **não** apaga a sessão; só uma recusa do servidor (`invalid_grant`) apaga.
 
@@ -253,49 +254,42 @@ escala. Reavalie acima de ~50 mil famílias.
   `gbfam export-catalog` e aplicado pelo plugin.
 - `cargo test` em `tools/gbfam`: 12 testes do catálogo (assinatura, delta idêntico ao banco novo, cadeia, versão que só
   cresce, adulteração, caminhos perigosos).
-- **De ponta a ponta contra o servidor real**: 22 verificações com tokens JWT reais (login, papéis, catálogo
-  assinado, download com SHA-256, `Range`, limites, caminhos perigosos).
+- **Testes integrados contra o servidor**: verificações de ponta a ponta com tokens JWT reais (login, papéis, catálogo
+  assinado, download com SHA-256, `Range`, limites de cota, caminhos perigosos).
 - A **janela** foi exercitada fora do Revit contra o servidor real (28 verificações): primeiro uso, catálogo, download
   de uma família, marca "baixada", filtro, arquivo corrompido, atualização por delta e sessão apagada, com capturas.
 - **Dentro do Revit real, nos três anos** (`./build/revit-selftest.ps1 -Year <ano>`, com o Revit fechado): o script
-  instala os três plugins, abre o Revit com dados isolados e um login de teste, e o plugin roda o fluxo por dentro.
-  **Revit 2025, 2026 e 2027: 27/27 cada** (22/11/2026): um só botão Sobre com os três plugins, login salvo,
-  catálogo do instalador (3.368 famílias), busca de texto e por IA, **baixar uma família do servidor (SHA-256 confere),
-  carregar e posicionar num projeto**, reaproveitar, sem internet (a baixada continua disponível; a nova diz "sem
-  conexão") e sem login (pede o login). O clique humano no posicionamento (`PromptForFamilyInstancePlacement`) foi
-  exercitado no 2027 com a versão 0.1.
+  instala os plugins, abre o Revit com dados isolados e um login de teste, e o plugin roda o fluxo por dentro.
+  **Revit 2025, 2026 e 2027: 27/27 cada** (22/11/2026): botão Sobre único, login salvo, catálogo do instalador, busca
+  de texto e por IA, **baixar uma família do servidor (SHA-256 confere), carregar e posicionar num projeto**,
+  reaproveitar, sem internet (a baixada continua disponível; a nova diz "sem conexão") e sem login (pede o login).
 
 ## Publicar
 
 ```powershell
-# o instalador completo (plugin + motor de IA + modelos + catálogo)...
-./build/package-familias.ps1
-# ...ou só o catálogo, para quem já tem o plugin (alguns MB)
-./build/package-catalog.ps1
+# Empacotamento completo (plugin + motor de IA + modelos + catálogo gerado com gbfam export-catalog)...
+./build/package-familias.ps1 -CatalogDir <pasta-do-catalogo>
+# ...ou só o catálogo, para quem já tem o plugin
+./build/package-catalog.ps1 -CatalogDir <pasta-do-catalogo>
 ```
 
 `gbfam.exe` e os modelos não estão no repositório: o script do plugin os procura em `tools\gbfam\` (compile com
 `cargo build --release` e deixe os modelos em `tools\gbfam\.models`) e aceita `-GbfamExe` e `-Models`. Por isso o CI
-só **compila** o plugin para os três anos e roda os testes do Core e do `gbfam`; o pacote é gerado na máquina de
-quem publica. Informe a pasta do catálogo com `-CatalogDir` (ou `GBFAM_CATALOG_DIR`). A **chave privada de assinatura do catálogo** fica exclusivamente fora do repositório.
+só **compila** o plugin para os três anos e roda os testes do Core e do `gbfam`; o pacote é gerado na máquina de quem
+publica informando `-CatalogDir` (ou a variável de ambiente `GBFAM_CATALOG_DIR`). A **chave privada de assinatura do
+catálogo** fica exclusivamente fora do repositório.
 
-`./build/package-library.ps1` continua existindo para o administrador (monta o pacote completo, banco e `.rfa`, para
-uso interno ou para um ambiente sem servidor), mas **ele deixou de ser publicado**: distribuí-lo anularia o controle
-de acesso e os limites do servidor.
+`./build/package-library.ps1` continua existindo para uso interno ou ambiente local sem servidor, mas **não é publicado**.
 
-**Instalador `.exe`:** `GBFamilias-Setup-<versão>.exe` (~0,7 GB), o instalador próprio `build/SetupStub.cs` (o IExpress
-travava com esse tamanho). Ele confere o SHA-256 do pacote, recusa instalar com o Revit aberto e roda o `Install.ps1`.
-O `.zip` com `Instalar.bat` continua disponível; `-NoExe` gera só o `.zip`.
+**Instalador `.exe`:** `GBFamilias-Setup-<versão>.exe`, usando o instalador próprio `build/SetupStub.cs`. Ele confere o
+SHA-256 do pacote, recusa instalar com o Revit aberto e roda o `Install.ps1`. O `.zip` com `Instalar.bat` continua
+disponível; `-NoExe` gera só o `.zip`.
 
 ## Limitações conhecidas
 
-- A janela (botões, barra de andamento, pedido da pasta) foi exercitada fora do Revit; dentro dele, o fluxo foi testado
-  sem interface. Vale um uso manual curto (roteiro no plano) antes de distribuir.
 - Os modelos de IA pesam ~1 GB (o e5 em precisão total tem 448 MB). Versões quantizadas reduziriam bastante.
 - As miniaturas têm ~128 px, então a busca por imagem e as descrições têm pouco detalhe visual.
-- Cerca de 1% das famílias não tem preview. O `tools/gbfam/scripts/revit_gerar_previews.py` gera os que faltam dentro
-  do Revit, mas não foi executado.
+- Uma pequena fração das famílias (~3%) não tem preview embutido no `.rfa`; elas continuam pesquisáveis por nome e metadados.
 - O CLIP foi treinado em inglês: consultas em português dependem sobretudo do e5 sobre a descrição gerada.
-- Sem conexão com o servidor, a busca e as famílias já baixadas continuam funcionando, mas não há login novo nem download.
-- O direito de redistribuir as famílias de fabricantes e de terceiros precisa ser conferido antes de abrir o acesso
-  a mais pessoas (o login ajuda a controlar quem recebe).
+- Sem conexão com o servidor de arquivos, a busca local e as famílias já baixadas continuam funcionando, mas não é
+  possível fazer login novo nem baixar famílias ainda não presentes no computador.
