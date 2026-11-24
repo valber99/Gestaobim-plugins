@@ -80,9 +80,7 @@ public static class UpdateNotifier
         }
 
         var lines = new List<string> { $"Versão instalada: {UpdateRules.Normalize(Current).ToString(3)}" };
-        lines.Add(release is not null
-            ? $"Nova versão disponível: {release.Version.ToString(3)}. Para atualizar, baixe o .zip, feche o Revit e execute o Instalar.bat."
-            : failure ?? "Você está na versão mais recente.");
+        if (failure is not null) lines.Add(failure);
         lines.AddRange(Details());
         return (DisplayName, string.Join("\n", lines), release?.Version.ToString(3), release?.Url);
     }

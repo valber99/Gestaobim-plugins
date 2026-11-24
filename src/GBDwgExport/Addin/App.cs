@@ -58,11 +58,16 @@ public sealed class App : IExternalApplication
         panel.AddItem(Button("GBDwgViews", "Exportar\nvistas", typeof(ExportViewsCommand).FullName!, "exportar-vistas",
             "Exporta vistas (plantas, cortes, elevações, 3D...) para DWG ou DXF, e não só folhas."));
         panel.AddSeparator();
-        panel.AddStackedItems(
-            Button("GBDwgSettingsOut", "Exportar configurações", typeof(ExportSettingsCommand).FullName!, "config-exportar",
-                "Salva as configurações do GB DWG Export num arquivo .zip para levar a outra máquina."),
-            Button("GBDwgSettingsIn", "Importar configurações", typeof(ImportSettingsCommand).FullName!, "config-importar",
-                "Lê um .zip de configurações do GB DWG Export."));
+        var configMenu = (PulldownButton)panel.AddItem(new PulldownButtonData("GBDwgSettings", "Configurações")
+        {
+            ToolTip = "Exportar ou importar as configurações do GB DWG Export (.zip).",
+            LargeImage = Icon("config-exportar"),
+            Image = Icon("config-exportar"),
+        });
+        configMenu.AddPushButton(Button("GBDwgSettingsOut", "Exportar configurações", typeof(ExportSettingsCommand).FullName!, "config-exportar",
+            "Salva as configurações do GB DWG Export num arquivo .zip para levar a outra máquina."));
+        configMenu.AddPushButton(Button("GBDwgSettingsIn", "Importar configurações", typeof(ImportSettingsCommand).FullName!, "config-importar",
+            "Lê um .zip de configurações do GB DWG Export."));
         UpdateNotifier.Start(application);
     }
 

@@ -82,9 +82,12 @@ public static class AboutHub
         var image = updates.IsEmpty ? "sobre" : "sobre-novo";
         button.LargeImage = icon(image);
         button.Image = icon(image);
+        var distinctVersions = updates.Values.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         button.ToolTip = updates.IsEmpty
             ? Tooltip
-            : "Há versão nova: " + string.Join("; ", updates.OrderBy(u => u.Key).Select(u => $"{u.Key} {u.Value}")) + ". Clique para ver.";
+            : distinctVersions.Count == 1
+                ? $"Há uma nova versão do Gestão BIM disponível ({distinctVersions[0]}). Clique para baixar."
+                : "Há versão nova: " + string.Join("; ", updates.OrderBy(u => u.Key).Select(u => $"{u.Key} {u.Value}")) + ". Clique para ver.";
     }
 
     /// <summary>Clique no botao: consulta todos os plugins ao mesmo tempo e mostra uma janela so.</summary>
@@ -114,26 +117,46 @@ public static class AboutHub
         }
         Apply(icon);
 
+        // Deduplica por URL: como o instalador e unico, mostra um unico aviso e um unico botao de download.
+        var links = sections
+            .Where(s => s.Item3 is not null && s.Item4 is not null)
+            .GroupBy(s => s.Item4!, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.Count() > 1 ? ("Gestão BIM", g.First().Item3!, g.Key) : (g.First().Item1, g.First().Item3!, g.Key))
+            .Take(4)
+            .ToList();
+
+        var header = links.Count == 1
+            ? $"Nova versão disponível: {links[0].Item2}. Para atualizar, baixe o instalador único, feche o Revit e execute-o."
+            : links.Count > 1
+                ? "Há novas versões disponíveis. Escolha abaixo para baixar."
+                : "Você está na versão mais recente.";
+
+        var parts = new List<string> { header };
+        foreach (var s in sections)
+        {
+            var body = string.IsNullOrWhiteSpace(s.Item2) ? "" : "\n" + s.Item2;
+            parts.Add($"{s.Item1}{body}");
+        }
+
         var dialog = new TaskDialog("Gestão BIM")
         {
             MainInstruction = "Gestão BIM",
-            MainContent = string.Join("\n\n", sections.Select(s => $"{s.Item1}\n{s.Item2}")),
+            MainContent = string.Join("\n\n", parts),
             FooterText = "Código-fonte e licença AGPL-3.0: github.com/valber99/Gestaobim-plugins",
             CommonButtons = TaskDialogCommonButtons.Close,
             DefaultButton = TaskDialogResult.Close,
         };
-        var links = sections.Where(s => s.Item3 is not null && s.Item4 is not null).Take(4).ToList();
         TaskDialogCommandLinkId[] ids =
             [TaskDialogCommandLinkId.CommandLink1, TaskDialogCommandLinkId.CommandLink2, TaskDialogCommandLinkId.CommandLink3, TaskDialogCommandLinkId.CommandLink4];
         TaskDialogResult[] results =
             [TaskDialogResult.CommandLink1, TaskDialogResult.CommandLink2, TaskDialogResult.CommandLink3, TaskDialogResult.CommandLink4];
-        for (var i = 0; i < links.Count; i++) dialog.AddCommandLink(ids[i], $"Baixar {links[i].Item1} {links[i].Item3}");
+        for (var i = 0; i < links.Count; i++) dialog.AddCommandLink(ids[i], $"Baixar {links[i].Item1} {links[i].Item2}");
 
         var chosen = Array.IndexOf(results, dialog.Show());
         if (chosen < 0 || chosen >= links.Count) return;
         try
         {
-            Process.Start(new ProcessStartInfo(links[chosen].Item4!) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(links[chosen].Item3) { UseShellExecute = true });
         }
         catch (Exception)
         {

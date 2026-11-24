@@ -11,7 +11,7 @@ namespace Gestaobim.Render.Addin;
 /// <summary>Cria o painel "Render" na aba "Gestão BIM" e o botao unico "Configurar IA".</summary>
 public sealed class App : IExternalApplication
 {
-    private const string PanelName = "Render";
+    private const string PanelName = AiRibbon.ConfigPanelName;
     private static AiUpdateNotifier? _updates;
 
     public Result OnStartup(UIControlledApplication application)

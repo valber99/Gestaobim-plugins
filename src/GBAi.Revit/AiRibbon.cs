@@ -118,9 +118,7 @@ public sealed class AiUpdateNotifier(string displayName, Version current, Func<s
             failure = "Não foi possível consultar o GitHub. Verifique a conexão com a internet.";
         }
         var lines = new System.Collections.Generic.List<string> { $"Versão instalada: {AiUpdateRules.Normalize(current).ToString(3)}" };
-        lines.Add(release is not null
-            ? $"Nova versão disponível: {release.Version.ToString(3)}. Para atualizar, baixe o instalador, feche o Revit e execute-o."
-            : failure ?? "Você está na versão mais recente.");
+        if (failure is not null) lines.Add(failure);
         lines.AddRange(details());
         return (displayName, string.Join("\n", lines), release?.Version.ToString(3), release?.Url);
     }

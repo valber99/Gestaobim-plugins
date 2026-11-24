@@ -79,6 +79,9 @@ public sealed class AiClient : IAiGateway, IDisposable
 
     public async Task<ImageResult> GenerateImageAsync(string model, string prompt, IReadOnlyList<ImagePart> images, string? aspectRatio, string? imageSize, CancellationToken cancel = default)
     {
+        if (IsOpenAiImageModel(model))
+            return await GenerateOpenAiImageAsync(model, prompt, images, aspectRatio, cancel).ConfigureAwait(false);
+
         var parts = new JsonArray();
         foreach (var image in images)
         {
@@ -90,19 +93,96 @@ public sealed class AiClient : IAiGateway, IDisposable
         }
         parts.Add(new JsonObject { ["text"] = prompt });
 
-        var generation = new JsonObject { ["responseModalities"] = new JsonArray("TEXT", "IMAGE") };
-        var imageConfig = new JsonObject();
-        if (!string.IsNullOrEmpty(aspectRatio)) imageConfig["aspectRatio"] = aspectRatio;
-        if (!string.IsNullOrEmpty(imageSize)) imageConfig["imageSize"] = imageSize;
-        if (imageConfig.Count > 0) generation["imageConfig"] = imageConfig;
-
-        var body = new JsonObject
+        JsonObject BuildBody(bool includeImageConfig)
         {
-            ["contents"] = new JsonArray(new JsonObject { ["role"] = "user", ["parts"] = parts }),
-            ["generationConfig"] = generation,
-        };
-        var node = await SendAsync(HttpMethod.Post, $"/v1beta/models/{Uri.EscapeDataString(model)}:generateContent", body, cancel).ConfigureAwait(false);
+            var generation = new JsonObject { ["responseModalities"] = new JsonArray("TEXT", "IMAGE") };
+            if (includeImageConfig)
+            {
+                var imageConfig = new JsonObject();
+                if (!string.IsNullOrEmpty(aspectRatio)) imageConfig["aspectRatio"] = aspectRatio;
+                if (!string.IsNullOrEmpty(imageSize)) imageConfig["imageSize"] = imageSize;
+                if (imageConfig.Count > 0) generation["imageConfig"] = imageConfig;
+            }
+            return new JsonObject
+            {
+                ["contents"] = new JsonArray(new JsonObject { ["role"] = "user", ["parts"] = parts.DeepClone() }),
+                ["generationConfig"] = generation,
+            };
+        }
+
+        var path = $"/v1beta/models/{Uri.EscapeDataString(model)}:generateContent";
+        JsonNode? node;
+        try
+        {
+            node = await SendAsync(HttpMethod.Post, path, BuildBody(includeImageConfig: true), cancel).ConfigureAwait(false);
+        }
+        catch (AiException ex) when (ex.Status == 400
+            && (!string.IsNullOrEmpty(aspectRatio) || !string.IsNullOrEmpty(imageSize))
+            && (ex.Message.Contains("aspect", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("image_config", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("imageConfig", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("image_size", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("imageSize", StringComparison.OrdinalIgnoreCase)))
+        {
+            // Alguns modelos/gateways nao suportam imageConfig (aspectRatio/imageSize): repete sem esse bloco.
+            node = await SendAsync(HttpMethod.Post, path, BuildBody(includeImageConfig: false), cancel).ConfigureAwait(false);
+        }
         return ParseImage(node);
+    }
+
+    private static bool IsOpenAiImageModel(string model) =>
+        model.StartsWith("gpt-image", StringComparison.OrdinalIgnoreCase)
+        || model.StartsWith("dall-e", StringComparison.OrdinalIgnoreCase);
+
+    private async Task<ImageResult> GenerateOpenAiImageAsync(string model, string prompt, IReadOnlyList<ImagePart> images, string? aspectRatio, CancellationToken cancel)
+    {
+        var size = aspectRatio switch
+        {
+            "9:16" or "2:3" or "3:4" or "4:5" => "1024x1536",
+            "16:9" or "3:2" or "4:3" or "5:4" or "21:9" => "1536x1024",
+            _ => "1024x1024",
+        };
+        var path = images.Count > 0 ? "/v1/images/edits" : "/v1/images/generations";
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent(model), "model");
+        form.Add(new StringContent(prompt), "prompt");
+        form.Add(new StringContent(size), "size");
+        foreach (var img in images)
+        {
+            var ext = img.MimeType.Contains("jpeg", StringComparison.OrdinalIgnoreCase) ? ".jpg" : ".png";
+            var content = new ByteArrayContent(img.Bytes);
+            content.Headers.ContentType = new MediaTypeHeaderValue(img.MimeType);
+            form.Add(content, "image[]", img.Label + ext);
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = form };
+        HttpResponseMessage response;
+        try
+        {
+            response = await _http.SendAsync(request, cancel).ConfigureAwait(false);
+        }
+        catch (HttpRequestException error)
+        {
+            throw new AiException("Nao foi possivel falar com o gateway de IA: " + Redactor.Scrub(error.Message, _token));
+        }
+        catch (TaskCanceledException) when (!cancel.IsCancellationRequested)
+        {
+            throw new AiException("O gateway de IA demorou demais para responder.");
+        }
+
+        using (response)
+        {
+            var text = await response.Content.ReadAsStringAsync(cancel).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+                throw new AiException($"O gateway respondeu {(int)response.StatusCode}: {Redactor.Shorten(Redactor.Scrub(ErrorMessage(text), _token), 400)}", (int)response.StatusCode);
+            JsonNode? node;
+            try { node = JsonNode.Parse(text); }
+            catch (JsonException) { throw new AiException("O gateway de IA devolveu uma resposta JSON invalida."); }
+            var b64 = node?["data"]?[0]?["b64_json"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(b64))
+                throw new AiException("O modelo de imagem nao devolveu dados base64 na resposta.");
+            return new ImageResult(Convert.FromBase64String(b64), "image/png", null);
+        }
     }
 
     /// <summary>Extrai a primeira imagem (e o texto) de uma resposta do generateContent.</summary>

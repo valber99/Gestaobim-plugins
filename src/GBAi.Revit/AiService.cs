@@ -24,8 +24,20 @@ public sealed class AiConnection : IDisposable
 
     public string ImageModel => Resolve(Settings.ImageModel, image: true);
 
-    private string Resolve(string chosen, bool image) =>
-        !string.IsNullOrWhiteSpace(chosen) && Models.Contains(chosen) ? chosen : AiSettings.PickModel(Models, image);
+    private string Resolve(string chosen, bool image)
+    {
+        if (!string.IsNullOrWhiteSpace(chosen) && Models.Contains(chosen))
+        {
+            // Se o usuario deixou um modelo de texto no campo de render mas ha um modelo de imagem disponivel, usa o de imagem.
+            if (image && !AiUi.LooksLikeImageModel(chosen))
+            {
+                var autoImg = AiSettings.PickModel(Models, image: true);
+                if (!string.IsNullOrWhiteSpace(autoImg) && AiUi.LooksLikeImageModel(autoImg)) return autoImg;
+            }
+            return chosen;
+        }
+        return AiSettings.PickModel(Models, image);
+    }
 
     public void Dispose() => Client.Dispose();
 }

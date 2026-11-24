@@ -63,7 +63,7 @@ public static class RenderJob
         var report = new RenderReport { Kind = "render", Model = model, Width = passes.Width, Height = passes.Height, ObjectCount = passes.Manifest.ObjectCount };
         AddInputHashes(report, request);
         var timer = Stopwatch.StartNew();
-        var aspect = passes.Manifest.Manifest["camera"]?["aspect_ratio"]?.ToString();
+        var aspect = SupportedAspectRatio((double)passes.Width / Math.Max(1, passes.Height));
         var image = await ai.GenerateImageAsync(model, request.Prompt, request.Images, aspect, quality.ToImageSize(), cancel).ConfigureAwait(false);
         report.DurationSeconds = Math.Round(timer.Elapsed.TotalSeconds, 2);
         return Save(image, report, folder, "render", token);
@@ -88,7 +88,7 @@ public static class RenderJob
         var report = new RenderReport { Kind = "edit", Model = model, Width = passes.Width, Height = passes.Height, EditedObject = description, ObjectCount = indexes.Count };
         AddInputHashes(report, request);
         var timer = Stopwatch.StartNew();
-        var aspect = passes.Manifest.Manifest["camera"]?["aspect_ratio"]?.ToString();
+        var aspect = SupportedAspectRatio((double)passes.Width / Math.Max(1, passes.Height));
         var image = await ai.GenerateImageAsync(model, request.Prompt, request.Images, aspect, quality.ToImageSize(), cancel).ConfigureAwait(false);
         report.DurationSeconds = Math.Round(timer.Elapsed.TotalSeconds, 2);
 
@@ -113,6 +113,38 @@ public static class RenderJob
             report.Note = "Nao foi possivel conferir a edicao: " + error.Message;
         }
         return new EditedRender(Save(image, report, folder, "edicao", token), check);
+    }
+
+    private static readonly (string Label, double Ratio)[] GeminiAspectRatios =
+    [
+        ("1:1", 1.0),
+        ("1:4", 1.0 / 4.0),
+        ("1:8", 1.0 / 8.0),
+        ("2:3", 2.0 / 3.0),
+        ("3:2", 3.0 / 2.0),
+        ("3:4", 3.0 / 4.0),
+        ("4:1", 4.0),
+        ("4:3", 4.0 / 3.0),
+        ("4:5", 4.0 / 5.0),
+        ("5:4", 5.0 / 4.0),
+        ("8:1", 8.0),
+        ("9:16", 9.0 / 16.0),
+        ("16:9", 16.0 / 9.0),
+        ("21:9", 21.0 / 9.0),
+    ];
+
+    /// <summary>Mapeia qualquer proporcao da vista 3D para o aspect_ratio suportado mais proximo na API Gemini.</summary>
+    public static string SupportedAspectRatio(double aspect)
+    {
+        if (double.IsNaN(aspect) || double.IsInfinity(aspect) || aspect <= 0) return "16:9";
+        var best = GeminiAspectRatios[0];
+        var bestDist = double.PositiveInfinity;
+        foreach (var item in GeminiAspectRatios)
+        {
+            var dist = Math.Abs(Math.Log(aspect / item.Ratio));
+            if (dist < bestDist) { bestDist = dist; best = item; }
+        }
+        return best.Label;
     }
 
     private static void AddInputHashes(RenderReport report, RenderRequest request)

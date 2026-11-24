@@ -4,6 +4,27 @@ Desde a **0.4.0** os plugins saem num instalador único (cinco desde a 0.5.0), c
 Antes disso, cada um tinha a sua: **GB DWG Export** com tag `dwg-v<versão>` (prefixo "DWG" abaixo), **GB Famílias**
 com `familias-v<versão>` (prefixo "Famílias") e GB Material Studio com `v<versão>`.
 
+## 0.5.2 — Nova interface, barra organizada, logo GBiM e correções no GB Render
+
+### Melhorado
+- **Barra de plugins (Ribbon)**: `Configurar IA`, `Cotar vista` e `Render com IA` agrupados no painel único **IA**;
+  no **Exportar DWG**, *Exportar* e *Importar configurações* unificados no botão dropdown **Configurações**.
+- **GB Famílias**: nova interface moderna com cabeçalho escuro, cards arredondados, grade responsiva (ajusta
+  automaticamente o número de colunas à largura da janela), ações fixas no rodapé do painel de detalhes, filtro
+  **Somente baixadas** visível e remoção do filtro redundante *Pasta de origem*.
+- **GB Render, GB Cotas e Configurar IA**: interface unificada em cards com barra de progresso, pré-visualização da
+  imagem renderizada/clay direto na janela do **GB Render**, carregamento automático de modelos ao abrir **Configurar
+  IA** com aviso se um modelo de texto for selecionado para render, botões *Marcar/Desmarcar todas* no **GB Cotas** e
+  cancelamento seguro ao fechar qualquer janela.
+- **Janela Sobre (`AboutHub`)**: aviso de atualização e botão **Baixar Gestão BIM** exibidos uma única vez para o
+  instalador único.
+- **Instalador (`GestaoBIM-Setup-0.5.2.exe`)**: novo ícone multi-resolução e logo **GBiM** no cabeçalho da janela.
+
+### Corrigido
+- **GB Render**: corrigido erro `400` de `aspect_ratio` mapeando a proporção da vista 3D para o valor suportado mais
+  próximo na API Gemini, com fallback automático sem `imageConfig` para modelos que não habilitam `aspect_ratio`, e
+  seleção automática de modelo de imagem caso um modelo de texto esteja salvo.
+
 ## 0.5.1 — Instalador gráfico, busca IA em RAM e correções de estabilidade
 
 ### Novo

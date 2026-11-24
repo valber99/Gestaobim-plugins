@@ -106,8 +106,13 @@ public sealed class AiSettings
     public static string PickModel(IReadOnlyList<string> models, bool image)
     {
         if (image)
-            return models.FirstOrDefault(m => m.Contains("image", StringComparison.OrdinalIgnoreCase)
+            return models.FirstOrDefault(m => m.Contains("gemini", StringComparison.OrdinalIgnoreCase)
+                                              && m.Contains("image", StringComparison.OrdinalIgnoreCase)
                                               && m.Contains("pro", StringComparison.OrdinalIgnoreCase))
+                   ?? models.FirstOrDefault(m => m.Contains("gemini", StringComparison.OrdinalIgnoreCase)
+                                                 && m.Contains("image", StringComparison.OrdinalIgnoreCase))
+                   ?? models.FirstOrDefault(m => m.Contains("image", StringComparison.OrdinalIgnoreCase)
+                                                 && m.Contains("pro", StringComparison.OrdinalIgnoreCase))
                    ?? models.FirstOrDefault(m => m.Contains("image", StringComparison.OrdinalIgnoreCase))
                    ?? "";
         foreach (var family in new[] { "claude", "gpt", "gemini" })

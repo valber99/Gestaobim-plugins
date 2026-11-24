@@ -369,26 +369,45 @@ sealed class SetupForm : Form
         BackColor = Color.White;
         Font = new Font("Segoe UI", 9.5f);
         ClientSize = new Size(560, 445);
+        try { Icon = Icon.ExtractAssociatedIcon(exePath); } catch { }
 
         // Cabecalho
         var header = new Panel();
         header.Dock = DockStyle.Top;
-        header.Height = 82;
+        header.Height = 84;
         header.BackColor = Color.FromArgb(18, 38, 58);
+
+        int textLeft = 24;
+        try
+        {
+            var logoStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("gestaobim-logo.png");
+            if (logoStream != null)
+            {
+                var pic = new PictureBox();
+                pic.Image = Image.FromStream(logoStream);
+                pic.SizeMode = PictureBoxSizeMode.Zoom;
+                pic.Location = new Point(20, 14);
+                pic.Size = new Size(56, 56);
+                pic.BackColor = Color.Transparent;
+                header.Controls.Add(pic);
+                textLeft = 88;
+            }
+        }
+        catch { }
 
         var lblTitle = new Label();
         lblTitle.Text = titleText;
         lblTitle.ForeColor = Color.White;
         lblTitle.Font = new Font("Segoe UI", 16f, FontStyle.Bold);
         lblTitle.AutoSize = true;
-        lblTitle.Location = new Point(24, 16);
+        lblTitle.Location = new Point(textLeft, 16);
 
         var lblSub = new Label();
         lblSub.Text = "Plugins para Autodesk Revit 2025, 2026 e 2027 (sem precisar de administrador)";
         lblSub.ForeColor = Color.FromArgb(196, 214, 232);
-        lblSub.Font = new Font("Segoe UI", 9.2f);
+        lblSub.Font = new Font("Segoe UI", 9.0f);
         lblSub.AutoSize = true;
-        lblSub.Location = new Point(25, 50);
+        lblSub.Location = new Point(textLeft + 1, 50);
 
         header.Controls.Add(lblTitle);
         header.Controls.Add(lblSub);

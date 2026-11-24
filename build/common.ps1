@@ -22,13 +22,15 @@ function New-LargeSetupExe {
     $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
     if (-not (Test-Path $csc)) { throw "csc.exe do .NET Framework nao encontrado: $csc" }
     $stub = Join-Path (Split-Path $Exe) 'setup-stub.exe'
-    $ico = Join-Path (Split-Path $PSScriptRoot) 'GBMaterialStudio.extension\lib\valber-materials.ico'
+    $ico = Join-Path $PSScriptRoot 'gestaobim.ico'
+    $logo = Join-Path $PSScriptRoot 'gestaobim-logo.png'
     $cscArgs = @(
         '/nologo', '/optimize+', '/target:winexe', "/out:$stub",
         '/r:System.IO.Compression.dll', '/r:System.IO.Compression.FileSystem.dll',
         '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll'
     )
     if (Test-Path $ico) { $cscArgs += "/win32icon:$ico" }
+    if (Test-Path $logo) { $cscArgs += "/resource:$logo,gestaobim-logo.png" }
     $cscArgs += (Join-Path $PSScriptRoot 'SetupStub.cs')
     & $csc @cscArgs
     if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar o instalador (SetupStub.cs).' }

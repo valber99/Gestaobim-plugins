@@ -37,6 +37,24 @@ public partial class BrowserWindow : Window
     private bool _ready;
     private bool _suppress;
     private bool _closed;
+    private WrapPanel? _cardsWrap;
+
+    private void OnCardsWrapLoaded(object sender, RoutedEventArgs e)
+    {
+        _cardsWrap = sender as WrapPanel;
+        UpdateCardWidth();
+    }
+
+    private void OnResultsSizeChanged(object sender, SizeChangedEventArgs e) => UpdateCardWidth();
+
+    private void UpdateCardWidth()
+    {
+        if (_cardsWrap is null) return;
+        var available = ResultsList.ActualWidth - 24;
+        if (available < 160) return;
+        var cols = Math.Max(2, (int)Math.Floor(available / 158.0));
+        _cardsWrap.ItemWidth = Math.Floor(available / cols);
+    }
 
     private sealed class FacetPanel
     {
@@ -266,7 +284,7 @@ public partial class BrowserWindow : Window
     {
         foreach (var (facet, title) in new[]
                  {
-                     (Facet.Folder, "Pasta de origem"), (Facet.Environment, "Ambiente"), (Facet.Material, "Material"),
+                     (Facet.Environment, "Ambiente"), (Facet.Material, "Material"),
                      (Facet.Color, "Cor"), (Facet.Style, "Estilo"), (Facet.RevitVersion, "Versão do Revit"),
                      (Facet.RevitCategory, "Categoria no Revit"),
                  })

@@ -11,7 +11,7 @@ namespace Gestaobim.Cotas.Addin;
 /// <summary>Cria o painel "Cotas" na aba "Gestão BIM" e o botao unico "Configurar IA".</summary>
 public sealed class App : IExternalApplication
 {
-    private const string PanelName = "Cotas";
+    private const string PanelName = AiRibbon.ConfigPanelName;
     private static AiUpdateNotifier? _updates;
 
     public Result OnStartup(UIControlledApplication application)

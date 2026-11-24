@@ -1,57 +1,159 @@
 <Window x:Class="Gestaobim.Familias.UI.BrowserWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="GB Famílias" Width="1320" Height="820" MinWidth="1000" MinHeight="600"
+        Title="GB Famílias" Width="1360" Height="840" MinWidth="1020" MinHeight="620"
         WindowStartupLocation="CenterScreen" ShowInTaskbar="True" FontFamily="Segoe UI" FontSize="13"
-        Background="#FFF7F8FA">
+        Background="#FFF1F5F9" Foreground="#FF1E293B">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolVis"/>
 
         <Style TargetType="Button">
-            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#FF1E293B"/>
+            <Setter Property="BorderBrush" Value="#FFCBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,6"/>
             <Setter Property="MinWidth" Value="64"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#FFF1F5F9"/>
+                                <Setter TargetName="Bg" Property="BorderBrush" Value="#FF94A3B8"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#FFE2E8F0"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
-        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="#FF2B6CB0"/>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF1677FF"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#FF204E80"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="12,8"/>
-        </Style>
-        <Style TargetType="CheckBox">
-            <Setter Property="Margin" Value="0,2"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-        <Style x:Key="SideExpander" TargetType="Expander">
-            <Setter Property="Margin" Value="0,0,0,6"/>
-            <Setter Property="IsExpanded" Value="False"/>
-        </Style>
-        <Style x:Key="StarButton" TargetType="Button">
-            <Setter Property="Background" Value="#CCFFFFFF"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="#FFE0A100"/>
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="Padding" Value="14,9"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#FF0958D9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#FF003EB3"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="HeaderButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF1E3A5F"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF335C81"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#FF284B7A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#FF162C47"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,3"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="#FF334155"/>
+        </Style>
+
+        <Style x:Key="SideExpander" TargetType="Expander">
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="IsExpanded" Value="False"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FF1E293B"/>
+        </Style>
+
+        <Style x:Key="StarButton" TargetType="Button">
+            <Setter Property="Background" Value="#E6FFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#FFF59E0B"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Padding" Value="5,1"/>
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="ToolTip" Value="Favoritar"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="12" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
+
         <Style x:Key="CardItemStyle" TargetType="ListBoxItem">
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Frame" BorderThickness="2" BorderBrush="Transparent" CornerRadius="8" Background="Transparent">
+                        <Border x:Name="Frame" BorderThickness="2" BorderBrush="Transparent" CornerRadius="10" Background="Transparent" Margin="2">
                             <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Frame" Property="Background" Value="#FFEEF3F9"/>
+                                <Setter TargetName="Frame" Property="Background" Value="#FFE2E8F0"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Frame" Property="BorderBrush" Value="#FF2B6CB0"/>
-                                <Setter TargetName="Frame" Property="Background" Value="#FFE3EEFA"/>
+                                <Setter TargetName="Frame" Property="BorderBrush" Value="#FF1677FF"/>
+                                <Setter TargetName="Frame" Property="Background" Value="#FFDBEAFE"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -60,210 +162,233 @@
         </Style>
 
         <DataTemplate x:Key="CardTemplate">
-            <Border Width="150" Height="188" Margin="3" Padding="6" Background="White" BorderBrush="#FFDDE1E7"
-                    BorderThickness="1" CornerRadius="6">
+            <Border Height="198" Margin="1" Padding="7" Background="White" BorderBrush="#FFE2E8F0"
+                    BorderThickness="1" CornerRadius="8">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="128"/>
+                        <RowDefinition Height="120"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Border Background="#FFF1F3F6" CornerRadius="4">
+                    <Border Background="#FFF8FAFC" CornerRadius="6" BorderBrush="#FFF1F5F9" BorderThickness="1">
                         <Grid>
-                            <Image Source="{Binding Thumbnail}" Stretch="Uniform" Margin="4"
+                            <Image Source="{Binding Thumbnail}" Stretch="Uniform" Margin="5"
                                    RenderOptions.BitmapScalingMode="HighQuality"/>
-                            <TextBlock Text="sem preview" Foreground="#FF9AA1AD" FontSize="11" HorizontalAlignment="Center"
+                            <TextBlock Text="sem preview" Foreground="#FF94A3B8" FontSize="11" HorizontalAlignment="Center"
                                        VerticalAlignment="Center" Visibility="{Binding NoPreview, Converter={StaticResource BoolVis}}"/>
-                            <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="#99204E80" CornerRadius="3"
-                                    Padding="4,0" Margin="3" ToolTip="Versão do Revit em que a família foi salva">
-                                <TextBlock Text="{Binding VersionBadge}" Foreground="White" FontSize="10"/>
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="#CC1E293B" CornerRadius="4"
+                                    Padding="5,1" Margin="4" ToolTip="Versão do Revit em que a família foi salva">
+                                <TextBlock Text="{Binding VersionBadge}" Foreground="White" FontSize="10" FontWeight="SemiBold"/>
                             </Border>
-                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="#FF2F855A" CornerRadius="3"
-                                    Padding="4,0" Margin="3" ToolTip="Já está na sua pasta de downloads"
+                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="#FF16A34A" CornerRadius="4"
+                                    Padding="5,1" Margin="4" ToolTip="Já está na sua pasta de downloads"
                                     Visibility="{Binding ShowDownloaded, Converter={StaticResource BoolVis}}">
-                                <TextBlock Text="✓ baixada" Foreground="White" FontSize="10"/>
+                                <TextBlock Text="✓ baixada" Foreground="White" FontSize="10" FontWeight="SemiBold"/>
                             </Border>
                             <Button Style="{StaticResource StarButton}" Content="{Binding StarText}" Tag="{Binding}"
-                                    Click="OnStarClick" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2"/>
+                                    Click="OnStarClick" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="3"/>
                         </Grid>
                     </Border>
                     <TextBlock Grid.Row="1" Text="{Binding Title}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
-                               MaxHeight="34" FontWeight="SemiBold" Margin="0,6,0,0" ToolTip="{Binding Title}"/>
-                    <TextBlock Grid.Row="2" Text="{Binding Subtitle}" Foreground="#FF6B7280" FontSize="11"
-                               TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                               MaxHeight="34" FontWeight="SemiBold" Foreground="#FF0F172A" FontSize="12" Margin="0,6,0,0" ToolTip="{Binding Title}"/>
+                    <TextBlock Grid.Row="2" Text="{Binding Subtitle}" Foreground="#FF64748B" FontSize="11"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Bottom" Margin="0,2,0,0"/>
                 </Grid>
             </Border>
         </DataTemplate>
 
         <DataTemplate x:Key="FacetTemplate">
-            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" Content="{Binding Text}"
+            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" Content="{Binding Text}" FontWeight="Normal"
                       Checked="OnFacetToggled" Unchecked="OnFacetToggled"/>
         </DataTemplate>
     </Window.Resources>
 
-    <Grid Margin="12">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Barra de busca -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,10" LastChildFill="True">
-            <Button x:Name="SettingsButton" DockPanel.Dock="Right" Content="Configurações" Margin="8,0,0,0" Click="OnSettings"/>
-            <Button x:Name="SyncButton" DockPanel.Dock="Right" Content="Atualizar catálogo" Margin="8,0,0,0" Click="OnSync" Visibility="Collapsed"
-                    ToolTip="Procura no servidor um catálogo novo (famílias, previews e dados de busca)"/>
-            <Button x:Name="ClearButton" DockPanel.Dock="Right" Content="Limpar filtros" Margin="8,0,0,0" Click="OnClearFilters"/>
-            <ComboBox x:Name="SortBox" DockPanel.Dock="Right" Width="130" Margin="8,0,0,0" SelectionChanged="OnSortChanged"
-                      ToolTip="Ordem dos resultados">
-                <ComboBoxItem Content="Relevância" IsSelected="True"/>
-                <ComboBoxItem Content="Nome"/>
-                <ComboBoxItem Content="Categoria"/>
-            </ComboBox>
-            <Border x:Name="ImageChip" DockPanel.Dock="Right" Visibility="Collapsed" Background="#FFE3EEFA" BorderBrush="#FF2B6CB0"
-                    BorderThickness="1" CornerRadius="4" Padding="8,2" Margin="8,0,0,0">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock x:Name="ImageChipText" VerticalAlignment="Center" MaxWidth="220" TextTrimming="CharacterEllipsis"/>
-                    <Button Content="✕" MinWidth="0" Padding="6,0" Margin="6,0,0,0" BorderThickness="0" Background="Transparent"
-                            Click="OnClearImage" ToolTip="Remover a busca por imagem"/>
-                </StackPanel>
-            </Border>
-            <Button x:Name="ImageButton" DockPanel.Dock="Right" Content="Buscar por imagem…" Margin="8,0,0,0" Click="OnPickImage"
-                    ToolTip="Acha famílias parecidas com uma imagem (foto, print ou desenho)"/>
-            <CheckBox x:Name="AiCheck" DockPanel.Dock="Right" Content="Busca por IA" Margin="8,0,0,0" VerticalAlignment="Center"
-                      IsChecked="True" Checked="OnAiToggled" Unchecked="OnAiToggled"
-                      ToolTip="Entende o sentido da busca, não só as palavras (ex.: &quot;lavatório&quot; acha pias)."/>
-            <Grid>
-                <TextBox x:Name="SearchBox" Padding="6,5" FontSize="14" TextChanged="OnSearchChanged" KeyDown="OnSearchKeyDown"/>
-                <TextBlock x:Name="SearchHint" Text="Buscar famílias: nome, material, cor, ambiente…" Foreground="#FF9AA1AD"
-                           Margin="9,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" FontSize="14"/>
-            </Grid>
-        </DockPanel>
+        <!-- Cabecalho / Barra de busca -->
+        <Border Grid.Row="0" Background="#FF12263A" Padding="14,11">
+            <DockPanel LastChildFill="True">
+                <Button x:Name="SettingsButton" Style="{StaticResource HeaderButton}" DockPanel.Dock="Right" Content="Configurações" Margin="8,0,0,0" Click="OnSettings"/>
+                <Button x:Name="SyncButton" Style="{StaticResource HeaderButton}" DockPanel.Dock="Right" Content="Atualizar catálogo" Margin="8,0,0,0" Click="OnSync" Visibility="Collapsed"
+                        ToolTip="Procura no servidor um catálogo novo (famílias, previews e dados de busca)"/>
+                <Button x:Name="ClearButton" Style="{StaticResource HeaderButton}" DockPanel.Dock="Right" Content="Limpar filtros" Margin="8,0,0,0" Click="OnClearFilters"/>
+                <ComboBox x:Name="SortBox" DockPanel.Dock="Right" Width="128" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="8,5"
+                          SelectionChanged="OnSortChanged" ToolTip="Ordem dos resultados">
+                    <ComboBoxItem Content="Relevância" IsSelected="True"/>
+                    <ComboBoxItem Content="Nome"/>
+                    <ComboBoxItem Content="Categoria"/>
+                </ComboBox>
+                <Border x:Name="ImageChip" DockPanel.Dock="Right" Visibility="Collapsed" Background="#FFDBEAFE" BorderBrush="#FF60A5FA"
+                        BorderThickness="1" CornerRadius="6" Padding="8,2" Margin="8,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="ImageChipText" VerticalAlignment="Center" Foreground="#FF1E3A8A" MaxWidth="200" TextTrimming="CharacterEllipsis"/>
+                        <Button Content="✕" MinWidth="0" Padding="6,0" Margin="6,0,0,0" BorderThickness="0" Background="Transparent" Foreground="#FF1E3A8A"
+                                Click="OnClearImage" ToolTip="Remover a busca por imagem"/>
+                    </StackPanel>
+                </Border>
+                <Button x:Name="ImageButton" Style="{StaticResource HeaderButton}" DockPanel.Dock="Right" Content="Buscar por imagem…" Margin="8,0,0,0" Click="OnPickImage"
+                        ToolTip="Acha famílias parecidas com uma imagem (foto, print ou desenho)"/>
+                <CheckBox x:Name="AiCheck" DockPanel.Dock="Right" Content="Busca por IA" Foreground="White" Margin="10,0,0,0" VerticalAlignment="Center"
+                          IsChecked="True" Checked="OnAiToggled" Unchecked="OnAiToggled"
+                          ToolTip="Entende o sentido da busca, não só as palavras (ex.: &quot;lavatório&quot; acha pias)."/>
+                <Border Background="White" CornerRadius="6" Padding="8,0">
+                    <Grid>
+                        <TextBox x:Name="SearchBox" BorderThickness="0" Background="Transparent" Padding="2,7" FontSize="14"
+                                 VerticalContentAlignment="Center" TextChanged="OnSearchChanged" KeyDown="OnSearchKeyDown"/>
+                        <TextBlock x:Name="SearchHint" Text="Buscar famílias: nome, material, cor, ambiente…" Foreground="#FF94A3B8"
+                                   Margin="4,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" FontSize="13.5"/>
+                    </Grid>
+                </Border>
+            </DockPanel>
+        </Border>
 
-        <Grid Grid.Row="1">
+        <!-- Conteudo 3 colunas -->
+        <Grid Grid.Row="1" Margin="12,12,12,10">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="270"/>
-                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="244"/>
+                <ColumnDefinition Width="10"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="12"/>
-                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="318"/>
             </Grid.ColumnDefinitions>
 
             <!-- Filtros e categorias -->
-            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Margin="0,0,6,0">
-                    <Expander Header="Coleções" IsExpanded="True" Style="{StaticResource SideExpander}">
-                        <StackPanel Margin="4,6,0,0">
-                            <ListBox x:Name="CollectionsList" MaxHeight="170" BorderBrush="#FFC9CED6" SelectionChanged="OnCollectionChanged"
-                                     DisplayMemberPath="Text"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                <Button Content="Nova coleção" Click="OnNewCollection" Margin="0,0,6,0"/>
-                                <Button x:Name="DeleteCollectionButton" Content="Excluir" Click="OnDeleteCollection" IsEnabled="False"/>
+            <Border Grid.Column="0" Background="White" BorderBrush="#FFE2E8F0" BorderThickness="1" CornerRadius="8" Padding="10">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,0,4,0">
+                        <Expander Header="Coleções" IsExpanded="True" Style="{StaticResource SideExpander}">
+                            <StackPanel Margin="4,6,0,0" TextElement.FontWeight="Normal">
+                                <ListBox x:Name="CollectionsList" MaxHeight="160" BorderBrush="#FFE2E8F0" Background="#FFF8FAFC"
+                                         SelectionChanged="OnCollectionChanged" DisplayMemberPath="Text" Padding="2"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <Button Content="Nova coleção" Click="OnNewCollection" Margin="0,0,6,0" Padding="10,4" FontSize="12"/>
+                                    <Button x:Name="DeleteCollectionButton" Content="Excluir" Click="OnDeleteCollection" IsEnabled="False" Padding="10,4" FontSize="12"/>
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
-                    </Expander>
-                    <Expander Header="Categorias" IsExpanded="True" Style="{StaticResource SideExpander}">
-                        <TreeView x:Name="CategoryTree" Margin="4,6,0,0" BorderThickness="0" Background="Transparent" MaxHeight="300">
-                            <TreeView.ItemContainerStyle>
-                                <Style TargetType="TreeViewItem">
-                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                                </Style>
-                            </TreeView.ItemContainerStyle>
-                            <TreeView.ItemTemplate>
-                                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                    <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" Content="{Binding Text}"
-                                              Checked="OnCategoryToggled" Unchecked="OnCategoryToggled"/>
-                                </HierarchicalDataTemplate>
-                            </TreeView.ItemTemplate>
-                        </TreeView>
-                    </Expander>
-                    <StackPanel x:Name="FacetsHost"/>
-                    <CheckBox x:Name="OnlyPreviewCheck" Content="Somente com preview" Margin="4,8,0,0" Checked="OnOptionChanged"
-                              Unchecked="OnOptionChanged"/>
-                    <CheckBox x:Name="OnlyDownloadedCheck" Content="Somente baixadas" Margin="4,4,0,0" Checked="OnOptionChanged"
-                              Unchecked="OnOptionChanged" Visibility="Collapsed"
-                              ToolTip="Mostra só as famílias que já estão na sua pasta de downloads (funcionam sem internet)"/>
-                </StackPanel>
-            </ScrollViewer>
+                        </Expander>
+                        <Expander Header="Categorias" IsExpanded="True" Style="{StaticResource SideExpander}">
+                            <TreeView x:Name="CategoryTree" Margin="2,6,0,0" BorderThickness="0" Background="Transparent" MaxHeight="320"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" TextElement.FontWeight="Normal">
+                                <TreeView.ItemContainerStyle>
+                                    <Style TargetType="TreeViewItem">
+                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                    </Style>
+                                </TreeView.ItemContainerStyle>
+                                <TreeView.ItemTemplate>
+                                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                        <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" Content="{Binding Text}"
+                                                  Checked="OnCategoryToggled" Unchecked="OnCategoryToggled"/>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+                        </Expander>
+                        <StackPanel x:Name="FacetsHost"/>
+                        <Border BorderBrush="#FFE2E8F0" BorderThickness="0,1,0,0" Margin="0,6,0,6"/>
+                        <CheckBox x:Name="OnlyPreviewCheck" Content="Somente com preview" Margin="4,2,0,0" Checked="OnOptionChanged"
+                                  Unchecked="OnOptionChanged"/>
+                        <CheckBox x:Name="OnlyDownloadedCheck" Content="Somente baixadas" Margin="4,4,0,0" Checked="OnOptionChanged"
+                                  Unchecked="OnOptionChanged"
+                                  ToolTip="Mostra só as famílias que já estão na sua pasta de downloads (funcionam sem internet)"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
 
             <!-- Resultados -->
             <DockPanel Grid.Column="2">
-                <Button x:Name="ShowMoreButton" DockPanel.Dock="Bottom" Content="Mostrar mais" Margin="0,8,0,0" HorizontalAlignment="Center"
-                        Visibility="Collapsed" Click="OnShowMore" Padding="24,6"/>
-                <Grid>
-                    <ListBox x:Name="ResultsList" BorderBrush="#FFC9CED6" Background="White" SelectionMode="Single"
-                             ItemTemplate="{StaticResource CardTemplate}" ItemContainerStyle="{StaticResource CardItemStyle}"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False"
-                             SelectionChanged="OnSelectionChanged" MouseDoubleClick="OnResultDoubleClick">
-                        <ListBox.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel IsItemsHost="True"/>
-                            </ItemsPanelTemplate>
-                        </ListBox.ItemsPanel>
-                    </ListBox>
-                    <TextBlock x:Name="EmptyText" Text="Nenhuma família encontrada." Foreground="#FF6B7280" FontSize="15"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
-                </Grid>
+                <Button x:Name="ShowMoreButton" DockPanel.Dock="Bottom" Content="Mostrar mais" Margin="0,10,0,0" HorizontalAlignment="Center"
+                        Visibility="Collapsed" Click="OnShowMore" Padding="24,7" FontWeight="SemiBold"/>
+                <Border Background="White" BorderBrush="#FFE2E8F0" BorderThickness="1" CornerRadius="8" Padding="4">
+                    <Grid>
+                        <ListBox x:Name="ResultsList" BorderThickness="0" Background="Transparent" SelectionMode="Single"
+                                 ItemTemplate="{StaticResource CardTemplate}" ItemContainerStyle="{StaticResource CardItemStyle}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False"
+                                 SelectionChanged="OnSelectionChanged" MouseDoubleClick="OnResultDoubleClick" SizeChanged="OnResultsSizeChanged">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel IsItemsHost="True" Loaded="OnCardsWrapLoaded"/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                        </ListBox>
+                        <TextBlock x:Name="EmptyText" Text="Nenhuma família encontrada." Foreground="#FF64748B" FontSize="15"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    </Grid>
+                </Border>
             </DockPanel>
 
-            <!-- Detalhes -->
-            <Border Grid.Column="4" Background="White" BorderBrush="#FFC9CED6" BorderThickness="1">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel x:Name="DetailsPanel" Margin="14">
-                        <TextBlock x:Name="DetailsHint" Text="Selecione uma família para ver os detalhes." Foreground="#FF6B7280"
-                                   TextWrapping="Wrap"/>
-                        <StackPanel x:Name="DetailsBody" Visibility="Collapsed">
-                            <Border Background="#FFF1F3F6" CornerRadius="6" Height="190">
-                                <Image x:Name="DetailImage" Stretch="Uniform" Margin="8" RenderOptions.BitmapScalingMode="HighQuality"/>
-                            </Border>
-                            <TextBlock x:Name="DetailTitle" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,10,0,0"/>
-                            <TextBlock x:Name="DetailCategory" Foreground="#FF2B6CB0" Margin="0,2,0,0" TextWrapping="Wrap"/>
-                            <TextBlock x:Name="DetailDescription" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                            <WrapPanel x:Name="TagsPanel" Margin="0,8,0,0"/>
-                            <TextBlock x:Name="DetailMeta" TextWrapping="Wrap" Margin="0,10,0,0" Foreground="#FF374151" LineHeight="20"/>
-                            <Border x:Name="CompatBox" Visibility="Collapsed" Background="#FFFFF4E0" BorderBrush="#FFE0A100"
-                                    BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,10,0,0">
-                                <TextBlock x:Name="CompatText" TextWrapping="Wrap" FontSize="12"/>
-                            </Border>
-                            <TextBlock x:Name="DetailPath" Foreground="#FF9AA1AD" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0"/>
-                            <Button x:Name="InsertButton" Style="{StaticResource PrimaryButton}" Content="Inserir no projeto"
-                                    Margin="0,14,0,0" Click="OnInsert"/>
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="8"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Button x:Name="FavoriteButton" Content="☆ Favoritar" Click="OnFavoriteClick"/>
-                                <Button x:Name="CollectionButton" Grid.Column="2" Content="Coleção ▾" Click="OnCollectionMenu"/>
-                            </Grid>
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="8"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Button x:Name="SimilarButton" Content="Ver parecidas" Click="OnSimilar"
-                                        ToolTip="Acha famílias com aparência parecida usando a busca por IA"/>
-                                <Button x:Name="FolderButton" Grid.Column="2" Content="Abrir pasta" Click="OnOpenFolder"/>
-                            </Grid>
-                        </StackPanel>
-                    </StackPanel>
-                </ScrollViewer>
+            <!-- Detalhes (acoes fixas no rodape) -->
+            <Border Grid.Column="4" Background="White" BorderBrush="#FFE2E8F0" BorderThickness="1" CornerRadius="8">
+                <Grid x:Name="DetailsPanel">
+                    <TextBlock x:Name="DetailsHint" Text="Selecione uma família para ver os detalhes e inserir no projeto."
+                               Foreground="#FF64748B" TextWrapping="Wrap" Margin="20" VerticalAlignment="Center" TextAlignment="Center"/>
+                    <DockPanel x:Name="DetailsBody" Visibility="Collapsed">
+                        <!-- Acoes fixas embaixo -->
+                        <Border DockPanel.Dock="Bottom" Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="0,1,0,0"
+                                CornerRadius="0,0,8,8" Padding="14,12">
+                            <StackPanel>
+                                <Button x:Name="InsertButton" Style="{StaticResource PrimaryButton}" Content="Inserir no projeto" Click="OnInsert"/>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="FavoriteButton" Content="☆ Favoritar" Click="OnFavoriteClick" FontSize="12"/>
+                                    <Button x:Name="CollectionButton" Grid.Column="2" Content="Coleção ▾" Click="OnCollectionMenu" FontSize="12"/>
+                                </Grid>
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="SimilarButton" Content="Ver parecidas" Click="OnSimilar" FontSize="12"
+                                            ToolTip="Acha famílias com aparência parecida usando a busca por IA"/>
+                                    <Button x:Name="FolderButton" Grid.Column="2" Content="Abrir pasta" Click="OnOpenFolder" FontSize="12"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Corpo rolavel -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="14">
+                                <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" CornerRadius="8" Height="196">
+                                    <Image x:Name="DetailImage" Stretch="Uniform" Margin="10" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                </Border>
+                                <TextBlock x:Name="DetailTitle" FontSize="16" FontWeight="SemiBold" Foreground="#FF0F172A" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                                <TextBlock x:Name="DetailCategory" Foreground="#FF1677FF" FontWeight="SemiBold" FontSize="12.5" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="DetailDescription" Foreground="#FF334155" TextWrapping="Wrap" LineHeight="19" Margin="0,8,0,0"/>
+                                <WrapPanel x:Name="TagsPanel" Margin="0,10,0,0"/>
+                                <TextBlock x:Name="DetailMeta" TextWrapping="Wrap" Margin="0,10,0,0" Foreground="#FF475569" FontSize="12.5" LineHeight="20"/>
+                                <Border x:Name="CompatBox" Visibility="Collapsed" Background="#FFFEF3C7" BorderBrush="#FFF59E0B"
+                                        BorderThickness="1" CornerRadius="6" Padding="9,7" Margin="0,10,0,0">
+                                    <TextBlock x:Name="CompatText" Foreground="#FF92400E" TextWrapping="Wrap" FontSize="12"/>
+                                </Border>
+                                <TextBlock x:Name="DetailPath" Foreground="#FF94A3B8" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Grid>
             </Border>
         </Grid>
 
         <!-- Barra de status -->
-        <DockPanel Grid.Row="2" Margin="0,8,0,0">
-            <Button x:Name="AccountButton" DockPanel.Dock="Right" Content="Entrar" Margin="12,0,0,0" MinWidth="0" Padding="10,1"
-                    Click="OnAccount" Visibility="Collapsed"/>
-            <TextBlock x:Name="AccountText" DockPanel.Dock="Right" Foreground="#FF6B7280" Margin="12,0,0,0" VerticalAlignment="Center"/>
-            <TextBlock x:Name="AiStatusText" DockPanel.Dock="Right" Foreground="#FF6B7280" Margin="12,0,0,0" VerticalAlignment="Center"/>
-            <Button x:Name="CancelDownloadButton" DockPanel.Dock="Right" Content="Cancelar" Margin="8,0,0,0" MinWidth="0" Padding="10,1"
-                    Click="OnCancelDownload" Visibility="Collapsed"/>
-            <ProgressBar x:Name="DownloadBar" DockPanel.Dock="Right" Width="160" Height="12" Margin="12,0,0,0" Visibility="Collapsed"
-                         VerticalAlignment="Center"/>
-            <TextBlock x:Name="StatusText" Foreground="#FF374151" TextTrimming="CharacterEllipsis"/>
-        </DockPanel>
+        <Border Grid.Row="2" Background="White" BorderBrush="#FFE2E8F0" BorderThickness="0,1,0,0" Padding="14,7">
+            <DockPanel>
+                <Button x:Name="AccountButton" DockPanel.Dock="Right" Content="Entrar" Margin="12,0,0,0" MinWidth="0" Padding="10,3" FontSize="12"
+                        Click="OnAccount" Visibility="Collapsed"/>
+                <TextBlock x:Name="AccountText" DockPanel.Dock="Right" Foreground="#FF64748B" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                <TextBlock x:Name="AiStatusText" DockPanel.Dock="Right" Foreground="#FF15803D" FontWeight="SemiBold" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                <Button x:Name="CancelDownloadButton" DockPanel.Dock="Right" Content="Cancelar" Margin="8,0,0,0" MinWidth="0" Padding="10,3" FontSize="12"
+                        Click="OnCancelDownload" Visibility="Collapsed"/>
+                <ProgressBar x:Name="DownloadBar" DockPanel.Dock="Right" Width="160" Height="10" Margin="12,0,0,0" Visibility="Collapsed"
+                             VerticalAlignment="Center"/>
+                <TextBlock x:Name="StatusText" Foreground="#FF334155" FontSize="12.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
+        </Border>
     </Grid>
 </Window>

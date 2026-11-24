@@ -17,101 +17,199 @@ public sealed class CotasChoice
 }
 
 /// <summary>
-/// Pedido do arquiteto, "Planejar" (IA ou regras), lista de cadeias com caixa de marcar e "Criar cotas". A lista e o preview:
-/// cada linha diz de que lado a cadeia fica, o nivel, quantas referencias e o comprimento total; cadeias que nao couberam
-/// aparecem com o motivo e nao podem ser marcadas.
+/// Janela do GB Cotas: visual moderno em cards, cancelamento seguro ao fechar, selecao rapida de cadeias
+/// e preview antes de gravar cotas nativas no Revit.
 /// </summary>
 public static class CotasWindow
 {
     public static CotasChoice? Show(Extraction extraction, RuleProfile rules, string viewName)
     {
         var summary = extraction.Summary;
-        var root = new StackPanel { Margin = new Thickness(16) };
-        root.Children.Add(new TextBlock
-        {
-            Text = $"Vista: {viewName} (1:{summary.Scale:0}). {summary.Refs.Count} referências encontradas: " +
-                   $"{summary.Refs.Count(r => r.Kind is RefKind.ExteriorFace or RefKind.InteriorFace)} faces de parede, " +
-                   $"{summary.Refs.Count(r => r.Kind == RefKind.Opening)} planos de portas e janelas, {summary.Refs.Count(r => r.Kind == RefKind.Axis)} eixos.",
-            TextWrapping = TextWrapping.Wrap,
-        });
-        foreach (var warning in extraction.Warnings)
-            root.Children.Add(new TextBlock { Text = warning, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.DarkOrange, FontSize = 11, Margin = new Thickness(0, 2, 0, 0) });
+        using var windowCts = new CancellationTokenSource();
+        var closed = false;
 
-        root.Children.Add(new TextBlock { Text = "O que cotar", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 2) });
+        var content = new StackPanel { Margin = new Thickness(16, 14, 16, 14) };
+
+        foreach (var warning in extraction.Warnings)
+        {
+            content.Children.Add(new Border
+            {
+                Background = AiUi.WarnBg,
+                CornerRadius = new CornerRadius(5),
+                Padding = new Thickness(10, 6, 10, 6),
+                Margin = new Thickness(0, 0, 0, 8),
+                Child = new TextBlock { Text = warning, FontSize = 11.5, Foreground = AiUi.WarnFg, TextWrapping = TextWrapping.Wrap },
+            });
+        }
+
+        // Card 1: Pedido e planejamento
+        var reqPanel = new StackPanel();
         var request = new TextBox
         {
             Text = "Cotar as fachadas em três linhas (vãos, eixos e total) no padrão do escritório.",
-            AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 54, Padding = new Thickness(4),
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            Height = 56,
+            Padding = new Thickness(6),
+            BorderBrush = AiUi.SecondaryBorder,
         };
-        root.Children.Add(request);
-        var useAi = new CheckBox { Content = "Usar IA para planejar as cadeias (sem marcar, valem só as regras do perfil)", IsChecked = true, Margin = new Thickness(0, 6, 0, 0) };
-        root.Children.Add(useAi);
-        root.Children.Add(new TextBlock
+        reqPanel.Children.Add(request);
+
+        var useAi = new CheckBox
         {
-            Text = "A IA só escolhe quais referências formam cada cadeia. Posições, afastamentos e a ausência de colisões são calculados pelo programa.",
-            FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0),
-        });
+            Content = "Usar IA para planejar as cadeias (desmarcado = usa apenas as regras do escritório)",
+            IsChecked = true,
+            Margin = new Thickness(0, 8, 0, 0),
+            Foreground = AiUi.TitleFg,
+        };
+        reqPanel.Children.Add(useAi);
+        reqPanel.Children.Add(AiUi.Note("A IA só escolhe quais referências formam cada cadeia. Posições, afastamentos e ausência de colisões são calculados pelo programa."));
 
-        var plan = new Button { Content = "Planejar", Padding = new Thickness(18, 5, 18, 5), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 10, 0, 0) };
-        var status = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
-        var list = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
-        var listScroll = new ScrollViewer { Content = list, Height = 250, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, BorderBrush = Brushes.LightGray, BorderThickness = new Thickness(1), Background = Brushes.White };
-        root.Children.Add(plan);
-        root.Children.Add(status);
-        root.Children.Add(listScroll);
+        var plan = AiUi.PrimaryButton("Planejar cotas");
+        plan.Margin = new Thickness(0, 0, 8, 0);
+        var configBtn = AiUi.SecondaryButton("Configurar IA…");
+        var planRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+        planRow.Children.Add(plan);
+        planRow.Children.Add(configBtn);
+        reqPanel.Children.Add(planRow);
 
-        var create = new Button { Content = "Criar cotas", IsDefault = true, IsEnabled = false, Width = 110, Margin = new Thickness(0, 0, 8, 0), Padding = new Thickness(0, 5, 0, 5) };
-        var rulesButton = new Button { Content = "Regras…", Width = 80, Margin = new Thickness(0, 0, 8, 0), Padding = new Thickness(0, 5, 0, 5), ToolTip = "Abre o perfil de regras (afastamentos, lados e padrão do escritório)." };
-        var cancel = new Button { Content = "Cancelar", IsCancel = true, Width = 90, Padding = new Thickness(0, 5, 0, 5) };
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 14, 0, 0) };
-        buttons.Children.Add(rulesButton);
-        buttons.Children.Add(create);
-        buttons.Children.Add(cancel);
-        root.Children.Add(buttons);
+        var (statusBox, statusText, statusBar) = AiUi.StatusBanner();
+        reqPanel.Children.Add(statusBox);
+        content.Children.Add(AiUi.Card("O que cotar", reqPanel));
+
+        // Card 2: Cadeias planejadas
+        var listPanel = new StackPanel();
+        var selectAll = AiUi.SecondaryButton("Marcar todas");
+        selectAll.Padding = new Thickness(8, 3, 8, 3);
+        selectAll.FontSize = 11.5;
+        selectAll.Margin = new Thickness(0, 0, 6, 0);
+        var selectNone = AiUi.SecondaryButton("Desmarcar todas");
+        selectNone.Padding = new Thickness(8, 3, 8, 3);
+        selectNone.FontSize = 11.5;
+        var selRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 6), Visibility = Visibility.Collapsed };
+        selRow.Children.Add(selectAll);
+        selRow.Children.Add(selectNone);
+        listPanel.Children.Add(selRow);
+
+        var list = new StackPanel { Margin = new Thickness(4) };
+        var listScroll = new ScrollViewer
+        {
+            Content = list,
+            Height = 250,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            BorderBrush = AiUi.CardBorder,
+            BorderThickness = new Thickness(1),
+            Background = AiUi.WindowBg,
+        };
+        listPanel.Children.Add(listScroll);
+        content.Children.Add(AiUi.Card("Cadeias planejadas (prévia)", listPanel, new Thickness(0)));
+
+        // Rodape
+        var rulesButton = AiUi.SecondaryButton("Abrir regras…");
+        rulesButton.ToolTip = "Abre o perfil de regras (afastamentos, lados e padrão do escritório).";
+        var create = AiUi.PrimaryButton("Criar cotas", isDefault: true);
+        create.IsEnabled = false;
+        create.Width = 116;
+        create.Margin = new Thickness(0, 0, 8, 0);
+        var cancel = AiUi.SecondaryButton("Cancelar", isCancel: true);
+        cancel.Width = 92;
+
+        var footerDock = new DockPanel { Margin = new Thickness(16, 10, 16, 10) };
+        DockPanel.SetDock(rulesButton, Dock.Left);
+        var rightBtns = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        rightBtns.Children.Add(create);
+        rightBtns.Children.Add(cancel);
+        DockPanel.SetDock(rightBtns, Dock.Right);
+        footerDock.Children.Add(rulesButton);
+        footerDock.Children.Add(rightBtns);
+
+        var footer = new Border
+        {
+            Background = Brushes.White,
+            BorderBrush = AiUi.CardBorder,
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Child = footerDock,
+        };
+
+        var subtitle = $"Vista: {viewName} (1:{summary.Scale:0})  ·  {summary.Refs.Count} referências (" +
+                       $"{summary.Refs.Count(r => r.Kind is RefKind.ExteriorFace or RefKind.InteriorFace)} faces, " +
+                       $"{summary.Refs.Count(r => r.Kind == RefKind.Opening)} aberturas, {summary.Refs.Count(r => r.Kind == RefKind.Axis)} eixos)";
+        var header = AiUi.Header("GB Cotas — Cotar vista", subtitle);
+
+        var mainDock = new DockPanel { Background = AiUi.WindowBg };
+        DockPanel.SetDock(header, Dock.Top);
+        DockPanel.SetDock(footer, Dock.Bottom);
+        mainDock.Children.Add(header);
+        mainDock.Children.Add(footer);
+        mainDock.Children.Add(new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
 
         var window = new Window
         {
-            Title = "GB Cotas — Cotar vista", Content = root, Width = 680, SizeToContent = SizeToContent.Height, MaxHeight = 820,
-            ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            FontFamily = new FontFamily("Segoe UI"), FontSize = 13, Background = new SolidColorBrush(Color.FromRgb(0xF7, 0xF8, 0xFA)),
+            Title = "GB Cotas — Cotar vista",
+            Content = mainDock,
+            Width = 720,
+            Height = 720,
+            MinWidth = 600,
+            MinHeight = 560,
+            ResizeMode = ResizeMode.CanResizeWithGrip,
+            ShowInTaskbar = false,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            FontFamily = new FontFamily("Segoe UI"),
+            FontSize = 13,
+            Background = AiUi.WindowBg,
         };
         Dialogs.Attach(window);
+
+        window.Closing += (_, _) =>
+        {
+            closed = true;
+            try { windowCts.Cancel(); } catch { }
+        };
 
         PlanOutcome? outcome = null;
         SolverResult? solved = null;
         var boxes = new List<(CheckBox Box, PlacedChain Chain)>();
         CotasChoice? result = null;
 
+        selectAll.Click += (_, _) => { foreach (var b in boxes) b.Box.IsChecked = true; };
+        selectNone.Click += (_, _) => { foreach (var b in boxes) b.Box.IsChecked = false; };
+        configBtn.Click += (_, _) => AiSettingsWindow.ShowDialog();
+
         rulesButton.Click += (_, _) =>
         {
             try { CotasFlow.OpenProfile(); }
-            catch (Exception error) { Dialogs.Alert(error.Message, CotasFlow.Title); }
+            catch (Exception error) { MessageBox.Show(window, error.Message, CotasFlow.Title, MessageBoxButton.OK, MessageBoxImage.Warning); }
         };
 
         plan.Click += async (_, _) =>
         {
+            if (closed) return;
             plan.IsEnabled = false;
+            configBtn.IsEnabled = false;
             create.IsEnabled = false;
+            selRow.Visibility = Visibility.Collapsed;
             list.Children.Clear();
             boxes.Clear();
-            status.Foreground = Brushes.DarkSlateGray;
-            status.Text = useAi.IsChecked == true ? "Conectando à IA e planejando…" : "Planejando pelas regras…";
+            AiUi.SetStatus(statusBox, statusText, statusBar, useAi.IsChecked == true ? "Conectando à IA e planejando cadeias…" : "Planejando pelas regras do escritório…", StatusKind.Info, busy: true);
             try
             {
                 AiConnection? connection = null;
                 string? connectionNote = null;
                 if (useAi.IsChecked == true)
                 {
-                    try { connection = await AiService.ConnectAsync(); }
+                    try { connection = await AiService.ConnectAsync(windowCts.Token); }
+                    catch (OperationCanceledException) { return; }
                     catch (Exception error) when (error is GatewayException or AiException)
                     {
                         connectionNote = "Sem IA (" + error.Message + "). Usei as regras do escritório.";
                     }
                 }
+                if (closed) { connection?.Dispose(); return; }
                 var model = connection?.PlanModel ?? "";
                 if (connection is not null && model.Length == 0) connectionNote = AiService.NoModelsMessage + " Usei as regras do escritório.";
-                try { outcome = await AiPlanner.PlanAsync(connection?.Client, model, summary, rules, request.Text); }
+                try { outcome = await AiPlanner.PlanAsync(connection?.Client, model, summary, rules, request.Text, windowCts.Token); }
                 finally { connection?.Dispose(); }
+                if (closed) return;
                 if (connectionNote is not null) outcome = outcome with { Note = connectionNote };
 
                 solved = DimSolver.Solve(outcome.Chains, summary, rules);
@@ -120,37 +218,42 @@ public static class CotasWindow
                     var length = placed.Refs[^1].Pos - placed.Refs[0].Pos;
                     var box = new CheckBox
                     {
-                        IsChecked = true, Margin = new Thickness(6, 3, 6, 0),
-                        Content = $"{SideName(placed.Chain.Side)} · {LevelName(placed.Chain.Level)} · {placed.Refs.Count} referências · {placed.SegmentLengths.Count} vão(s) · total {length:#,0} mm"
+                        IsChecked = true,
+                        Margin = new Thickness(6, 4, 6, 2),
+                        Foreground = AiUi.TitleFg,
+                        Content = $"{SideName(placed.Chain.Side)} · {LevelName(placed.Chain.Level)} · {placed.Refs.Count} refs · {placed.SegmentLengths.Count} vão(s) · {length:#,0} mm"
                                   + (placed.ShiftedSegments.Count > 0 ? $" · {placed.ShiftedSegments.Count} texto(s) deslocado(s)" : "")
-                                  + (placed.Attempts > 1 ? " · afastada para evitar colisão" : ""),
+                                  + (placed.Attempts > 1 ? " · afastada p/ evitar colisão" : ""),
                     };
                     list.Children.Add(box);
                     boxes.Add((box, placed));
                 }
                 foreach (var un in solved.Unplaced)
-                    list.Children.Add(new TextBlock { Text = $"✗ {SideName(un.Chain.Side)} · {LevelName(un.Chain.Level)}: {un.Reason}", Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 3, 6, 0) });
+                    list.Children.Add(new TextBlock { Text = $"✗ {SideName(un.Chain.Side)} · {LevelName(un.Chain.Level)}: {un.Reason}", Foreground = AiUi.ErrFg, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 4, 6, 2) });
                 foreach (var rej in outcome.Rejected)
-                    list.Children.Add(new TextBlock { Text = $"✗ Plano da IA, cadeia \"{rej.ChainId}\": {rej.Message}", Foreground = Brushes.DarkOrange, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 3, 6, 0) });
+                    list.Children.Add(new TextBlock { Text = $"✗ Plano da IA, cadeia \"{rej.ChainId}\": {rej.Message}", Foreground = AiUi.WarnFg, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 4, 6, 2) });
 
                 var source = outcome.Source switch
                 {
-                    PlanSource.Ai => outcome.Retried ? "plano da IA (corrigido numa segunda tentativa)" : "plano da IA",
+                    PlanSource.Ai => outcome.Retried ? "plano da IA (corrigido numa 2ª tentativa)" : "plano da IA",
                     PlanSource.AiThenRules => "regras do escritório (a IA não deu um plano válido)",
                     _ => "regras do escritório",
                 };
-                status.Foreground = solved.Placed.Count > 0 ? Brushes.DarkGreen : Brushes.Firebrick;
-                status.Text = $"{solved.Placed.Count} cadeia(s) posicionada(s) sem colisão com {source}." + (outcome.Note is null ? "" : " " + outcome.Note);
+                var kind = solved.Placed.Count > 0 ? StatusKind.Ok : StatusKind.Error;
+                AiUi.SetStatus(statusBox, statusText, statusBar,
+                    $"{solved.Placed.Count} cadeia(s) posicionada(s) sem colisão com {source}." + (outcome.Note is null ? "" : " " + outcome.Note),
+                    kind);
                 create.IsEnabled = solved.Placed.Count > 0;
+                selRow.Visibility = boxes.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
             }
+            catch (OperationCanceledException) { }
             catch (Exception error)
             {
-                status.Foreground = Brushes.Firebrick;
-                status.Text = error.Message;
+                if (!closed) AiUi.SetStatus(statusBox, statusText, statusBar, error.Message, StatusKind.Error);
             }
             finally
             {
-                plan.IsEnabled = true;
+                if (!closed) { plan.IsEnabled = true; configBtn.IsEnabled = true; }
             }
         };
 
@@ -159,8 +262,7 @@ public static class CotasWindow
             var selected = boxes.Where(b => b.Box.IsChecked == true).Select(b => b.Chain).ToList();
             if (selected.Count == 0 || outcome is null || solved is null)
             {
-                status.Foreground = Brushes.Firebrick;
-                status.Text = "Marque pelo menos uma cadeia.";
+                AiUi.SetStatus(statusBox, statusText, statusBar, "Marque pelo menos uma cadeia para criar.", StatusKind.Warn);
                 return;
             }
             result = new CotasChoice { Plan = outcome, Result = solved, Selected = selected };

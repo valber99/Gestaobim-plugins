@@ -10,8 +10,8 @@ using System.Windows.Media;
 namespace Gestaobim.Ai.Revit;
 
 /// <summary>
-/// "Configurar IA": contas de assinatura (OAuth), chaves de API, modelo de cada tarefa e privacidade. Montada em codigo, como as
-/// outras janelas. As chaves nunca voltam para a tela: so se sabe se estao configuradas.
+/// "Configurar IA": contas de assinatura (OAuth), chaves de API, modelo de cada tarefa e privacidade.
+/// Carrega os modelos automaticamente ao abrir, destaca modelos de imagem e cancela tarefas ao fechar.
 /// </summary>
 public static class AiSettingsWindow
 {
@@ -29,17 +29,21 @@ public static class AiSettingsWindow
     public static void ShowDialog()
     {
         var settings = AiSettings.Load();
-        var hint = Brushes.Gray;
-        var root = new StackPanel { Margin = new Thickness(16) };
+        using var windowCts = new CancellationTokenSource();
+        var closed = false;
+        var busy = false;
 
-        void Heading(string text) => root.Children.Add(new TextBlock { Text = text, FontWeight = FontWeights.SemiBold, FontSize = 14, Margin = new Thickness(0, 14, 0, 4) });
-        void Note(string text) => root.Children.Add(new TextBlock { Text = text, FontSize = 11, Foreground = hint, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
+        var content = new StackPanel { Margin = new Thickness(16) };
 
-        var status = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
-
-        // ---- contas por assinatura
-        Heading("Contas de assinatura (OAuth)");
-        var accounts = new ListBox { Height = 70 };
+        // ---- 1. Contas por assinatura (OAuth)
+        var oauthPanel = new StackPanel();
+        var accounts = new ListBox
+        {
+            Height = 72,
+            BorderBrush = AiUi.SecondaryBorder,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(4),
+        };
         void RefreshAccounts()
         {
             accounts.Items.Clear();
@@ -47,174 +51,315 @@ public static class AiSettingsWindow
             if (accounts.Items.Count == 0) accounts.Items.Add("(nenhuma conta conectada)");
         }
         RefreshAccounts();
-        root.Children.Add(accounts);
+        oauthPanel.Children.Add(accounts);
 
-        var loginRow = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
+        var loginRow = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         var loginButtons = new List<Button>();
+        var disconnect = AiUi.SecondaryButton("Desconectar selecionada");
+        disconnect.Margin = new Thickness(0, 0, 8, 4);
+
+        var test = AiUi.SecondaryButton("Testar conexão e atualizar modelos");
+        var save = AiUi.PrimaryButton("Salvar", isDefault: true);
+        save.Width = 100;
+        save.Margin = new Thickness(0, 0, 8, 0);
+        var close = AiUi.SecondaryButton("Fechar", isCancel: true);
+        close.Width = 90;
+
+        var (statusBox, statusText, statusBar) = AiUi.StatusBanner();
+        var planBox = new ComboBox { IsEditable = true, Text = settings.PlanModel, Padding = new Thickness(6, 4, 6, 4), Margin = new Thickness(0, 2, 0, 8) };
+        var imageBox = new ComboBox { IsEditable = true, Text = settings.ImageModel, Padding = new Thickness(6, 4, 6, 4), Margin = new Thickness(0, 2, 0, 4) };
+        var imageModelWarn = new TextBlock
+        {
+            Foreground = AiUi.WarnFg,
+            Background = AiUi.WarnBg,
+            Padding = new Thickness(8, 5, 8, 5),
+            FontSize = 11.5,
+            TextWrapping = TextWrapping.Wrap,
+            Visibility = Visibility.Collapsed,
+            Margin = new Thickness(0, 4, 0, 0),
+        };
+
+        void UpdateImageWarning()
+        {
+            var chosen = imageBox.Text.Trim();
+            if (chosen.Length > 0 && !AiUi.LooksLikeImageModel(chosen))
+            {
+                imageModelWarn.Text = $"Atenção: \"{chosen}\" parece ser um modelo de texto, não de imagem. Deixe em branco (automático) ou escolha um modelo com \"image\" no nome.";
+                imageModelWarn.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                imageModelWarn.Visibility = Visibility.Collapsed;
+            }
+        }
+        imageBox.SelectionChanged += (_, _) => UpdateImageWarning();
+        imageBox.LostFocus += (_, _) => UpdateImageWarning();
+        imageBox.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent, new TextChangedEventHandler((_, _) => UpdateImageWarning()));
+        UpdateImageWarning();
+
+        void SetBusy(bool value)
+        {
+            busy = value;
+            foreach (var b in loginButtons) b.IsEnabled = !value;
+            disconnect.IsEnabled = !value;
+            test.IsEnabled = !value;
+            save.IsEnabled = !value;
+        }
+
+        void PopulateModels(IReadOnlyList<string> models)
+        {
+            var prevPlan = planBox.Text;
+            var prevImg = imageBox.Text;
+            planBox.Items.Clear();
+            imageBox.Items.Clear();
+            var orderedImg = models.OrderByDescending(AiUi.LooksLikeImageModel).ThenBy(m => m, StringComparer.OrdinalIgnoreCase).ToList();
+            foreach (var m in models) planBox.Items.Add(m);
+            foreach (var m in orderedImg) imageBox.Items.Add(m);
+            planBox.Text = prevPlan;
+            imageBox.Text = prevImg;
+            UpdateImageWarning();
+        }
+
         foreach (var provider in OAuthLogin.Providers)
         {
-            var button = new Button { Content = "Conectar " + provider.ShortName, Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(0, 0, 8, 4) };
+            var button = AiUi.SecondaryButton("Conectar " + provider.ShortName);
+            button.Margin = new Thickness(0, 0, 8, 4);
             var captured = provider;
             button.Click += async (_, _) =>
             {
+                if (busy || closed) return;
                 if (!settings.OAuthRiskAcknowledged)
                 {
                     if (!Dialogs.Alert(OAuthRisk, Title, ask: true)) return;
                     settings.OAuthRiskAcknowledged = true;
                     settings.Save();
                 }
-                foreach (var b in loginButtons) b.IsEnabled = false;
-                status.Foreground = Brushes.DarkSlateGray;
-                status.Text = $"Abrindo o navegador para entrar em {captured.Name}. Termine o login lá (até 5 minutos)…";
+                SetBusy(true);
+                AiUi.SetStatus(statusBox, statusText, statusBar, $"Abrindo o navegador para entrar em {captured.Name}. Conclua o login lá (até 5 min)…", StatusKind.Info, busy: true);
                 try
                 {
-                    var (added, _, output) = await OAuthLogin.LoginAsync(captured, TimeSpan.FromMinutes(5));
+                    var (added, _, output) = await OAuthLogin.LoginAsync(captured, TimeSpan.FromMinutes(5), windowCts.Token);
+                    if (closed) return;
                     RefreshAccounts();
-                    status.Foreground = added ? Brushes.DarkGreen : Brushes.Firebrick;
-                    status.Text = added
-                        ? "Conta conectada. Clique em \"Testar conexão\" para ver os modelos."
-                        : "Nenhuma conta nova apareceu." + (string.IsNullOrWhiteSpace(output) ? "" : " " + Redactor.Shorten(output.Trim(), 300));
-                    if (added) await GatewayHost.RestartAsync(settings.ProviderKeys());
+                    if (added)
+                    {
+                        AiUi.SetStatus(statusBox, statusText, statusBar, "Conta conectada! Reiniciando o gateway e carregando modelos…", StatusKind.Info, busy: true);
+                        var endpoint = await GatewayHost.RestartAsync(settings.ProviderKeys(), windowCts.Token);
+                        using var client = new AiClient(endpoint);
+                        var models = await client.ListModelsAsync(windowCts.Token);
+                        if (closed) return;
+                        PopulateModels(models);
+                        AiUi.SetStatus(statusBox, statusText, statusBar, $"Conta conectada com sucesso ({models.Count} modelos disponíveis).", StatusKind.Ok);
+                    }
+                    else
+                    {
+                        AiUi.SetStatus(statusBox, statusText, statusBar,
+                            "Nenhuma conta nova apareceu." + (string.IsNullOrWhiteSpace(output) ? "" : " " + Redactor.Shorten(output.Trim(), 300)),
+                            StatusKind.Warn);
+                    }
                 }
+                catch (OperationCanceledException) { }
                 catch (Exception error)
                 {
-                    status.Foreground = Brushes.Firebrick;
-                    status.Text = error.Message;
+                    if (!closed) AiUi.SetStatus(statusBox, statusText, statusBar, error.Message, StatusKind.Error);
                 }
                 finally
                 {
-                    foreach (var b in loginButtons) b.IsEnabled = true;
+                    if (!closed) SetBusy(false);
                 }
             };
             loginButtons.Add(button);
             loginRow.Children.Add(button);
         }
-        var disconnect = new Button { Content = "Desconectar a conta selecionada", Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(0, 0, 8, 4) };
+
         disconnect.Click += async (_, _) =>
         {
+            if (busy || closed) return;
             if (accounts.SelectedItem is not string name || name.StartsWith('(')) return;
             if (!Dialogs.Alert($"Desconectar \"{name}\"? Para usar de novo será preciso entrar outra vez.", Title, ask: true)) return;
-            // Handler assincrono: nada pode escapar daqui (derrubaria o Revit).
+            SetBusy(true);
             try
             {
                 OAuthLogin.Disconnect(name);
                 RefreshAccounts();
-                status.Foreground = Brushes.DarkSlateGray;
-                status.Text = $"\"{name}\" desconectada. Reiniciando o gateway…";
-                await GatewayHost.RestartAsync(settings.ProviderKeys());
-                status.Text = $"\"{name}\" desconectada.";
+                AiUi.SetStatus(statusBox, statusText, statusBar, $"\"{name}\" desconectada. Reiniciando o gateway…", StatusKind.Info, busy: true);
+                await GatewayHost.RestartAsync(settings.ProviderKeys(), windowCts.Token);
+                if (!closed) AiUi.SetStatus(statusBox, statusText, statusBar, $"\"{name}\" desconectada.", StatusKind.Ok);
             }
+            catch (OperationCanceledException) { }
             catch (Exception error)
             {
-                status.Foreground = Brushes.Firebrick;
-                status.Text = error.Message;
+                if (!closed) AiUi.SetStatus(statusBox, statusText, statusBar, error.Message, StatusKind.Error);
+            }
+            finally
+            {
+                if (!closed) SetBusy(false);
             }
         };
         loginRow.Children.Add(disconnect);
-        root.Children.Add(loginRow);
-        Note("O login abre o navegador padrão e o token fica numa pasta só sua (%LOCALAPPDATA%\\GestaoBIM\\gbai\\auth).");
+        oauthPanel.Children.Add(loginRow);
+        oauthPanel.Children.Add(AiUi.Note("O login abre o navegador padrão e o token fica salvo apenas na sua pasta de usuário (%LOCALAPPDATA%\\GestaoBIM\\gbai\\auth)."));
+        content.Children.Add(AiUi.Card("Contas de assinatura (OAuth)", oauthPanel));
 
-        // ---- chaves de API
-        Heading("Chaves de API");
+        // ---- 2. Chaves de API
+        var keysPanel = new StackPanel();
         var keyBoxes = new Dictionary<string, PasswordBox>(StringComparer.OrdinalIgnoreCase);
+        var keyBadges = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
         foreach (var (id, label) in new[] { ("gemini", "Google Gemini (AI Studio)"), ("claude", "Anthropic (Claude)"), ("codex", "OpenAI") })
         {
-            var row = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
-            var name = new TextBlock { Text = label, Width = 180, VerticalAlignment = VerticalAlignment.Center };
-            var configured = new TextBlock { Text = settings.HasKey(id) ? "configurada" : "não configurada", Width = 100, Foreground = settings.HasKey(id) ? Brushes.DarkGreen : hint, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right };
+            var row = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
+            var name = new TextBlock { Text = label, Width = 185, VerticalAlignment = VerticalAlignment.Center, Foreground = AiUi.TitleFg };
+            var configured = new TextBlock
+            {
+                Text = settings.HasKey(id) ? "● configurada" : "não configurada",
+                Width = 105,
+                Foreground = settings.HasKey(id) ? AiUi.OkFg : AiUi.MutedFg,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextAlignment = TextAlignment.Right,
+                FontSize = 12,
+            };
+            keyBadges[id] = configured;
             DockPanel.SetDock(name, Dock.Left);
             DockPanel.SetDock(configured, Dock.Right);
-            var box = new PasswordBox { Padding = new Thickness(4), ToolTip = "Cole a chave nova aqui. Deixe em branco para manter a atual." };
+            var box = new PasswordBox { Padding = new Thickness(6, 4, 6, 4), BorderBrush = AiUi.SecondaryBorder, ToolTip = "Cole a chave nova aqui. Deixe em branco para manter; digite '-' para apagar." };
             keyBoxes[id] = box;
             row.Children.Add(name);
             row.Children.Add(configured);
             row.Children.Add(box);
-            root.Children.Add(row);
+            keysPanel.Children.Add(row);
         }
-        Note("Guardadas cifradas com a DPAPI do Windows (só este usuário, neste computador). Em branco = manter; digite um traço (-) para apagar.");
+        keysPanel.Children.Add(AiUi.Note("Guardadas cifradas com DPAPI do Windows (só este usuário, neste computador). Em branco = manter; digite um traço (-) para apagar."));
+        content.Children.Add(AiUi.Card("Chaves de API", keysPanel));
 
-        // ---- modelos
-        Heading("Modelo de cada tarefa");
-        var planBox = new ComboBox { IsEditable = true, Text = settings.PlanModel, Margin = new Thickness(0, 0, 0, 4) };
-        var imageBox = new ComboBox { IsEditable = true, Text = settings.ImageModel };
-        var planRow = new DockPanel();
-        DockPanel.SetDock(planRow, Dock.Top);
-        root.Children.Add(new TextBlock { Text = "Planejar cotas (texto)", Margin = new Thickness(0, 0, 0, 2) });
-        root.Children.Add(planBox);
-        root.Children.Add(new TextBlock { Text = "Gerar imagens (render)", Margin = new Thickness(0, 4, 0, 2) });
-        root.Children.Add(imageBox);
-        Note("Em branco o plugin escolhe um modelo adequado da lista. \"Testar conexão\" carrega a lista que o gateway oferece.");
+        // ---- 3. Modelos por tarefa
+        var modelsPanel = new StackPanel();
+        modelsPanel.Children.Add(new TextBlock { Text = "Planejar cotas (texto)", Foreground = AiUi.TitleFg, FontSize = 12.5 });
+        modelsPanel.Children.Add(planBox);
+        modelsPanel.Children.Add(new TextBlock { Text = "Gerar imagens (render)", Foreground = AiUi.TitleFg, FontSize = 12.5 });
+        modelsPanel.Children.Add(imageBox);
+        modelsPanel.Children.Add(imageModelWarn);
+        modelsPanel.Children.Add(AiUi.Note("Deixe em branco para o plugin escolher automaticamente o melhor modelo disponível para cada tarefa."));
+        content.Children.Add(AiUi.Card("Modelo de cada tarefa", modelsPanel));
 
-        // ---- privacidade
-        Heading("Privacidade");
-        var strip = new CheckBox { Content = "Não enviar fabricante e modelo das famílias no render", IsChecked = settings.StripManufacturers };
-        root.Children.Add(strip);
-        Note(PrivacyNote);
+        // ---- 4. Privacidade
+        var privPanel = new StackPanel();
+        var strip = new CheckBox { Content = "Não enviar fabricante e modelo das famílias no render", IsChecked = settings.StripManufacturers, Foreground = AiUi.TitleFg };
+        privPanel.Children.Add(strip);
+        privPanel.Children.Add(AiUi.Note(PrivacyNote));
+        content.Children.Add(AiUi.Card("Privacidade", privPanel, new Thickness(0, 0, 0, 4)));
 
-        // ---- teste
-        var test = new Button { Content = "Testar conexão", Padding = new Thickness(14, 5, 14, 5), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 14, 0, 0) };
-        test.Click += async (_, _) =>
+        content.Children.Add(statusBox);
+
+        // ---- Rodape
+        var footerDock = new DockPanel { Margin = new Thickness(16, 10, 16, 10) };
+        DockPanel.SetDock(test, Dock.Left);
+        var rightBtns = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        rightBtns.Children.Add(save);
+        rightBtns.Children.Add(close);
+        DockPanel.SetDock(rightBtns, Dock.Right);
+        footerDock.Children.Add(test);
+        footerDock.Children.Add(rightBtns);
+
+        var footer = new Border
         {
-            test.IsEnabled = false;
-            status.Foreground = Brushes.DarkSlateGray;
-            status.Text = "Iniciando o gateway local…";
-            try
-            {
-                ApplyKeys(settings, keyBoxes);
-                settings.Save();
-                var endpoint = await GatewayHost.RestartAsync(settings.ProviderKeys());
-                using var client = new AiClient(endpoint);
-                var health = await GatewayHost.CheckHealthAsync(endpoint);
-                var models = await client.ListModelsAsync();
-                planBox.Items.Clear();
-                imageBox.Items.Clear();
-                foreach (var m in models) { planBox.Items.Add(m); imageBox.Items.Add(m); }
-                status.Foreground = models.Count > 0 ? Brushes.DarkGreen : Brushes.DarkOrange;
-                status.Text = models.Count > 0
-                    ? $"Gateway ativo em 127.0.0.1:{health.Port} (sem token: {health.StatusWithoutToken}; com token: {health.StatusWithToken}). {models.Count} modelos disponíveis."
-                    : "Gateway ativo, mas sem modelos: conecte uma conta ou informe uma chave de API.";
-            }
-            catch (Exception error)
-            {
-                status.Foreground = Brushes.Firebrick;
-                status.Text = error.Message;
-            }
-            finally
-            {
-                test.IsEnabled = true;
-            }
+            Background = Brushes.White,
+            BorderBrush = AiUi.CardBorder,
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Child = footerDock,
         };
-        root.Children.Add(test);
-        root.Children.Add(status);
 
-        var save = new Button { Content = "Salvar", IsDefault = true, Width = 90, Margin = new Thickness(0, 0, 8, 0), Padding = new Thickness(0, 5, 0, 5) };
-        var close = new Button { Content = "Fechar", IsCancel = true, Width = 90, Padding = new Thickness(0, 5, 0, 5) };
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 16, 0, 0) };
-        buttons.Children.Add(save);
-        buttons.Children.Add(close);
-        root.Children.Add(buttons);
+        var mainDock = new DockPanel { Background = AiUi.WindowBg };
+        var header = AiUi.Header("Configurar IA", "Conecte contas ou chaves de API e escolha os modelos usados por GB Cotas e GB Render");
+        DockPanel.SetDock(header, Dock.Top);
+        DockPanel.SetDock(footer, Dock.Bottom);
+        mainDock.Children.Add(header);
+        mainDock.Children.Add(footer);
+        mainDock.Children.Add(new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
 
         var window = new Window
         {
             Title = Title,
-            Content = new ScrollViewer { Content = root, VerticalScrollBarVisibility = ScrollBarVisibility.Auto },
-            Width = 640,
+            Content = mainDock,
+            Width = 660,
             Height = 760,
+            MinWidth = 580,
+            MinHeight = 560,
             ResizeMode = ResizeMode.CanResizeWithGrip,
             ShowInTaskbar = false,
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
             FontFamily = new FontFamily("Segoe UI"),
             FontSize = 13,
-            Background = new SolidColorBrush(Color.FromRgb(0xF7, 0xF8, 0xFA)),
+            Background = AiUi.WindowBg,
         };
         Dialogs.Attach(window);
 
-        save.Click += async (_, _) =>
+        window.Closed += (_, _) =>
         {
-            // Handler assincrono: nada pode escapar daqui (derrubaria o Revit).
+            closed = true;
+            try { windowCts.Cancel(); } catch { }
+        };
+
+        async Task RefreshModelsAsync(bool restartGateway)
+        {
+            if (busy || closed) return;
+            SetBusy(true);
+            AiUi.SetStatus(statusBox, statusText, statusBar, restartGateway ? "Reiniciando o gateway e testando conexão…" : "Carregando modelos disponíveis…", StatusKind.Info, busy: true);
             try
             {
-                var changedKeys = ApplyKeys(settings, keyBoxes);
+                if (restartGateway)
+                {
+                    ApplyKeys(settings, keyBoxes, keyBadges);
+                    settings.Save();
+                }
+                var endpoint = restartGateway
+                    ? await GatewayHost.RestartAsync(settings.ProviderKeys(), windowCts.Token)
+                    : await GatewayHost.EnsureStartedAsync(settings.ProviderKeys(), windowCts.Token);
+                using var client = new AiClient(endpoint);
+                var health = await GatewayHost.CheckHealthAsync(endpoint, windowCts.Token);
+                var models = await client.ListModelsAsync(windowCts.Token);
+                if (closed) return;
+                PopulateModels(models);
+                var imgCount = models.Count(AiUi.LooksLikeImageModel);
+                if (models.Count > 0)
+                {
+                    AiUi.SetStatus(statusBox, statusText, statusBar,
+                        $"Gateway ativo em 127.0.0.1:{health.Port} — {models.Count} modelos disponíveis ({imgCount} de imagem).",
+                        StatusKind.Ok);
+                }
+                else
+                {
+                    AiUi.SetStatus(statusBox, statusText, statusBar,
+                        "Gateway ativo, mas sem modelos: conecte uma conta OAuth ou informe uma chave de API.",
+                        StatusKind.Warn);
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception error)
+            {
+                if (!closed) AiUi.SetStatus(statusBox, statusText, statusBar, error.Message, StatusKind.Error);
+            }
+            finally
+            {
+                if (!closed) SetBusy(false);
+            }
+        }
+
+        test.Click += async (_, _) => await RefreshModelsAsync(restartGateway: true);
+
+        // Auto-carrega modelos ao abrir se ja houver conta ou chave configurada
+        window.Loaded += async (_, _) =>
+        {
+            if (OAuthLogin.ConnectedAccounts().Count > 0 || settings.ProviderKeys().Count > 0)
+                await RefreshModelsAsync(restartGateway: false);
+        };
+
+        save.Click += async (_, _) =>
+        {
+            if (busy || closed) return;
+            SetBusy(true);
+            try
+            {
+                var changedKeys = ApplyKeys(settings, keyBoxes, keyBadges);
                 settings.PlanModel = planBox.Text.Trim();
                 settings.ImageModel = imageBox.Text.Trim();
                 settings.StripManufacturers = strip.IsChecked == true;
@@ -222,31 +367,43 @@ public static class AiSettingsWindow
                 settings.Save();
                 if (changedKeys)
                 {
-                    try { await GatewayHost.RestartAsync(settings.ProviderKeys()); }
-                    catch (Exception error) { Dialogs.Alert("As configurações foram salvas, mas o gateway não reiniciou:\n" + error.Message, Title); }
+                    AiUi.SetStatus(statusBox, statusText, statusBar, "Aplicando chaves no gateway…", StatusKind.Info, busy: true);
+                    try { await GatewayHost.RestartAsync(settings.ProviderKeys(), windowCts.Token); }
+                    catch (OperationCanceledException) { return; }
+                    catch (Exception error)
+                    {
+                        if (!closed) MessageBox.Show(window, "As configurações foram salvas, mas o gateway não reiniciou:\n" + error.Message, Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
-                if (window.IsVisible) window.DialogResult = true;
+                if (!closed && window.IsVisible) window.DialogResult = true;
             }
             catch (Exception error)
             {
-                status.Foreground = Brushes.Firebrick;
-                status.Text = "Não foi possível salvar: " + error.Message;
+                if (!closed) AiUi.SetStatus(statusBox, statusText, statusBar, "Não foi possível salvar: " + error.Message, StatusKind.Error);
+            }
+            finally
+            {
+                if (!closed) SetBusy(false);
             }
         };
+
         window.ShowDialog();
     }
 
-    /// <summary>Aplica o que foi digitado nas caixas de chave. Devolve true se alguma chave mudou.</summary>
-    private static bool ApplyKeys(AiSettings settings, Dictionary<string, PasswordBox> boxes)
+    private static bool ApplyKeys(AiSettings settings, Dictionary<string, PasswordBox> boxes, Dictionary<string, TextBlock> badges)
     {
         var changed = false;
         foreach (var (provider, box) in boxes)
         {
             var typed = box.Password.Trim();
             if (typed.Length == 0) continue;
+            if (typed.IndexOfAny(['\r', '\n']) >= 0)
+                throw new InvalidOperationException($"A chave de \"{provider}\" contém quebras de linha inválidas.");
             if (typed == "-") settings.Keys.Remove(provider);
             else settings.Keys[provider] = typed;
             box.Clear();
+            badges[provider].Text = settings.HasKey(provider) ? "● configurada" : "não configurada";
+            badges[provider].Foreground = settings.HasKey(provider) ? AiUi.OkFg : AiUi.MutedFg;
             changed = true;
         }
         return changed;
